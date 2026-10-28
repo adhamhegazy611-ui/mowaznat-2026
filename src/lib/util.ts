@@ -117,3 +117,12 @@ export function quickPass(p: Project, k: QuickKey | null): boolean {
       return p[k] === '✓'
   }
 }
+
+/** «71-44» → [71, 44] ، «ك91-97» → [91, 97] — نفس mz_bat_tokens في قاعدة البيانات */
+export function batTokens(b: string | null | undefined): string[] {
+  return (b ?? '')
+    .replace(/ك/g, '')
+    .split(/[-–,/+]/)
+    .map((x) => x.trim())
+    .filter(Boolean)
+}

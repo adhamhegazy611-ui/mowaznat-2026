@@ -47,6 +47,8 @@ export interface Profile {
   email: string | null
   full_name: string | null
   role: Role | null
+  /** null = كل المشاريع */
+  battalions: string[] | null
 }
 
 export interface HistoryEntry {

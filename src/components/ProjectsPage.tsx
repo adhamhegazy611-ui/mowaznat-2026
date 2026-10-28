@@ -16,13 +16,15 @@ interface Props {
   reload: () => void
   initialFilters?: Partial<Record<FieldKey, string[]>>
   initialQuick?: QuickKey | null
+  /** للحسابات المحصورة على كتيبة: المشروع الجديد بيتعمل عليها */
+  defaultBattalion?: string | null
 }
 
 type Filters = Partial<Record<FieldKey, string[]>>
 const PREF_COLS = 'mowazanat-cols-v2'
 const NEXT: Record<string, Mark> = { '✓': '✗', '✗': null, null: '✓' }
 
-export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, toast, reload, initialFilters, initialQuick }: Props) {
+export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, toast, reload, initialFilters, initialQuick, defaultBattalion }: Props) {
   const [q, setQ] = useState('')
   const [quick, setQuick] = useState<QuickKey | null>(initialQuick ?? null)
   const [filters, setFilters] = useState<Filters>(initialFilters ?? {})
@@ -199,7 +201,7 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
           <input placeholder="ابحث في كل الأعمدة… (اسم مشروع، مراجع، ملاحظة)" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         {canEdit && (
-          <button className="btn primary" onClick={() => setEditing(emptyProject((projects.at(-1)?.sort_order ?? 0) + 1))}>
+          <button className="btn primary" onClick={() => setEditing({ ...emptyProject((projects.at(-1)?.sort_order ?? 0) + 1), battalion: defaultBattalion ?? null })}>
             + مشروع جديد
           </button>
         )}

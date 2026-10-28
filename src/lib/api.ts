@@ -13,6 +13,8 @@ export interface Session {
   name: string
   /** null = عنده حساب في المقايسات بس مالوش صلاحية على «موازنات» */
   role: Role | null
+  /** الكتايب اللي الحساب يشوفها — null = كل المشاريع */
+  battalions: string[] | null
 }
 
 /** نفس نظام المقايسات: اسم المستخدم بيتحوّل لإيميل username@mo2ysaat.app */
@@ -39,7 +41,7 @@ export interface Api {
   deleteReviewer(id: number): Promise<void>
 
   listProfiles(): Promise<Profile[]>
-  setRole(id: string, role: Role | null): Promise<void>
+  setRole(id: string, role: Role | null, battalions?: string[] | null): Promise<void>
 
   listHistory(projectId?: number): Promise<HistoryEntry[]>
 }
@@ -49,7 +51,10 @@ export interface Api {
 // ------------------------------------------------------------------
 function supabaseApi(sb: SupabaseClient): Api {
   const must = <T,>(r: { data: T; error: { message: string } | null }): T => {
-    if (r.error) throw new Error(r.error.message)
+    if (r.error)
+      throw new Error(
+        /row-level security/i.test(r.error.message) ? 'مش مسموحلك تحفظ مشروع على الكتيبة دي' : r.error.message,
+      )
     return r.data
   }
   return {
@@ -57,9 +62,9 @@ function supabaseApi(sb: SupabaseClient): Api {
       const { data } = await sb.auth.getSession()
       const u = data.session?.user
       if (!u) return null
-      const { data: me } = await sb.rpc('mz_me').maybeSingle<{ username: string; role: Role | null }>()
+      const { data: me } = await sb.rpc('mz_me').maybeSingle<{ username: string; role: Role | null; battalions: string[] | null }>()
       const username = me?.username ?? (u.email ?? '').split('@')[0]
-      return { userId: u.id, email: u.email ?? '', name: username, role: me?.role ?? null }
+      return { userId: u.id, email: u.email ?? '', name: username, role: me?.role ?? null, battalions: me?.battalions ?? null }
     },
     async signIn(email, password) {
       const { error } = await sb.auth.signInWithPassword({ email: toEmail(email), password })
@@ -122,11 +127,11 @@ function supabaseApi(sb: SupabaseClient): Api {
     },
 
     async listProfiles() {
-      const rows = must(await sb.rpc('mz_list_users')) as { user_id: string; username: string; role: Role | null }[]
-      return rows.map((r) => ({ id: r.user_id, email: r.username, full_name: r.username, role: r.role }))
+      const rows = must(await sb.rpc('mz_list_users')) as { user_id: string; username: string; role: Role | null; battalions: string[] | null }[]
+      return rows.map((r) => ({ id: r.user_id, email: r.username, full_name: r.username, role: r.role, battalions: r.battalions }))
     },
-    async setRole(id, role) {
-      must(await sb.rpc('mz_set_role', { p_user: id, p_role: role }))
+    async setRole(id, role, battalions) {
+      must(await sb.rpc('mz_set_role', { p_user: id, p_role: role, p_battalions: battalions ?? null }))
     },
 
     async listHistory(projectId) {
@@ -209,7 +214,7 @@ function demoApi(): Api {
     }
     return d
   }
-  const session: Session = { userId: 'demo', email: 'demo@mowazanat', name: 'وضع تجريبي', role: 'admin' }
+  const session: Session = { userId: 'demo', email: 'demo@mowazanat', name: 'وضع تجريبي', role: 'admin', battalions: null }
 
   return {
     async getSession() {
@@ -284,7 +289,7 @@ function demoApi(): Api {
       save()
     },
     async listProfiles() {
-      return [{ id: 'demo', email: 'demo@mowazanat', full_name: 'وضع تجريبي', role: 'admin' }]
+      return [{ id: 'demo', email: 'demo@mowazanat', full_name: 'وضع تجريبي', role: 'admin', battalions: null }]
     },
     async setRole() {},
     async listHistory(projectId) {

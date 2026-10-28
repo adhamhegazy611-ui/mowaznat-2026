@@ -120,6 +120,11 @@ export default function App() {
         <div className="user">
           <span className="who">{session.name}</span>
           <span className="role">{ROLE_AR[session.role]}</span>
+          {session.battalions?.length ? (
+            <span className="scope-chip" title="الحساب ده بيشوف مشاريع الكتايب دي بس">
+              {session.battalions.map((b) => (isNaN(+b) ? b : 'ك' + b)).join('، ')}
+            </span>
+          ) : null}
           <button onClick={() => api.signOut().then(DEMO ? loadProjects : loadSession)}>{DEMO ? 'ترجيع البيانات' : 'خروج'}</button>
         </div>
       </header>
@@ -150,7 +155,7 @@ export default function App() {
             <div className="card">{history == null ? <div className="spinner">جاري التحميل…</div> : <HistoryList items={history} />}</div>
           </>
         ) : page === 'admin' && isAdmin ? (
-          <AdminPage reviewers={reviewers} reloadReviewers={loadReviewers} toast={toast} me={session.userId} />
+          <AdminPage reviewers={reviewers} projects={projects} reloadReviewers={loadReviewers} toast={toast} me={session.userId} />
         ) : (
           <ProjectsPage
             key={preset.n}
@@ -162,6 +167,7 @@ export default function App() {
             isAdmin={isAdmin}
             toast={toast}
             reload={loadProjects}
+            defaultBattalion={session.battalions?.[0] ?? null}
           />
         )}
       </main>

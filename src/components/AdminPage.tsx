@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { api, DEMO } from '../lib/api'
-import type { Profile, Reviewer, Role } from '../lib/types'
+import type { Profile, Project, Reviewer, Role } from '../lib/types'
+import { batTokens } from '../lib/util'
 
 const ROLE_AR: Record<Role, string> = { admin: 'مدير (كل الصلاحيات)', editor: 'محرر (إضافة وتعديل)', viewer: 'مشاهد (عرض فقط)' }
 
-export default function AdminPage({ reviewers, reloadReviewers, toast, me }: {
+export default function AdminPage({ reviewers, projects, reloadReviewers, toast, me }: {
   reviewers: Reviewer[]
+  projects: Project[]
   reloadReviewers: () => void
   toast: (m: string) => void
   me: string
@@ -13,6 +15,11 @@ export default function AdminPage({ reviewers, reloadReviewers, toast, me }: {
   const [users, setUsers] = useState<Profile[] | null>(null)
   const [newName, setNewName] = useState('')
   const [names, setNames] = useState<Record<number, string>>({})
+
+  // كل الكتايب الموجودة في المشاريع (71-44 بتتحسب 71 و44)
+  const allBats = [...new Set(projects.flatMap((p) => batTokens(p.battalion)))].sort((a, b) =>
+    isNaN(+a) || isNaN(+b) ? a.localeCompare(b, 'ar') : +a - +b,
+  )
 
   const loadUsers = () => api.listProfiles().then(setUsers).catch((e) => toast(e.message))
   useEffect(() => {
@@ -105,49 +112,109 @@ export default function AdminPage({ reviewers, reloadReviewers, toast, me }: {
             <div className="spinner">جاري التحميل…</div>
           ) : (
             <div className="table-scroll">
-              <table className="plain">
+              <table className="plain users">
                 <thead>
                   <tr>
                     <th>اسم المستخدم</th>
-                    
                     <th>الصلاحية</th>
+                    <th>المشاريع اللي يشوفها</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((u) => (
-                    <tr key={u.id}>
-                      <td>{u.full_name}</td>
-                      <td>
-                        <select
-                          value={u.role ?? ''}
-                          disabled={u.id === me}
-                          onChange={async (e) => {
-                            try {
-                              await api.setRole(u.id, (e.target.value || null) as Role | null)
-                              toast('اتغيّرت الصلاحية ✓')
-                              void loadUsers()
-                            } catch (err) {
-                              toast('خطأ: ' + (err as Error).message)
-                            }
-                          }}
-                        >
-                          <option value="">بدون دخول</option>
-                          {(Object.keys(ROLE_AR) as Role[]).map((r) => (
-                            <option key={r} value={r}>{ROLE_AR[r]}</option>
-                          ))}
-                        </select>
-                      </td>
-                    </tr>
+                    <UserRow key={u.id} u={u} me={me} allBats={allBats} toast={toast} reload={loadUsers} />
                   ))}
                 </tbody>
               </table>
             </div>
           )}
           <p style={{ color: 'var(--ink-3)', fontSize: 12.5, marginBottom: 0 }}>
-            دي نفس حسابات «متابعة المقايسات». الحساب الجديد بيتعمل ويتوافق عليه هناك، وبعدها تدّيله صلاحية على «موازنات» من هنا.
+            دي نفس حسابات «متابعة المقايسات». الحساب الجديد بيتعمل ويتوافق عليه هناك، وبعدها تدّيله صلاحية على «موازنات» من هنا،
+            وتختار الكتايب اللي يشوف مشاريعها. المدير بيشوف كل المشاريع دايماً.
           </p>
         </div>
       </div>
     </>
+  )
+}
+
+function UserRow({ u, me, allBats, toast, reload }: {
+  u: Profile
+  me: string
+  allBats: string[]
+  toast: (m: string) => void
+  reload: () => void
+}) {
+  const [open, setOpen] = useState<DOMRect | null>(null)
+  const [sel, setSel] = useState<string[]>(u.battalions ?? [])
+  const isMe = u.id === me
+
+  const save = async (role: Role | null, bats: string[] | null) => {
+    try {
+      await api.setRole(u.id, role, bats && bats.length ? bats : null)
+      toast('اتحفظت الصلاحية ✓')
+      reload()
+    } catch (err) {
+      toast('خطأ: ' + (err as Error).message)
+    }
+  }
+
+  const scope =
+    !u.role ? '—' : u.role === 'admin' ? 'كل المشاريع' : u.battalions?.length ? u.battalions.map((b) => (isNaN(+b) ? b : 'ك' + b)).join('، ') : 'كل المشاريع'
+
+  return (
+    <tr>
+      <td>{u.full_name}</td>
+      <td>
+        <select value={u.role ?? ''} disabled={isMe} onChange={(e) => save((e.target.value || null) as Role | null, u.battalions)}>
+          <option value="">بدون دخول</option>
+          {(Object.keys(ROLE_AR) as Role[]).map((r) => (
+            <option key={r} value={r}>{ROLE_AR[r]}</option>
+          ))}
+        </select>
+      </td>
+      <td>
+        {u.role && u.role !== 'admin' ? (
+          <button className="btn small" onClick={(e) => { setSel(u.battalions ?? []); setOpen(open ? null : e.currentTarget.getBoundingClientRect()) }}>
+            {scope} ▾
+          </button>
+        ) : (
+          <span style={{ color: 'var(--ink-3)' }}>{scope}</span>
+        )}
+        {open && (
+          <>
+            <div className="pop-backdrop" onClick={() => setOpen(null)} />
+            <div
+              className="bat-pop"
+              style={{
+                top: Math.min(open.bottom + 4, window.innerHeight - 340),
+                left: Math.max(8, Math.min(open.right - 280, window.innerWidth - 288)),
+              }}
+            >
+              <label className="all">
+                <input type="checkbox" checked={sel.length === 0} onChange={() => setSel([])} />
+                <b>كل المشاريع</b>
+              </label>
+              <div className="bat-grid">
+                {allBats.map((b) => (
+                  <label key={b}>
+                    <input
+                      type="checkbox"
+                      checked={sel.includes(b)}
+                      onChange={(e) => setSel(e.target.checked ? [...sel, b] : sel.filter((x) => x !== b))}
+                    />
+                    {isNaN(+b) ? b : 'ك' + b}
+                  </label>
+                ))}
+              </div>
+              <div className="acts">
+                <button className="btn small primary" onClick={() => { setOpen(null); void save(u.role, sel) }}>حفظ</button>
+                <button className="btn small ghost" onClick={() => setOpen(null)}>إلغاء</button>
+              </div>
+            </div>
+          </>
+        )}
+      </td>
+    </tr>
   )
 }
