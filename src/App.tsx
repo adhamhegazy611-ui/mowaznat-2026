@@ -8,7 +8,7 @@ import AdminPage from './components/AdminPage'
 import HistoryList from './components/HistoryList'
 import type { HistoryEntry } from './lib/types'
 import type { FieldKey } from './lib/columns'
-import { BLANK } from './lib/util'
+import { BLANK, type QuickKey } from './lib/util'
 
 type Page = 'projects' | 'summary' | 'history' | 'admin'
 const ROLE_AR = { admin: 'مدير', editor: 'محرر', viewer: 'مشاهد' } as const
@@ -25,7 +25,7 @@ export default function App() {
   const [reviewers, setReviewers] = useState<Reviewer[]>([])
   const [history, setHistory] = useState<HistoryEntry[] | null>(null)
   const [toastMsg, setToastMsg] = useState('')
-  const [preset, setPreset] = useState<{ filters: Partial<Record<FieldKey, string[]>>; n: number }>({ filters: {}, n: 0 })
+  const [preset, setPreset] = useState<{ filters: Partial<Record<FieldKey, string[]>>; quick?: QuickKey | null; n: number }>({ filters: {}, n: 0 })
 
   const toast = useCallback((m: string) => {
     setToastMsg(m)
@@ -139,6 +139,10 @@ export default function App() {
               setPreset({ filters: { [key]: [value || BLANK] }, n: preset.n + 1 })
               go('projects')
             }}
+            onQuick={(quick) => {
+              setPreset({ filters: {}, quick, n: preset.n + 1 })
+              go('projects')
+            }}
           />
         ) : page === 'history' ? (
           <>
@@ -151,6 +155,7 @@ export default function App() {
           <ProjectsPage
             key={preset.n}
             initialFilters={preset.filters}
+            initialQuick={preset.quick}
             projects={projects}
             reviewers={reviewers}
             canEdit={canEdit}

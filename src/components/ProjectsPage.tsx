@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { COLUMNS, COLOR_HEX, emptyProject, type Column, type FieldKey } from '../lib/columns'
+import { COLUMNS, cellBg, emptyProject, type Column, type FieldKey } from '../lib/columns'
 import type { Mark, Project, Reviewer } from '../lib/types'
-import { BLANK, computeTotals, copyText, displayValue, fmtDate, fmtNum, loadPref, normalize, savePref, todayStr } from '../lib/util'
+import { BLANK, QUICK_LABEL, quickPass, type QuickKey, computeTotals, copyText, displayValue, fmtDate, fmtNum, loadPref, normalize, savePref, todayStr } from '../lib/util'
 import { exportToExcel } from '../lib/exportExcel'
 import ColumnFilter, { type SortDir } from './ColumnFilter'
 import ProjectForm from './ProjectForm'
@@ -15,14 +15,16 @@ interface Props {
   toast: (m: string) => void
   reload: () => void
   initialFilters?: Partial<Record<FieldKey, string[]>>
+  initialQuick?: QuickKey | null
 }
 
 type Filters = Partial<Record<FieldKey, string[]>>
 const PREF_COLS = 'mowazanat-cols-v1'
 const NEXT: Record<string, Mark> = { '✓': '✗', '✗': null, null: '✓' }
 
-export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, toast, reload, initialFilters }: Props) {
+export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, toast, reload, initialFilters, initialQuick }: Props) {
   const [q, setQ] = useState('')
+  const [quick, setQuick] = useState<QuickKey | null>(initialQuick ?? null)
   const [filters, setFilters] = useState<Filters>(initialFilters ?? {})
   const [sort, setSort] = useState<{ key: FieldKey; dir: SortDir } | null>(null)
   const [hidden, setHidden] = useState<string[]>(() =>
@@ -53,8 +55,14 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
       return vals.includes(displayValue(p, col) || BLANK)
     })
 
+  // الكروت بتتحسب على الفلاتر من غير الفلتر السريع، والجدول بيطبّق الفلتر السريع كمان
+  const base = useMemo(
+    () => projects.filter((p) => matchSearch(p) && passes(p)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [projects, q, filters],
+  )
   const rows = useMemo(() => {
-    let r = projects.filter((p) => matchSearch(p) && passes(p))
+    let r = base.filter((p) => quickPass(p, quick))
     if (sort) {
       const col = COLUMNS.find((c) => c.key === sort.key)!
       const numeric = ['int', 'num', 'seq'].includes(col.kind)
@@ -68,9 +76,24 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
     }
     return r
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projects, q, filters, sort])
+  }, [base, quick, sort])
 
   const totals = computeTotals(rows)
+  const kpi = computeTotals(base)
+
+  // دمج خانة «ك» للصفوف المتتالية اللي ليها نفس الكتيبة (زي الخلايا المدمجة في الشيت)
+  const batSpan = useMemo(() => {
+    const span = new Map<number, number>() // id → rowSpan (0 = مدموجة في اللي فوقها)
+    for (let i = 0; i < rows.length; ) {
+      const b = rows[i].battalion
+      let j = i + 1
+      if (b) while (j < rows.length && rows[j].battalion === b) j++
+      span.set(rows[i].id, j - i)
+      for (let k = i + 1; k < j; k++) span.set(rows[k].id, 0)
+      i = j
+    }
+    return span
+  }, [rows])
   const activeFilterKeys = Object.keys(filters) as FieldKey[]
 
   const cycleMark = async (p: Project, key: FieldKey) => {
@@ -145,8 +168,8 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
   }
 
   const cellStyle = (p: Project, c: Column) => {
-    const color = p.colors?.[c.key]
-    return color ? { background: COLOR_HEX[color] } : undefined
+    const bg = cellBg(p.colors, c.key)
+    return bg ? { background: bg } : undefined
   }
 
   return (
@@ -160,15 +183,15 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
       </div>
 
       <div className="kpis">
-        <Kpi k="عدد المشاريع" v={totals.count} />
-        <Kpi k="المقايسات المتوقفة" v={totals.stopped} />
-        <Kpi k="مقايسات تم تسليمها" v={totals.delivered} />
-        <Kpi k="لوحات ✓" v={totals.marks.st_drawings} of={totals.count} />
-        <Kpi k="موازنة ✓" v={totals.marks.st_budget} of={totals.count} />
-        <Kpi k="ذاتي ✓" v={totals.marks.st_self} of={totals.count} />
-        <Kpi k="عقود ✓" v={totals.marks.st_contracts} of={totals.count} />
-        <Kpi k="الموازنة موجودة" v={totals.budgetFound} of={totals.count} />
-        <Kpi k="شامل (مليون)" v={fmtNum(totals.incl, 1)} />
+        <Kpi k="عدد المشاريع" v={kpi.count} on={quick === null} onClick={() => setQuick(null)} />
+        <Kpi k="المقايسات المتوقفة" v={kpi.stopped} q="stopped" quick={quick} setQuick={setQuick} />
+        <Kpi k="مقايسات تم تسليمها" v={kpi.delivered} q="delivered" quick={quick} setQuick={setQuick} />
+        <Kpi k="لوحات ✓" v={kpi.marks.st_drawings} of={kpi.count} q="st_drawings" quick={quick} setQuick={setQuick} />
+        <Kpi k="موازنة ✓" v={kpi.marks.st_budget} of={kpi.count} q="st_budget" quick={quick} setQuick={setQuick} />
+        <Kpi k="ذاتي ✓" v={kpi.marks.st_self} of={kpi.count} q="st_self" quick={quick} setQuick={setQuick} />
+        <Kpi k="عقود ✓" v={kpi.marks.st_contracts} of={kpi.count} q="st_contracts" quick={quick} setQuick={setQuick} />
+        <Kpi k="الموازنة موجودة" v={kpi.budgetFound} of={kpi.count} q="budget" quick={quick} setQuick={setQuick} />
+        <Kpi k="شامل (مليون)" v={fmtNum(kpi.incl, 1)} q="incl" quick={quick} setQuick={setQuick} />
       </div>
 
       <div className="toolbar">
@@ -190,13 +213,14 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
         <button className="btn" onClick={() => window.print()}>
           طباعة
         </button>
-        {(activeFilterKeys.length > 0 || q || sort) && (
+        {(activeFilterKeys.length > 0 || q || sort || quick) && (
           <button
             className="btn ghost"
             onClick={() => {
               setFilters({})
               setQ('')
               setSort(null)
+              setQuick(null)
             }}
           >
             مسح كل الفلاتر
@@ -204,8 +228,14 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
         )}
       </div>
 
-      {activeFilterKeys.length > 0 && (
+      {(activeFilterKeys.length > 0 || quick) && (
         <div className="active-filters">
+          {quick && (
+            <span className="chip">
+              {QUICK_LABEL[quick]}
+              <button aria-label="إزالة" onClick={() => setQuick(null)}>×</button>
+            </span>
+          )}
           {activeFilterKeys.map((k) => {
             const col = COLUMNS.find((c) => c.key === k)!
             const vals = filters[k]!
@@ -258,10 +288,24 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
               <tr key={p.id} onClick={() => setEditing(p)}>
                 {visible.map((c, i) => {
                   const st = cellStyle(p, c)
-                  const red = p.colors?.[c.key] === 'red' || p.colors?.[c.key] === 'darkgreen'
-                  const cls = ['c-' + c.kind, i === 0 ? 'sticky-1' : c.key === 'name' ? 'sticky-2' : '', red ? 'cell-red' : '']
+                  const cls = ['c-' + c.kind, i === 0 ? 'sticky-1' : c.key === 'name' ? 'sticky-2' : '']
                     .filter(Boolean)
                     .join(' ')
+                  if (c.key === 'battalion') {
+                    const span = batSpan.get(p.id) ?? 1
+                    if (span === 0) return null
+                    return (
+                      <td
+                        key={c.key}
+                        rowSpan={span}
+                        className={cls + ' c-bat-merged'}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ maxWidth: c.width }}
+                      >
+                        {p.battalion ?? ''}
+                      </td>
+                    )
+                  }
                   return (
                     <td key={c.key} className={cls} style={{ ...st, maxWidth: c.width }}>
                       {renderCell(p, c)}
@@ -363,15 +407,26 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
   )
 }
 
-function Kpi({ k, v, of }: { k: string; v: number | string; of?: number }) {
+function Kpi({ k, v, of, q, quick, setQuick, on, onClick }: {
+  k: string
+  v: number | string
+  of?: number
+  q?: QuickKey
+  quick?: QuickKey | null
+  setQuick?: (q: QuickKey | null) => void
+  on?: boolean
+  onClick?: () => void
+}) {
+  const active = on ?? (q != null && quick === q)
+  const click = onClick ?? (() => setQuick?.(active ? null : q!))
   return (
-    <div className="kpi">
+    <button type="button" className={'kpi click' + (active ? ' on' : '')} onClick={click} aria-pressed={active}>
       <div className="k">{k}</div>
       <div className="v">
         {v}
         {of != null && <small> / {of}</small>}
       </div>
-    </div>
+    </button>
   )
 }
 

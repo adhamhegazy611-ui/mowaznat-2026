@@ -286,3 +286,13 @@ table.plain { width: 100%; border-collapse: collapse; font-size: 13px; }
   .sheet td.c-longtext .clamp { -webkit-line-clamp: unset; display: block; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* ---------- كروت قابلة للضغط + دمج الكتيبة ---------- */
+.kpi.click { text-align: right; cursor: pointer; font: inherit; color: inherit; transition: border-color .12s, box-shadow .12s, background .12s; }
+.kpi.click:hover { border-color: var(--brand-2); }
+.kpi.click.on { border-color: var(--brand); background: #eaf3ec; box-shadow: inset 0 0 0 1px var(--brand); }
+.kpi.click.on .k { color: var(--brand); font-weight: 700; }
+.sheet td.c-bat-merged { background: #f4f6f2; font-weight: 800; font-size: 15px; cursor: default; vertical-align: middle; border-bottom: 1px solid var(--line-strong); }
+.sheet tbody tr:hover td.c-bat-merged { box-shadow: none; }
+.stage.click { cursor: pointer; border-radius: 8px; padding: 4px 6px; margin: 6px -6px; }
+.stage.click:hover { background: var(--hover); }

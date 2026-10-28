@@ -1,5 +1,5 @@
 import type { Project } from './types'
-import { COLUMNS, COLOR_HEX, type Column } from './columns'
+import { COLUMNS, cellBg, type Column } from './columns'
 import { computeTotals, todayStr } from './util'
 
 /** تصدير نفس شكل الشيت: RTL، صف العنوان، الألوان، صف الإجمالي، تجميد الهيدر وفلتر */
@@ -54,13 +54,22 @@ export async function exportToExcel(rows: Project[], visible: Column[]) {
         wrapText: true,
         horizontal: c.kind === 'longtext' || c.kind === 'text' || c.kind === 'path' ? 'right' : 'center',
       }
-      const color = p.colors?.[c.key]
-      if (color) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + COLOR_HEX[color].slice(1) } }
-        if (color === 'red') cell.font = { ...font, color: { argb: 'FFFFFFFF' } }
-      }
+      const bg = c.key === 'battalion' ? undefined : cellBg(p.colors, c.key)
+      if (bg) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + bg.slice(1).toUpperCase() } }
+      if (c.key === 'battalion') cell.font = { ...font, bold: true }
     })
   })
+
+  // دمج خانة «ك» للصفوف المتتالية اللي ليها نفس الكتيبة
+  const bi = cols.findIndex((c) => c.key === 'battalion')
+  if (bi >= 0) {
+    for (let i = 0; i < rows.length; ) {
+      let j = i + 1
+      if (rows[i].battalion) while (j < rows.length && rows[j].battalion === rows[i].battalion) j++
+      if (j - i > 1) ws.mergeCells(3 + i, bi + 1, 2 + j, bi + 1)
+      i = j
+    }
+  }
 
   // صف الإجمالي
   const t = computeTotals(rows)

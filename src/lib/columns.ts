@@ -21,7 +21,7 @@ export const COLUMNS: Column[] = [
   { key: 'sector', label: 'القطاع', kind: 'text', width: 130, excel: 'C' },
   { key: 'stopped_count', label: 'عدد المقايسات المتوقفة', kind: 'int', width: 96, hiddenByDefault: true, excel: 'D' },
   { key: 'delivered_count', label: 'مقايسات تم تسليمها', kind: 'int', width: 96, excel: 'E' },
-  { key: 'battalion', label: 'الكتيبة', kind: 'battalion', width: 84, excel: 'F' },
+  { key: 'battalion', label: 'ك', kind: 'battalion', width: 64, excel: 'F' },
   { key: 'reviewer', label: 'المراجع', kind: 'person', width: 124, excel: 'G' },
   { key: 'pricing_by', label: 'تسعير', kind: 'person', width: 124, hiddenByDefault: true, excel: 'H' },
   { key: 'contracts_reviewer', label: 'مراجعة العقود', kind: 'person', width: 124, hiddenByDefault: true, excel: 'I' },
@@ -53,6 +53,23 @@ export const COLOR_HEX: Record<CellColor, string> = {
   yellow: '#FFFF00',
   red: '#FF0000',
 }
+// ألوان فاتحة للصف كله (لون الصف = لون خانة «بيان الاعمال»)
+export const COLOR_LIGHT: Record<CellColor, string> = {
+  green: '#e3f3d3',
+  darkgreen: '#c8ebd3',
+  orange: '#ffefc7',
+  yellow: '#fffbc2',
+  red: '#fde0e0',
+}
+
+/** لون الخانة: لونها هي لو مختلف عن الصف، وإلا لون الصف — بالدرجة الفاتحة */
+export function cellBg(colors: Partial<Record<string, CellColor>> | undefined, key: string): string | undefined {
+  const row = colors?.name
+  const own = colors?.[key]
+  const c = own && own !== row ? own : row
+  return c ? COLOR_LIGHT[c] : undefined
+}
+
 export const COLOR_LABEL: Record<CellColor, string> = {
   green: 'أخضر',
   darkgreen: 'أخضر غامق',

@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
 import type { Project, Reviewer } from '../lib/types'
-import { computeTotals, fmtNum } from '../lib/util'
+import { computeTotals, fmtNum, type QuickKey } from '../lib/util'
 
 interface Props {
   projects: Project[]
   reviewers: Reviewer[]
   onPick: (filter: { key: 'reviewer' | 'battalion'; value: string }) => void
+  onQuick: (q: QuickKey | null) => void
 }
 
 const STAGES = [
@@ -15,7 +16,7 @@ const STAGES = [
   ['st_contracts', 'عقود'],
 ] as const
 
-export default function SummaryPage({ projects, reviewers, onPick }: Props) {
+export default function SummaryPage({ projects, reviewers, onPick, onQuick }: Props) {
   const t = computeTotals(projects)
 
   const byReviewer = useMemo(() => {
@@ -60,19 +61,19 @@ export default function SummaryPage({ projects, reviewers, onPick }: Props) {
       </div>
 
       <div className="kpis">
-        <div className="kpi"><div className="k">عدد المشاريع</div><div className="v">{t.count}</div></div>
-        <div className="kpi"><div className="k">المقايسات المتوقفة</div><div className="v">{t.stopped}</div></div>
-        <div className="kpi"><div className="k">مقايسات تم تسليمها</div><div className="v">{t.delivered}</div></div>
-        <div className="kpi"><div className="k">الموازنة موجودة</div><div className="v">{t.budgetFound}<small> / {t.count}</small></div></div>
-        <div className="kpi"><div className="k">شامل (مليون)</div><div className="v">{fmtNum(t.incl, 1)}</div></div>
-        <div className="kpi"><div className="k">غير شامل (مليون)</div><div className="v">{fmtNum(t.excl, 1)}</div></div>
+        <Card k="عدد المشاريع" v={t.count} onClick={() => onQuick(null)} />
+        <Card k="المقايسات المتوقفة" v={t.stopped} onClick={() => onQuick('stopped')} />
+        <Card k="مقايسات تم تسليمها" v={t.delivered} onClick={() => onQuick('delivered')} />
+        <Card k="الموازنة موجودة" v={t.budgetFound} of={t.count} onClick={() => onQuick('budget')} />
+        <Card k="شامل (مليون)" v={fmtNum(t.incl, 1)} onClick={() => onQuick('incl')} />
+        <Card k="غير شامل (مليون)" v={fmtNum(t.excl, 1)} onClick={() => onQuick(null)} />
       </div>
 
       <div className="two">
         <div className="card">
           <h3>تقدّم المراحل</h3>
           {STAGES.map(([k, l]) => (
-            <div className="stage" key={k}>
+            <div className="stage click" key={k} onClick={() => onQuick(k)} title="اضغط يفتح المشاريع">
               <span>{l}</span>
               <div className="bar"><i style={{ width: pct(t.marks[k]) + '%' }} /></div>
               <b>{t.marks[k]} ✓ ({pct(t.marks[k])}%)</b>
@@ -102,7 +103,7 @@ export default function SummaryPage({ projects, reviewers, onPick }: Props) {
       </div>
       <div className="card">
         <h3>حسب الكتيبة</h3>
-        <GroupTable rows={byBattalion} first="الكتيبة" onPick={(v) => onPick({ key: 'battalion', value: v })} />
+        <GroupTable rows={byBattalion} first="ك" onPick={(v) => onPick({ key: 'battalion', value: v })} />
       </div>
     </>
   )
@@ -145,5 +146,17 @@ function GroupTable({ rows, first, onPick }: { rows: Row[]; first: string; onPic
         </tbody>
       </table>
     </div>
+  )
+}
+
+function Card({ k, v, of, onClick }: { k: string; v: number | string; of?: number; onClick: () => void }) {
+  return (
+    <button type="button" className="kpi click" onClick={onClick} title="اضغط يفتح المشاريع">
+      <div className="k">{k}</div>
+      <div className="v">
+        {v}
+        {of != null && <small> / {of}</small>}
+      </div>
+    </button>
   )
 }

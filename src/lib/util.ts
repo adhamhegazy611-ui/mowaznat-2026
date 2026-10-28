@@ -85,3 +85,32 @@ export function savePref(key: string, v: unknown) {
     /* ignore */
   }
 }
+
+// ---------- الفلاتر السريعة (لما تدوس على كارت من الكروت اللي فوق) ----------
+export type QuickKey = 'stopped' | 'delivered' | 'st_drawings' | 'st_budget' | 'st_self' | 'st_contracts' | 'budget' | 'incl'
+export const QUICK_LABEL: Record<QuickKey, string> = {
+  stopped: 'فيها مقايسات متوقفة',
+  delivered: 'فيها مقايسات تم تسليمها',
+  st_drawings: 'لوحات ✓',
+  st_budget: 'موازنة ✓',
+  st_self: 'ذاتي ✓',
+  st_contracts: 'عقود ✓',
+  budget: 'الموازنة موجودة',
+  incl: 'ليها قيمة شامل',
+}
+export function quickPass(p: Project, k: QuickKey | null): boolean {
+  switch (k) {
+    case null:
+      return true
+    case 'stopped':
+      return (p.stopped_count ?? 0) > 0
+    case 'delivered':
+      return (p.delivered_count ?? 0) > 0
+    case 'budget':
+      return !!p.budget_status && /^موجود[ةه]$/.test(p.budget_status.trim())
+    case 'incl':
+      return p.total_incl != null
+    default:
+      return p[k] === '✓'
+  }
+}
