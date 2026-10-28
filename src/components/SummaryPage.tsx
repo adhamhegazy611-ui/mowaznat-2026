@@ -1,11 +1,11 @@
 import { useMemo } from 'react'
 import type { Project, Reviewer } from '../lib/types'
-import { computeTotals, fmtNum, type QuickKey } from '../lib/util'
+import { BLANK, computeTotals, fmtNum, normalize, type QuickKey } from '../lib/util'
 
 interface Props {
   projects: Project[]
   reviewers: Reviewer[]
-  onPick: (filter: { key: 'reviewer' | 'battalion'; value: string }) => void
+  onPick: (filter: { key: 'reviewer' | 'battalion' | 'action_taken'; values: string[] }) => void
   onQuick: (q: QuickKey | null) => void
 }
 
@@ -42,13 +42,19 @@ export default function SummaryPage({ projects, reviewers, onPick, onQuick }: Pr
       .sort((a, b) => b.count - a.count)
   }, [projects])
 
+  // «ما تم اجراؤه» متجمّع: «جاري الاعتماد في الهيئة بتاريخ ...» و«جاري الاعتماد في الهيئه» بيتحسبوا مع بعض
   const byStatus = useMemo(() => {
-    const m = new Map<string, number>()
+    const m = new Map<string, { label: string; values: Set<string>; n: number }>()
     for (const p of projects) {
-      const k = (p.action_taken ?? '').trim() || 'غير محدد'
-      m.set(k, (m.get(k) ?? 0) + 1)
+      const raw = (p.action_taken ?? '').trim()
+      const head = raw.split('\n')[0].replace(/\s*بتاريخ.*$/, '').replace(/[\s/]+$/, '').trim()
+      const key = head ? normalize(head) : ''
+      const g = m.get(key) ?? { label: head || 'غير محدد', values: new Set<string>(), n: 0 }
+      g.values.add(raw || BLANK)
+      g.n++
+      m.set(key, g)
     }
-    return [...m.entries()].sort((a, b) => b[1] - a[1])
+    return [...m.values()].sort((a, b) => b.n - a.n)
   }, [projects])
 
   const pct = (n: number) => (t.count ? Math.round((n / t.count) * 100) : 0)
@@ -66,7 +72,7 @@ export default function SummaryPage({ projects, reviewers, onPick, onQuick }: Pr
         <Card k="مقايسات تم تسليمها" v={t.delivered} onClick={() => onQuick('delivered')} />
         <Card k="الموازنة موجودة" v={t.budgetFound} of={t.count} onClick={() => onQuick('budget')} />
         <Card k="شامل (مليون)" v={fmtNum(t.incl, 1)} onClick={() => onQuick('incl')} />
-        <Card k="غير شامل (مليون)" v={fmtNum(t.excl, 1)} onClick={() => onQuick(null)} />
+        <Card k="غير شامل (مليون)" v={fmtNum(t.excl, 1)} onClick={() => onQuick('excl')} />
       </div>
 
       <div className="two">
@@ -81,14 +87,19 @@ export default function SummaryPage({ projects, reviewers, onPick, onQuick }: Pr
           ))}
         </div>
         <div className="card">
-          <h3>ما تم اجراؤه</h3>
+          <h3>ما تم اجراؤه <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--ink-3)' }}>— اضغط على أي سطر يفتح مشاريعه</span></h3>
           <div className="table-scroll">
             <table className="plain">
               <tbody>
-                {byStatus.map(([k, n]) => (
-                  <tr key={k}>
-                    <td>{k}</td>
-                    <td style={{ width: 60 }}><b>{n}</b></td>
+                {byStatus.map((g) => (
+                  <tr
+                    key={g.label}
+                    className="click"
+                    title="اضغط يفتح المشاريع"
+                    onClick={() => onPick({ key: 'action_taken', values: [...g.values] })}
+                  >
+                    <td>{g.label}</td>
+                    <td style={{ width: 60 }}><b>{g.n}</b></td>
                   </tr>
                 ))}
               </tbody>
@@ -99,11 +110,11 @@ export default function SummaryPage({ projects, reviewers, onPick, onQuick }: Pr
 
       <div className="card">
         <h3>حسب المراجع <span className="sub" style={{ fontWeight: 400, fontSize: 12, color: 'var(--ink-3)' }}>— اضغط على الاسم يفتح مشاريعه</span></h3>
-        <GroupTable rows={byReviewer} first="المراجع" onPick={(v) => onPick({ key: 'reviewer', value: v })} />
+        <GroupTable rows={byReviewer} first="المراجع" onPick={(v) => onPick({ key: 'reviewer', values: [v || BLANK] })} />
       </div>
       <div className="card">
         <h3>حسب الكتيبة</h3>
-        <GroupTable rows={byBattalion} first="ك" onPick={(v) => onPick({ key: 'battalion', value: v })} />
+        <GroupTable rows={byBattalion} first="ك" onPick={(v) => onPick({ key: 'battalion', values: [v || BLANK] })} />
       </div>
     </>
   )

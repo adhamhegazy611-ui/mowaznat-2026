@@ -8,7 +8,7 @@ import AdminPage from './components/AdminPage'
 import HistoryList from './components/HistoryList'
 import type { HistoryEntry } from './lib/types'
 import type { FieldKey } from './lib/columns'
-import { BLANK, type QuickKey } from './lib/util'
+import type { QuickKey } from './lib/util'
 
 type Page = 'projects' | 'summary' | 'history' | 'admin'
 const ROLE_AR = { admin: 'مدير', editor: 'محرر', viewer: 'مشاهد' } as const
@@ -135,8 +135,8 @@ export default function App() {
           <SummaryPage
             projects={projects}
             reviewers={reviewers}
-            onPick={({ key, value }) => {
-              setPreset({ filters: { [key]: [value || BLANK] }, n: preset.n + 1 })
+            onPick={({ key, values }) => {
+              setPreset({ filters: { [key]: values }, n: preset.n + 1 })
               go('projects')
             }}
             onQuick={(quick) => {

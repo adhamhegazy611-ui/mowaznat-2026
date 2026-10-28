@@ -87,7 +87,7 @@ export function savePref(key: string, v: unknown) {
 }
 
 // ---------- الفلاتر السريعة (لما تدوس على كارت من الكروت اللي فوق) ----------
-export type QuickKey = 'stopped' | 'delivered' | 'st_drawings' | 'st_budget' | 'st_self' | 'st_contracts' | 'budget' | 'incl'
+export type QuickKey = 'stopped' | 'delivered' | 'st_drawings' | 'st_budget' | 'st_self' | 'st_contracts' | 'budget' | 'incl' | 'excl'
 export const QUICK_LABEL: Record<QuickKey, string> = {
   stopped: 'فيها مقايسات متوقفة',
   delivered: 'فيها مقايسات تم تسليمها',
@@ -97,6 +97,7 @@ export const QUICK_LABEL: Record<QuickKey, string> = {
   st_contracts: 'عقود ✓',
   budget: 'الموازنة موجودة',
   incl: 'ليها قيمة شامل',
+  excl: 'ليها قيمة غير شامل',
 }
 export function quickPass(p: Project, k: QuickKey | null): boolean {
   switch (k) {
@@ -110,6 +111,8 @@ export function quickPass(p: Project, k: QuickKey | null): boolean {
       return !!p.budget_status && /^موجود[ةه]$/.test(p.budget_status.trim())
     case 'incl':
       return p.total_incl != null
+    case 'excl':
+      return p.total_excl != null
     default:
       return p[k] === '✓'
   }
