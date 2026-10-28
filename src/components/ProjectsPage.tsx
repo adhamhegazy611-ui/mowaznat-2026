@@ -19,7 +19,7 @@ interface Props {
 }
 
 type Filters = Partial<Record<FieldKey, string[]>>
-const PREF_COLS = 'mowazanat-cols-v1'
+const PREF_COLS = 'mowazanat-cols-v2'
 const NEXT: Record<string, Mark> = { '✓': '✗', '✗': null, null: '✓' }
 
 export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, toast, reload, initialFilters, initialQuick }: Props) {
@@ -364,16 +364,6 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
               ))}
             </div>
             <div className="acts">
-              <button
-                className="btn small"
-                onClick={() => {
-                  const n = COLUMNS.filter((c) => c.hiddenByDefault).map((c) => c.key)
-                  setHidden(n)
-                  savePref(PREF_COLS, n)
-                }}
-              >
-                زي الشيت
-              </button>
               <button
                 className="btn small"
                 onClick={() => {
