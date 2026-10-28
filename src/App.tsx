@@ -110,7 +110,7 @@ export default function App() {
           موازنات
         </div>
         <nav className="nav">
-          <button className={page === 'projects' ? 'active' : ''} onClick={() => go('projects')}>موقف المشاريع</button>
+          <button className={page === 'projects' ? 'active' : ''} onClick={() => go('projects')}>مشاريع الطرق</button>
           <button className={page === 'summary' ? 'active' : ''} onClick={() => go('summary')}>الملخص</button>
           <button className={page === 'history' ? 'active' : ''} onClick={() => go('history')}>سجل التعديلات</button>
           {isAdmin && (

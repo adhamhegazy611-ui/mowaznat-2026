@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { COLUMNS, cellBg, emptyProject, type Column, type FieldKey } from '../lib/columns'
 import type { Mark, Project, Reviewer } from '../lib/types'
-import { BLANK, QUICK_LABEL, quickPass, type QuickKey, computeTotals, copyText, displayValue, fmtDate, fmtNum, loadPref, normalize, savePref, todayStr } from '../lib/util'
+import { BLANK, QUICK_LABEL, quickPass, type QuickKey, computeTotals, copyText, displayValue, fmtDate, fmtNum, loadPref, normalize, savePref } from '../lib/util'
 import { exportToExcel } from '../lib/exportExcel'
 import ColumnFilter, { type SortDir } from './ColumnFilter'
 import ProjectForm from './ProjectForm'
@@ -175,8 +175,7 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
   return (
     <>
       <div className="page-head">
-        <h1>موقف المشاريع المتوقفة</h1>
-        <span className="date">{todayStr()}</span>
+        <h1>مشاريع الطرق</h1>
         <span className="sub">
           {rows.length === projects.length ? `${projects.length} مشروع` : `${rows.length} من ${projects.length} مشروع`}
         </span>

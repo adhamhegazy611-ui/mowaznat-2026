@@ -6,7 +6,7 @@ import { computeTotals, todayStr } from './util'
 export async function exportToExcel(rows: Project[], visible: Column[]) {
   const ExcelJS = (await import('exceljs')).default
   const wb = new ExcelJS.Workbook()
-  const ws = wb.addWorksheet('موقف المشاريع', {
+  const ws = wb.addWorksheet('مشاريع الطرق', {
     views: [{ rightToLeft: true, state: 'frozen', ySplit: 2 }],
     pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 },
   })
@@ -21,7 +21,7 @@ export async function exportToExcel(rows: Project[], visible: Column[]) {
   ws.getCell(1, 1).value = todayStr()
   ws.mergeCells(1, 2, 1, cols.length)
   const title = ws.getCell(1, 2)
-  title.value = 'موقف المشاريع المتوقفة'
+  title.value = 'مشاريع الطرق'
   title.font = { ...font, size: 16, bold: true }
   title.alignment = { horizontal: 'center', vertical: 'middle' }
   ws.getRow(1).height = 28
@@ -97,7 +97,7 @@ export async function exportToExcel(rows: Project[], visible: Column[]) {
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob)
   const d = new Date()
-  a.download = `موقف المشاريع ${d.getDate()}-${d.getMonth() + 1}-${d.getFullYear()}.xlsx`
+  a.download = `مشاريع الطرق ${d.getDate()}-${d.getMonth() + 1}-${d.getFullYear()}.xlsx`
   a.click()
   setTimeout(() => URL.revokeObjectURL(a.href), 2000)
 }
