@@ -44,6 +44,10 @@ export interface Api {
   setRole(id: string, role: Role | null, battalions?: string[] | null): Promise<void>
 
   listHistory(projectId?: number): Promise<HistoryEntry[]>
+
+  /** ربط أسماء المشاريع في شيت المقايسات المتوقفة بمشاريع الموقع (null = تجاهل) */
+  listAliases(): Promise<Map<string, number | null>>
+  saveAliases(rows: { alias: string; project_id: number | null }[]): Promise<void>
 }
 
 // ------------------------------------------------------------------
@@ -138,6 +142,14 @@ function supabaseApi(sb: SupabaseClient): Api {
       let q = sb.from('mz_history').select('*').order('created_at', { ascending: false }).limit(300)
       if (projectId) q = q.eq('project_id', projectId)
       return must(await q) as HistoryEntry[]
+    },
+
+    async listAliases() {
+      const rows = must(await sb.from('mz_aliases').select('alias, project_id')) as { alias: string; project_id: number | null }[]
+      return new Map(rows.map((r) => [r.alias, r.project_id]))
+    },
+    async saveAliases(rows) {
+      if (rows.length) must(await sb.from('mz_aliases').upsert(rows, { onConflict: 'alias' }))
     },
   }
 }
@@ -295,6 +307,15 @@ function demoApi(): Api {
     async listHistory(projectId) {
       const h = load().history
       return projectId ? h.filter((x) => x.project_id === projectId) : h
+    },
+    async listAliases() {
+      const db = load() as DB & { aliases?: Record<string, number | null> }
+      return new Map(Object.entries(db.aliases ?? {}))
+    },
+    async saveAliases(rows) {
+      const db = load() as DB & { aliases?: Record<string, number | null> }
+      db.aliases = { ...(db.aliases ?? {}), ...Object.fromEntries(rows.map((r) => [r.alias, r.project_id])) }
+      save()
     },
   }
 }

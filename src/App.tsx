@@ -155,7 +155,7 @@ export default function App() {
             <div className="card">{history == null ? <div className="spinner">جاري التحميل…</div> : <HistoryList items={history} />}</div>
           </>
         ) : page === 'admin' && isAdmin ? (
-          <AdminPage reviewers={reviewers} projects={projects} reloadReviewers={loadReviewers} toast={toast} me={session.userId} />
+          <AdminPage reviewers={reviewers} projects={projects} reloadReviewers={loadReviewers} reloadProjects={loadProjects} toast={toast} me={session.userId} />
         ) : (
           <ProjectsPage
             key={preset.n}

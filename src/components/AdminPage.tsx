@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react'
 import { api, DEMO } from '../lib/api'
 import type { Profile, Project, Reviewer, Role } from '../lib/types'
 import { batTokens } from '../lib/util'
+import ImportStopped from './ImportStopped'
 
 const ROLE_AR: Record<Role, string> = { admin: 'مدير (كل الصلاحيات)', editor: 'محرر (إضافة وتعديل)', viewer: 'مشاهد (عرض فقط)' }
 
-export default function AdminPage({ reviewers, projects, reloadReviewers, toast, me }: {
+export default function AdminPage({ reviewers, projects, reloadReviewers, reloadProjects, toast, me }: {
   reviewers: Reviewer[]
   projects: Project[]
   reloadReviewers: () => void
+  reloadProjects: () => void
   toast: (m: string) => void
   me: string
 }) {
@@ -42,6 +44,7 @@ export default function AdminPage({ reviewers, projects, reloadReviewers, toast,
       <div className="page-head">
         <h1>الإدارة</h1>
       </div>
+      <ImportStopped projects={projects} toast={toast} reload={reloadProjects} />
       <div className="two">
         <div className="card">
           <h3>المراجعين</h3>

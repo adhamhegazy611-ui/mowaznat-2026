@@ -29,12 +29,22 @@ export const BLANK = '(فارغة)'
 export function normalize(s: string) {
   return s
     .replace(/[إأآا]/g, 'ا')
-    .replace(/ى/g, 'ي')
+    .replace(/[ىی]/g, 'ي')
     .replace(/ة/g, 'ه')
+    .replace(/ک/g, 'ك')
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x660))
     .replace(/[ًٌٍَُِّْـ]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase()
+}
+
+/** مفتاح اسم المشروع للمطابقة: من غير أقواس وعلامات، وكلمات بس */
+export function nameKey(s: string) {
+  return normalize(s)
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 export interface Totals {

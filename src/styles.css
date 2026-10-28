@@ -305,3 +305,17 @@ table.plain { width: 100%; border-collapse: collapse; font-size: 13px; }
 .bat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; max-height: 220px; overflow: auto; }
 .bat-pop .acts { display: flex; gap: 6px; margin-top: 8px; }
 .scope-chip { background: rgba(255,255,255,.16); border-radius: 99px; padding: 2px 10px; }
+
+/* ---------- رفع شيت المقايسات المتوقفة ---------- */
+.import-sum { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; font-size: 13.5px; }
+.import-sum .bad { color: var(--no); font-weight: 700; }
+.import-sum .muted { color: var(--ink-3); }
+table.import td { vertical-align: top; }
+table.import td.note { text-align: right; white-space: pre-line; font-size: 12.5px; color: var(--ink-2); max-width: 280px; }
+table.import select { max-width: 300px; border: 1px solid var(--line-strong); border-radius: 7px; padding: 4px 6px; background: #fff; }
+.tag { display: inline-block; border-radius: 99px; padding: 1px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.tag.ok { background: #e3f4e8; color: var(--ok); }
+.tag.warn { background: #fff1d1; color: #8a5a00; }
+.tag.bad { background: #fbe6e6; color: var(--no); }
+.tag.muted { background: #eceeec; color: var(--ink-3); }
+label.zero { display: flex; gap: 8px; align-items: center; margin-top: 12px; font-size: 13.5px; cursor: pointer; }
