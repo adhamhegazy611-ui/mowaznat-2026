@@ -26,7 +26,7 @@ export default function Login({ onDone }: { onDone: () => void }) {
     <div className="login-wrap">
       <div className="login">
         <h1>موازنات</h1>
-        <p>متابعة مشاريع الطرق والموازنات</p>
+        <p>متابعة مشروعات الطرق والموازنات</p>
         <form onSubmit={submit}>
           <div className="field">
             <div className="lab">اسم المستخدم</div>

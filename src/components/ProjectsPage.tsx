@@ -175,7 +175,7 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
   return (
     <>
       <div className="page-head">
-        <h1>مشاريع الطرق</h1>
+        <h1>مشروعات الطرق</h1>
         <span className="sub">
           {rows.length === projects.length ? `${projects.length} مشروع` : `${rows.length} من ${projects.length} مشروع`}
         </span>
