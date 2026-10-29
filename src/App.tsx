@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, DEMO, type Session } from './lib/api'
 import type { Project, Reviewer } from './lib/types'
 import Login from './components/Login'
@@ -32,8 +32,22 @@ export default function App() {
     window.setTimeout(() => setToastMsg((x) => (x === m ? '' : x)), 2600)
   }, [])
 
+  const [sessionErr, setSessionErr] = useState('')
+  const seq = useRef(0)
   const loadSession = useCallback(() => {
-    api.getSession().then(setSession).catch(() => setSession(null))
+    // أكتر من طلب ممكن يشتغلوا مع بعض (فتح الصفحة + تجديد التوكن): ناخد نتيجة آخر واحد بس
+    const n = ++seq.current
+    api
+      .getSession()
+      .then((s) => {
+        if (n !== seq.current) return
+        setSessionErr('')
+        setSession(s)
+      })
+      .catch((e) => {
+        if (n !== seq.current) return
+        setSessionErr((e as Error).message)
+      })
   }, [])
 
   useEffect(() => {
@@ -50,7 +64,8 @@ export default function App() {
           }
         }
       }
-      loadSession()
+      // مينفعش نكلّم Supabase جوه onAuthStateChange نفسها (بيعلّق) — نأجّلها لحظة
+      setTimeout(loadSession, 0)
     })
   }, [loadSession])
 
@@ -83,6 +98,16 @@ export default function App() {
     setPage(p)
   }
 
+  if (sessionErr && !session)
+    return (
+      <div className="login-wrap">
+        <div className="login">
+          <h1>موازنات</h1>
+          <p>{sessionErr}</p>
+          <button className="btn primary" onClick={loadSession}>حاول تاني</button>
+        </div>
+      </div>
+    )
   if (session === undefined) return <div className="spinner">جاري التحميل…</div>
   if (!session) return <Login onDone={loadSession} />
 

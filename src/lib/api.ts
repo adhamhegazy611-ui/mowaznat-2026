@@ -66,7 +66,16 @@ function supabaseApi(sb: SupabaseClient): Api {
       const { data } = await sb.auth.getSession()
       const u = data.session?.user
       if (!u) return null
-      const { data: me } = await sb.rpc('mz_me').maybeSingle<{ username: string; role: Role | null; battalions: string[] | null }>()
+      type Me = { username: string; role: Role | null; battalions: string[] | null }
+      let r = await sb.rpc('mz_me').maybeSingle<Me>()
+      if (r.error) {
+        // التوكن ممكن يكون انتهى (الموبايل كان قافل فترة): نجدّده ونجرب تاني
+        await sb.auth.refreshSession()
+        r = await sb.rpc('mz_me').maybeSingle<Me>()
+      }
+      // لو لسه فيه مشكلة اتصال منقولش «مالكش صلاحية» — نرمي خطأ والشاشة تعرض «حاول تاني»
+      if (r.error) throw new Error('مقدرتش أتأكد من حسابك، اتأكد من النت وحاول تاني')
+      const me = r.data
       const username = me?.username ?? (u.email ?? '').split('@')[0]
       return { userId: u.id, email: u.email ?? '', name: username, role: me?.role ?? null, battalions: me?.battalions ?? null }
     },
