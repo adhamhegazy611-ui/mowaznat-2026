@@ -26,11 +26,11 @@
 html, body { margin: 0; height: 100%; }
 body {
   font-family: 'Cairo', system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
-  /* خلفية طريق أسفلت باهتة ورا المحتوى */
-  background:
-    linear-gradient(180deg, rgba(243, 244, 241, .93) 0%, rgba(243, 244, 241, .88) 55%, rgba(243, 244, 241, .80) 100%),
-    url('/road.jpg') center bottom / cover no-repeat fixed,
-    var(--bg);
+  /* خلفية رسم طرق (زي موقع حجز المراجعة) */
+  background-color: var(--bg);
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='640' viewBox='0 0 640 640'><g fill='none' stroke-linecap='butt'><g stroke='%23d6dcd5' stroke-width='46'><path d='M0 160 C180 160 230 360 400 360 S560 160 640 160'/><path d='M130 0 V640'/><path d='M0 520 H640'/><path d='M500 520 C500 600 470 620 470 640 M470 0 C470 30 520 80 520 200 C520 300 400 420 400 520'/></g><g stroke='%23eceee9' stroke-width='40'><path d='M0 160 C180 160 230 360 400 360 S560 160 640 160'/><path d='M130 0 V640'/><path d='M0 520 H640'/><path d='M500 520 C500 600 470 620 470 640 M470 0 C470 30 520 80 520 200 C520 300 400 420 400 520'/></g><circle cx='130' cy='520' r='52' stroke='%23d6dcd5' stroke-width='30'/><circle cx='130' cy='520' r='52' stroke='%23eceee9' stroke-width='25'/><circle cx='130' cy='520' r='30' fill='%23e3e7e1' stroke='%23d6dcd5' stroke-width='2'/><g stroke='%23c3ccc2' stroke-width='2' stroke-dasharray='14 12'><path d='M0 160 C180 160 230 360 400 360 S560 160 640 160'/><path d='M130 0 V468 M130 572 V640'/><path d='M0 520 H78 M182 520 H640'/><path d='M500 520 C500 600 470 620 470 640 M470 0 C470 30 520 80 520 200 C520 300 400 420 400 520'/></g></g></svg>");
+  background-size: 640px 640px;
+  background-attachment: fixed;
   color: var(--ink);
   font-size: 14px;
   line-height: 1.5;
@@ -258,7 +258,7 @@ table.plain { width: 100%; border-collapse: collapse; font-size: 13px; }
 .rev-row .muted { color: var(--ink-3); font-size: 12px; white-space: nowrap; }
 
 /* ---------- login ---------- */
-.login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 16px; background: linear-gradient(160deg, rgba(31, 81, 53, .82) 0%, rgba(22, 59, 39, .78) 50%, rgba(15, 42, 28, .55) 100%), url('/road.jpg') center bottom / cover no-repeat; }
+.login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 16px; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='640' viewBox='0 0 640 640'><g fill='none' stroke-linecap='butt'><g stroke='rgba(255,255,255,.07)' stroke-width='46'><path d='M0 160 C180 160 230 360 400 360 S560 160 640 160'/><path d='M130 0 V640'/><path d='M0 520 H640'/><path d='M500 520 C500 600 470 620 470 640 M470 0 C470 30 520 80 520 200 C520 300 400 420 400 520'/></g><g stroke='rgba(255,255,255,.035)' stroke-width='40'><path d='M0 160 C180 160 230 360 400 360 S560 160 640 160'/><path d='M130 0 V640'/><path d='M0 520 H640'/><path d='M500 520 C500 600 470 620 470 640 M470 0 C470 30 520 80 520 200 C520 300 400 420 400 520'/></g><circle cx='130' cy='520' r='52' stroke='rgba(255,255,255,.07)' stroke-width='30'/><circle cx='130' cy='520' r='52' stroke='rgba(255,255,255,.035)' stroke-width='25'/><circle cx='130' cy='520' r='30' fill='rgba(255,255,255,.06)' stroke='rgba(255,255,255,.07)' stroke-width='2'/><g stroke='rgba(255,255,255,.2)' stroke-width='2' stroke-dasharray='14 12'><path d='M0 160 C180 160 230 360 400 360 S560 160 640 160'/><path d='M130 0 V468 M130 572 V640'/><path d='M0 520 H78 M182 520 H640'/><path d='M500 520 C500 600 470 620 470 640 M470 0 C470 30 520 80 520 200 C520 300 400 420 400 520'/></g></g></svg>") 0 0 / 640px 640px, linear-gradient(160deg, #1f5135 0%, #163b27 55%, #0f2a1c 100%); }
 .login { background: #fff; border-radius: 16px; padding: 28px; width: min(400px, 100%); box-shadow: 0 30px 80px rgba(0,0,0,.35); }
 .login h1 { margin: 0 0 4px; font-size: 26px; color: var(--brand); }
 .login p { margin: 0 0 18px; color: var(--ink-2); }
@@ -372,5 +372,8 @@ label.zero { display: flex; gap: 8px; align-items: center; margin-top: 12px; fon
 
 @media (max-width: 720px) {
   /* الموبايل مابيدعمش fixed كويس */
-  body { background-attachment: scroll, scroll, scroll; }
+  body { background-attachment: scroll; }
 }
+
+/* شريط خطوط الطريق تحت الشريط العلوي */
+.road-strip { height: 10px; background: repeating-linear-gradient(90deg, #e9eee8 0 30px, transparent 30px 54px) center / 100% 2px no-repeat, #2b3a30; border-bottom: 1px solid #1c2820; }

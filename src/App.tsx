@@ -153,6 +153,7 @@ export default function App() {
           <button onClick={() => api.signOut().then(DEMO ? loadProjects : loadSession)}>{DEMO ? 'ترجيع البيانات' : 'خروج'}</button>
         </div>
       </header>
+      <div className="road-strip" aria-hidden />
       {DEMO && (
         <div className="demo-banner">
           وضع تجريبي: البيانات من الشيت ومتسجّلة في المتصفح ده بس. بعد ربط Supabase (ملف .env) البيانات هتبقى مشتركة بين الكل وبتسجيل دخول.
