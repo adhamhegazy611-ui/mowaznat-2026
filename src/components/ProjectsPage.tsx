@@ -184,7 +184,7 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
       </div>
 
       <div className="kpis">
-        <Kpi k="عدد المشاريع" v={kpi.count} on={quick === null} onClick={() => setQuick(null)} />
+        <Kpi k="عدد المشروعات" v={kpi.count} on={quick === null} onClick={() => setQuick(null)} />
         <Kpi k="المقايسات المتوقفة" v={kpi.stopped} q="stopped" quick={quick} setQuick={setQuick} />
         <Kpi k="مقايسات تم تسليمها" v={kpi.delivered} q="delivered" quick={quick} setQuick={setQuick} />
         <Kpi k="لوحات ✓" v={kpi.marks.st_drawings} of={kpi.count} q="st_drawings" quick={quick} setQuick={setQuick} />
@@ -417,6 +417,7 @@ function Kpi({ k, v, of, q, quick, setQuick, on, onClick }: {
         {v}
         {of != null && <small> / {of}</small>}
       </div>
+      {of != null && of > 0 && <div className="meter"><i style={{ width: (Number(v) / of) * 100 + '%' }} /></div>}
     </button>
   )
 }

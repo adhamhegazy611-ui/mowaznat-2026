@@ -58,16 +58,19 @@ export default function SummaryPage({ projects, reviewers, onPick, onQuick }: Pr
   }, [projects])
 
   const pct = (n: number) => (t.count ? Math.round((n / t.count) * 100) : 0)
+  const batBars = byBattalion.map((b) => ({ label: b.name === 'غير محددة' ? b.name : isNaN(+b.name) ? b.name : 'ك' + b.name, n: b.count, key: b.key }))
 
   return (
     <>
-      <div className="page-head">
-        <h1>الملخص</h1>
-        <span className="sub">كل الأرقام محسوبة لحظياً من جدول المشاريع</span>
+      <div className="dash-head">
+        <div>
+          <h1>الملخص</h1>
+          <div className="sub">كل الأرقام محسوبة لحظياً من جدول المشروعات — اضغط على أي رقم يفتح مشروعاته</div>
+        </div>
       </div>
 
       <div className="kpis">
-        <Card k="عدد المشاريع" v={t.count} onClick={() => onQuick(null)} />
+        <Card k="عدد المشروعات" v={t.count} onClick={() => onQuick(null)} />
         <Card k="المقايسات المتوقفة" v={t.stopped} onClick={() => onQuick('stopped')} />
         <Card k="مقايسات تم تسليمها" v={t.delivered} onClick={() => onQuick('delivered')} />
         <Card k="الموازنة موجودة" v={t.budgetFound} of={t.count} onClick={() => onQuick('budget')} />
@@ -75,48 +78,65 @@ export default function SummaryPage({ projects, reviewers, onPick, onQuick }: Pr
         <Card k="غير شامل (مليون)" v={fmtNum(t.excl, 1)} onClick={() => onQuick('excl')} />
       </div>
 
-      <div className="two">
-        <div className="card">
-          <h3>تقدّم المراحل</h3>
-          {STAGES.map(([k, l]) => (
-            <div className="stage click" key={k} onClick={() => onQuick(k)} title="اضغط يفتح المشاريع">
-              <span>{l}</span>
-              <div className="bar"><i style={{ width: pct(t.marks[k]) + '%' }} /></div>
-              <b>{t.marks[k]} ✓ ({pct(t.marks[k])}%)</b>
+      <div className="section-title"><h2>تقدّم المراحل</h2><span>نسبة المشروعات اللي المرحلة دي فيها ✓</span></div>
+      <div className="stages">
+        {STAGES.map(([k, l]) => (
+          <button type="button" className="stage-card" key={k} onClick={() => onQuick(k)} title="اضغط يفتح المشروعات">
+            <div className="top">
+              <span className="name">{l}</span>
+              <span className="pct">{pct(t.marks[k])}%</span>
             </div>
-          ))}
+            <div className="track"><i style={{ width: pct(t.marks[k]) + '%' }} /></div>
+            <span className="meta">{t.marks[k]} من {t.count} مشروع</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="section-title"><h2>الموقف</h2></div>
+      <div className="dash-grid">
+        <div className="panel">
+          <h3>ما تم اجراؤه</h3>
+          <div className="hint">عدد المشروعات في كل حالة</div>
+          <BarList
+            items={byStatus.map((g) => ({ label: g.label, n: g.n, key: g.label }))}
+            onPick={(key) => {
+              const g = byStatus.find((x) => x.label === key)!
+              onPick({ key: 'action_taken', values: [...g.values] })
+            }}
+          />
         </div>
-        <div className="card">
-          <h3>ما تم اجراؤه <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--ink-3)' }}>— اضغط على أي سطر يفتح مشاريعه</span></h3>
-          <div className="table-scroll">
-            <table className="plain">
-              <tbody>
-                {byStatus.map((g) => (
-                  <tr
-                    key={g.label}
-                    className="click"
-                    title="اضغط يفتح المشاريع"
-                    onClick={() => onPick({ key: 'action_taken', values: [...g.values] })}
-                  >
-                    <td>{g.label}</td>
-                    <td style={{ width: 60 }}><b>{g.n}</b></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="panel">
+          <h3>المشروعات حسب الكتيبة</h3>
+          <div className="hint">عدد المشروعات لكل كتيبة</div>
+          <BarList items={batBars} onPick={(key) => onPick({ key: 'battalion', values: [key || BLANK] })} />
         </div>
       </div>
 
-      <div className="card">
-        <h3>حسب المراجع <span className="sub" style={{ fontWeight: 400, fontSize: 12, color: 'var(--ink-3)' }}>— اضغط على الاسم يفتح مشاريعه</span></h3>
+      <div className="section-title"><h2>حسب المراجع</h2><span>اضغط على الاسم يفتح مشروعاته</span></div>
+      <div className="panel">
         <GroupTable rows={byReviewer} first="المراجع" onPick={(v) => onPick({ key: 'reviewer', values: [v || BLANK] })} />
       </div>
-      <div className="card">
-        <h3>حسب الكتيبة</h3>
+
+      <div className="section-title"><h2>تفاصيل الكتايب</h2></div>
+      <div className="panel">
         <GroupTable rows={byBattalion} first="ك" onPick={(v) => onPick({ key: 'battalion', values: [v || BLANK] })} />
       </div>
     </>
+  )
+}
+
+function BarList({ items, onPick }: { items: { label: string; n: number; key: string }[]; onPick: (key: string) => void }) {
+  const max = Math.max(1, ...items.map((i) => i.n))
+  return (
+    <div className="barlist">
+      {items.map((i) => (
+        <button key={i.key + i.label} onClick={() => onPick(i.key)} title={`${i.label}: ${i.n} — اضغط يفتح المشروعات`}>
+          <span className="lbl">{i.label}</span>
+          <span className="trk"><i style={{ width: (i.n / max) * 100 + '%' }} /></span>
+          <span className="num">{i.n}</span>
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -128,7 +148,7 @@ function GroupTable({ rows, first, onPick }: { rows: Row[]; first: string; onPic
         <thead>
           <tr>
             <th>{first}</th>
-            <th>المشاريع</th>
+            <th>المشروعات</th>
             <th>المتوقفة</th>
             <th>تم تسليمها</th>
             <th>لوحات ✓</th>
@@ -162,12 +182,13 @@ function GroupTable({ rows, first, onPick }: { rows: Row[]; first: string; onPic
 
 function Card({ k, v, of, onClick }: { k: string; v: number | string; of?: number; onClick: () => void }) {
   return (
-    <button type="button" className="kpi click" onClick={onClick} title="اضغط يفتح المشاريع">
+    <button type="button" className="kpi click" onClick={onClick} title="اضغط يفتح المشروعات">
       <div className="k">{k}</div>
       <div className="v">
         {v}
         {of != null && <small> / {of}</small>}
       </div>
+      {of != null && of > 0 && <div className="meter"><i style={{ width: (Number(v) / of) * 100 + '%' }} /></div>}
     </button>
   )
 }
