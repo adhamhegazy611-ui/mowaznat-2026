@@ -105,6 +105,33 @@ main{max-width:1100px;margin:0 auto;padding:34px 20px 40px}
 .go{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:14px;font-weight:700;color:var(--c);font-size:14.5px}
 .go small{font-weight:400;color:var(--muted);font-size:12px;direction:ltr}
 .c1{--c:#b8860b;--soft:#fdf6e3}.c2{--c:#1f5135;--soft:#e8f1eb}.c3{--c:#1e3a66;--soft:#eaf0f8}
+.c4{--c:#9a3412;--soft:#fdeee6}
+.card[hidden]{display:none}
+/* ---------- تحليل الأسعار (أدمن) ---------- */
+#pa{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;background:#f4f6f9;color:var(--ink)}
+#pa .vbar{flex:none;height:46px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--navy);color:#fff;box-shadow:inset 0 -3px 0 #9a3412}
+#pa .vbar button{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:9px;padding:5px 12px;cursor:pointer;font-size:13px;font-weight:700}
+#pa .vbar b{font-size:14.5px}
+#pa .vbar input{margin-inline-start:auto;width:min(260px,40vw);border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;border-radius:9px;padding:6px 12px;font:inherit;font-size:13px}
+#pa .vbar input::placeholder{color:#b9c8e0}
+#pa .pbody{flex:1;display:flex;min-height:0}
+#pa nav{flex:none;width:290px;overflow:auto;background:#fff;border-inline-end:1px solid var(--line);padding:10px 8px}
+#pa nav h4{margin:12px 8px 6px;font-size:12.5px;color:#9a3412;font-weight:800}
+#pa nav button{display:block;width:100%;text-align:start;background:none;border:0;border-radius:8px;padding:8px 10px;cursor:pointer;font:inherit;font-size:13.5px;color:var(--ink2)}
+#pa nav button:hover{background:#f1f5f9}
+#pa nav button.on{background:#fdeee6;color:#7c2a0d;font-weight:700}
+#pa .pmain{flex:1;overflow:auto;padding:18px}
+#pa .pmain h3{margin:0 0 12px;font-size:18px}
+#pa .tw{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12px}
+#pa table{border-collapse:collapse;width:100%;font-size:13.5px}
+#pa td{border:1px solid #e5e9ef;padding:6px 9px;vertical-align:top;line-height:1.7}
+#pa td.n{text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap}
+#pa td.f{background:#fbf3ee;font-weight:700}
+#pa td.w{white-space:pre-wrap;background:#fafbfc}
+#pa .pg img{display:block;width:100%;max-width:900px;margin:0 auto 16px;border:1px solid var(--line);border-radius:10px;background:#fff}
+#pa .msg{padding:60px 20px;text-align:center;color:var(--muted)}
+@media (max-width:760px){#pa nav{position:absolute;z-index:3;inset-block:46px 0;inset-inline-start:0;width:82%;box-shadow:0 0 40px rgba(0,0,0,.3);display:none}#pa nav.open{display:block}#pa .menu{display:inline-block!important}}
+#pa .menu{display:none}
 @media (max-width:600px){.hero h1{font-size:22px}.who span.nm{display:none}}
 /* ---------- النظام مفتوح جوه البوابة ---------- */
 #view{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;background:#fff}
@@ -216,9 +243,20 @@ body:not(.in) footer{color:#6f84a6}
       <p>الجهات بتحجز ميعاد مراجعة من النتيجة، والإدارة بتتابع الحضور والأرشيف.</p>
       <div class="go"><span>دخول ←</span><small>hagz-moraga3a.vercel.app</small></div>
     </a>
+    <a class="card c4" id="paCard" href="#" hidden>
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M8 18h8"/></svg></div>
+      <h2>تحليل أسعار</h2>
+      <p>تحليلات الأسعار: سيارات الإشراف، أعمال الأمن والسلامة، والأعمال الترابية والرصف والبردورات. للمسؤول فقط.</p>
+      <div class="go"><span>فتح ←</span><small>للأدمن فقط</small></div>
+    </a>
   </div>
 </main>
 <footer>مكتب التصميمات</footer>
+
+<div id="pa" class="hidden">
+  <div class="vbar"><button type="button" id="paBack">→ البوابة</button><button type="button" class="menu" id="paMenu">☰</button><b>تحليل أسعار</b><input id="paQ" type="search" placeholder="بحث في البنود…" autocomplete="off"></div>
+  <div class="pbody"><nav id="paNav"></nav><div class="pmain" id="paMain"><div class="msg">جاري التحميل…</div></div></div>
+</div>
 
 <!-- النظام بيفتح هنا جوه البوابة نفسها -->
 <div id="view" class="hidden">
@@ -264,7 +302,7 @@ function show(session) {
   $('who').classList.toggle('hidden', !inn);
   if (!inn && typeof closeApp === 'function' && $('view')) closeApp();
   if (inn) { $('uName').textContent = (session.user.email || '').split('@')[0]; loadAdmin(session.user.id); }
-  else { $('reqBtn').classList.add('hidden'); }
+  else { $('reqBtn').classList.add('hidden'); $('paCard').hidden = true; closePA(); }
 }
 
 /* ===== طلبات إنشاء الحسابات (للمسؤول بس) ===== */
@@ -276,6 +314,7 @@ async function loadAdmin(uid) {
     IS_ADMIN = !!(data && data.role === 'admin');
   } catch (e) { IS_ADMIN = false; }
   $('reqBtn').classList.toggle('hidden', !IS_ADMIN);
+  $('paCard').hidden = !IS_ADMIN;
   if (IS_ADMIN) refreshReqs();
 }
 async function getReqs() {
@@ -432,6 +471,94 @@ APPS.forEach((x, i) => (x.a.onclick = (e) => { e.preventDefault(); openApp(i); }
 $('vBack').onclick = () => { if (history.state && history.state.app != null) history.back(); else closeApp(); };
 // زرار الرجوع في الموبايل بيقفل النظام ويرجعك للبوابة
 addEventListener('popstate', (e) => { if (!(e.state && e.state.app != null)) closeApp(); else openApp(e.state.app, true); });
+
+/* ===== تحليل أسعار (للأدمن بس: الداتا مشفرة والمفتاح في قاعدة البيانات بصلاحية الأدمن) ===== */
+let PA = null, PAcur = null;
+async function loadPA() {
+  if (PA) return PA;
+  const { data, error } = await sb.from('price_key').select('k').eq('id', 1).maybeSingle();
+  if (error || !data) throw new Error('denied');
+  const kb = Uint8Array.from(atob(data.k), (c) => c.charCodeAt(0));
+  const buf = new Uint8Array(await (await fetch('/pa.bin', { cache: 'no-store' })).arrayBuffer());
+  const key = await crypto.subtle.importKey('raw', kb, 'AES-GCM', false, ['decrypt']);
+  const gz = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, key, buf.slice(12));
+  const txt = await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  PA = JSON.parse(txt);
+  return PA;
+}
+function paItems() {
+  const out = [{ g: 'أعمال الأمن والسلامة (مايو 2026)', t: 'جدول الأسعار', safety: true }];
+  PA.sheets.forEach((s, i) => out.push({ g: s.grp, t: s.title, i }));
+  return out;
+}
+function paNav(q) {
+  const nav = $('paNav'); nav.textContent = '';
+  let last = null; q = (q || '').trim();
+  paItems().forEach((it) => {
+    if (q) {
+      const hay = it.t + ' ' + (it.safety ? 'أمن سلامة لوحات علامات' : PA.sheets[it.i].rows.map((r) => r.join(' ')).join(' '));
+      if (!hay.includes(q)) return;
+    }
+    if (it.g !== last) { const h4 = document.createElement('h4'); h4.textContent = it.g; nav.appendChild(h4); last = it.g; }
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = it.t;
+    if (PAcur === (it.safety ? 's' : it.i)) b.classList.add('on');
+    b.onclick = () => { paShow(it); nav.classList.remove('open'); };
+    nav.appendChild(b);
+  });
+  if (!nav.children.length) { const d = document.createElement('div'); d.className = 'msg'; d.textContent = 'مفيش نتايج'; nav.appendChild(d); }
+}
+function paShow(it) {
+  PAcur = it.safety ? 's' : it.i;
+  const m = $('paMain'); m.textContent = ''; m.scrollTop = 0;
+  const h3 = document.createElement('h3'); h3.textContent = (it.safety ? 'أسعار أعمال الأمن والسلامة — مايو 2026' : it.g + ' — ' + it.t); m.appendChild(h3);
+  if (it.safety) {
+    const w = document.createElement('div'); w.className = 'pg';
+    PA.safety.forEach((b, k) => { const im = document.createElement('img'); im.alt = 'صفحة ' + (k + 1); im.src = 'data:image/jpeg;base64,' + b; w.appendChild(im); });
+    m.appendChild(w);
+  } else {
+    const rows = PA.sheets[it.i].rows, nc = Math.max(...rows.map((r) => r.length));
+    const tw = document.createElement('div'); tw.className = 'tw';
+    const tb = document.createElement('table');
+    rows.forEach((r) => {
+      const tr = document.createElement('tr');
+      const filled = r.map((c, j) => (c !== '' ? j : -1)).filter((j) => j >= 0);
+      if (filled.length === 1 && filled[0] === 0 && nc > 1) {
+        const td = document.createElement('td'); td.colSpan = nc; td.textContent = r[0];
+        td.className = String(r[0]).length > 90 ? 'w' : 'f'; tr.appendChild(td);
+      } else {
+        for (let j = 0; j < nc; j++) {
+          const v = r[j] === undefined ? '' : r[j], td = document.createElement('td');
+          if (typeof v === 'number') { td.className = 'n'; td.textContent = Number.isInteger(v) ? v.toLocaleString('en-US') : String(v); }
+          else td.textContent = v;
+          tr.appendChild(td);
+        }
+      }
+      tb.appendChild(tr);
+    });
+    tw.appendChild(tb); m.appendChild(tw);
+  }
+  paNav($('paQ').value);
+}
+async function openPA() {
+  if (!IS_ADMIN) return;
+  $('pa').classList.remove('hidden'); document.body.classList.add('viewing');
+  history.pushState({ pa: 1 }, '');
+  const m = $('paMain');
+  try {
+    m.innerHTML = '<div class="msg">جاري التحميل…</div>';
+    await loadPA(); paNav('');
+    paShow(paItems()[1] || paItems()[0]);
+  } catch (e) { m.innerHTML = '<div class="msg">تعذّر تحميل البيانات (للأدمن فقط).</div>'; }
+}
+function closePA() {
+  if ($('pa').classList.contains('hidden')) return;
+  $('pa').classList.add('hidden'); document.body.classList.remove('viewing');
+}
+$('paCard').onclick = (e) => { e.preventDefault(); openPA(); };
+$('paBack').onclick = () => { if (history.state && history.state.pa) history.back(); else closePA(); };
+$('paMenu').onclick = () => $('paNav').classList.toggle('open');
+$('paQ').oninput = () => { if (PA) paNav($('paQ').value); };
+addEventListener('popstate', (e) => { if (!(e.state && e.state.pa)) closePA(); });
 
 sb.auth.getSession().then(({ data }) => show(data.session));
 sb.auth.onAuthStateChange((_ev, session) => setTimeout(() => show(session), 0));
