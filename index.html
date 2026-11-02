@@ -41,6 +41,27 @@ body.in .scene:after{background:linear-gradient(180deg,transparent 0,transparent
 .who b{color:#fff}
 .lnk{background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:9px;padding:6px 14px;cursor:pointer;font-size:13px}
 .lnk:hover{background:rgba(255,255,255,.1)}
+.reqb{background:#c98a1b;border:1px solid #c98a1b;color:#fff;border-radius:9px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+.reqb:hover{background:#b07714}
+.reqb .n{background:#fff;color:#7a4f00;border-radius:99px;min-width:20px;padding:0 6px;font-size:12px;line-height:20px;text-align:center}
+.rqm{position:fixed;inset:0;background:rgba(8,16,32,.6);z-index:300;display:grid;place-items:start center;padding:40px 12px;overflow:auto}
+.rqm.hidden{display:none}
+.rqb{background:#fff;color:#14213d;border-radius:14px;width:min(640px,100%);box-shadow:0 24px 60px rgba(0,0,0,.4)}
+.rqh{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid #e2e8f0}
+.rqh h2{margin:0;font-size:18px;flex:1}
+.rqh button{border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:5px 12px;cursor:pointer;font:inherit}
+.rqc{padding:14px 20px 20px}
+.rqc .hint{margin:0 0 10px;color:#64748b;font-size:13px}
+.rqr{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid #eef2f7}
+.rqr .i{flex:1;min-width:180px}
+.rqr .i small{display:block;color:#64748b;font-size:12.5px}
+.rqr .no{color:#b91c1c}
+.rqr button{border-radius:8px;padding:6px 14px;cursor:pointer;font:inherit;font-weight:600;border:1px solid #cbd5e1;background:#fff}
+.rqr .ok{background:#15803d;border-color:#15803d;color:#fff}
+.rqr .rj{color:#b91c1c;border-color:#fca5a5}
+.rqr button:disabled{opacity:.45;cursor:not-allowed}
+.rqe{padding:20px 0;text-align:center;color:#64748b}
+.rqt{margin-top:10px;font-size:13.5px}
 
 /* ---------- الدخول ---------- */
 .auth{min-height:calc(100vh - 68px);display:grid;place-items:center;padding:20px}
@@ -146,7 +167,7 @@ body:not(.in) footer{color:#6f84a6}
   <div class="mark"><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M7 29 L13 3 M25 29 L19 3" stroke="#fff" stroke-width="2.6" fill="none"/><path d="M16 7v4M16 15v4M16 23v4" stroke="#f5c542" stroke-width="2.6"/></svg></div>
   <div class="brand"><b>مكتب التصميمات</b><span>بوابة الأنظمة</span></div>
   <div class="sp"></div>
-  <div class="who hidden" id="who"><span class="nm">أهلاً <b id="uName"></b></span><button class="lnk" id="out">خروج</button></div>
+  <div class="who hidden" id="who"><button class="reqb hidden" id="reqBtn" type="button">👤 طلبات الحسابات <span class="n hidden" id="reqN"></span></button><span class="nm">أهلاً <b id="uName"></b></span><button class="lnk" id="out">خروج</button></div>
 </div></div>
 
 <!-- ============ الدخول / حساب جديد ============ -->
@@ -212,6 +233,12 @@ body:not(.in) footer{color:#6f84a6}
   </div>
 </div>
 
+<div class="rqm hidden" id="rqm"><div class="rqb">
+  <div class="rqh"><h2>طلبات إنشاء الحسابات</h2><button type="button" id="rqx">إغلاق ✕</button></div>
+  <div class="rqc"><p class="hint">لما تقبل الطلب، الحساب بيبقى <b>مشاهد فقط</b> لكتيبته (الرقم اللي في اسم الحساب، زي <b>k44</b> = كتيبة 44) في «متابعة المقايسات» و«الموازنات»، ومش بيقدر يعدّل حاجة.</p>
+  <div id="rqList"></div><div class="rqt" id="rqMsg"></div></div>
+</div></div>
+
 <script>
 // نفس حسابات «متابعة المقايسات»: اسم المستخدم بيتحوّل لـ username@mo2ysaat.app
 const SB_URL = 'https://qadrtqtydtgzachfzpqw.supabase.co';
@@ -236,8 +263,68 @@ function show(session) {
   $('apps').classList.toggle('hidden', !inn);
   $('who').classList.toggle('hidden', !inn);
   if (!inn && typeof closeApp === 'function' && $('view')) closeApp();
-  if (inn) $('uName').textContent = (session.user.email || '').split('@')[0];
+  if (inn) { $('uName').textContent = (session.user.email || '').split('@')[0]; loadAdmin(session.user.id); }
+  else { $('reqBtn').classList.add('hidden'); }
 }
+
+/* ===== طلبات إنشاء الحسابات (للمسؤول بس) ===== */
+let IS_ADMIN = false;
+const batOf = (u) => (String(u).match(/\d+/) || [null])[0];
+async function loadAdmin(uid) {
+  try {
+    const { data } = await sb.from('app_users').select('role').eq('user_id', uid).maybeSingle();
+    IS_ADMIN = !!(data && data.role === 'admin');
+  } catch (e) { IS_ADMIN = false; }
+  $('reqBtn').classList.toggle('hidden', !IS_ADMIN);
+  if (IS_ADMIN) refreshReqs();
+}
+async function getReqs() {
+  const { data, error } = await sb.from('signup_requests').select('user_id,username,created_at').eq('status', 'pending').order('created_at');
+  if (error) throw error;
+  return data || [];
+}
+async function refreshReqs() {
+  try {
+    const n = (await getReqs()).length;
+    $('reqN').textContent = n; $('reqN').classList.toggle('hidden', !n);
+  } catch (e) {}
+}
+async function renderReqs() {
+  const box = $('rqList'); box.textContent = 'جاري التحميل…';
+  let rows = [];
+  try { rows = await getReqs(); } catch (e) { box.textContent = 'تعذّر تحميل الطلبات'; return; }
+  box.textContent = '';
+  if (!rows.length) { const d = document.createElement('div'); d.className = 'rqe'; d.textContent = 'مفيش طلبات جديدة دلوقتي'; box.appendChild(d); }
+  rows.forEach((r) => {
+    const bat = batOf(r.username), row = document.createElement('div'); row.className = 'rqr';
+    const info = document.createElement('div'); info.className = 'i';
+    const b = document.createElement('b'); b.dir = 'ltr'; b.textContent = r.username;
+    const sm = document.createElement('small');
+    sm.textContent = new Date(r.created_at).toLocaleString('ar-EG') + ' — ' + (bat ? 'هيبقى مشاهد لكتيبة ' + bat : 'الاسم مفيهوش رقم كتيبة — اقبله من «متابعة المقايسات»');
+    if (!bat) sm.className = 'no';
+    info.append(b, sm);
+    const ok = document.createElement('button'); ok.className = 'ok'; ok.textContent = '✓ قبول'; ok.disabled = !bat;
+    const rj = document.createElement('button'); rj.className = 'rj'; rj.textContent = '✕ رفض';
+    ok.onclick = async () => {
+      ok.disabled = rj.disabled = true;
+      const { data, error } = await sb.rpc('approve_signup_auto', { p_user: r.user_id });
+      if (error) { $('rqMsg').textContent = 'خطأ: ' + error.message; ok.disabled = !bat; rj.disabled = false; return; }
+      $('rqMsg').textContent = '✓ اتقبل ' + r.username + ': مشاهد لكتيبة ' + data + ' في المقايسات والموازنات';
+      renderReqs(); refreshReqs();
+    };
+    rj.onclick = async () => {
+      if (!confirm('رفض طلب ' + r.username + '؟ الحساب هيتمسح.')) return;
+      ok.disabled = rj.disabled = true;
+      const { error } = await sb.rpc('reject_signup', { p_user: r.user_id });
+      $('rqMsg').textContent = error ? 'خطأ: ' + error.message : 'اتحذف الطلب';
+      renderReqs(); refreshReqs();
+    };
+    row.append(info, ok, rj); box.appendChild(row);
+  });
+}
+$('reqBtn').onclick = () => { $('rqMsg').textContent = ''; $('rqm').classList.remove('hidden'); renderReqs(); };
+$('rqx').onclick = () => $('rqm').classList.add('hidden');
+$('rqm').onclick = (e) => { if (e.target === $('rqm')) $('rqm').classList.add('hidden'); };
 
 $('fIn').onsubmit = async (e) => {
   e.preventDefault();
