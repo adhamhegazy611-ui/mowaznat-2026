@@ -281,7 +281,7 @@ $('out').onclick = async () => { await sb.auth.signOut(); show(null); };
 const APPS = [...document.querySelectorAll('[data-sso]')].map((a) => ({ a, href: a.href.split('#')[0], name: a.querySelector('h2').textContent }));
 $('vSw').innerHTML = APPS.map((x, i) => `<button type="button" data-i="${i}"></button>`).join('');
 [...$('vSw').children].forEach((b, i) => { b.textContent = APPS[i].name; b.onclick = () => openApp(i, true); });
-const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const RM = false; // الأنيميشن شغال دايماً (المستخدم طالبه)
 let CUR = null;
 // شكل الكارت بالنسبة للشاشة (عشان النظام يكبر منه ويرجعله)
 function cardClip(i) {
