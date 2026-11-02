@@ -104,15 +104,22 @@ const normP = s => String(s || "").replace(/[\u064B-\u065F]/g, "").replace(/[أ�
 function renderProjList() {
   const q = normP($("fProj").value.trim()), words = q.split(/\s+/).filter(Boolean);
   const list = (words.length ? projects.filter(n => { const t = normP(n); return words.every(w => t.includes(w)); }) : projects);
-  $("pList").innerHTML = list.length ? list.map((n, i) => `<div class="opt" data-i="${i}">${esc(n)}</div>`).join("")
-    : `<div class="opt none">${projects.length ? "مفيش مشروع بالاسم ده في الموازنات" : "اكتب اسم المشروع"}</div>`;
+  $("pList").innerHTML = `<div class="opt" data-new="1" style="font-weight:600">➕ إضافة مشروع جديد</div>` + (list.length ? list.map((n, i) => `<div class="opt" data-i="${i}">${esc(n)}</div>`).join("")
+    : `<div class="opt none">${projects.length ? "مفيش مشروع بالاسم ده في القايمة" : "لسه مفيش مشاريع في القايمة"}</div>`);
   $("pList")._cur = list;
 }
 function openPList(o) { $("pList").classList.toggle("hidden", !o); $("projPick").classList.toggle("open", o); }
-$("fProj").onfocus = () => { renderProjList(); openPList(true); };
-$("fProj").oninput = () => { renderProjList(); openPList(true); };
+let NEWP = false;
+function setNewP(on) {
+  NEWP = on; $("pBack").classList.toggle("hidden", !on);
+  $("fProj").placeholder = on ? "اكتب اسم المشروع الجديد…" : "اضغط هنا واختار المشروع (أو ابحث بالاسم)…";
+  if (on) { $("fProj").value = ""; openPList(false); $("fProj").focus(); }
+}
+$("pBack").onclick = () => { setNewP(false); $("fProj").value = ""; $("fProj").focus(); };
+$("fProj").onfocus = () => { if (!NEWP) { renderProjList(); openPList(true); } };
+$("fProj").oninput = () => { if (!NEWP) { renderProjList(); openPList(true); } };
 $("fProj").onblur = () => setTimeout(() => openPList(false), 150);
-$("pList").onmousedown = e => { const o = e.target.closest(".opt[data-i]"); if (!o) return; e.preventDefault(); $("fProj").value = $("pList")._cur[+o.dataset.i]; openPList(false); };
+$("pList").onmousedown = e => { const nw = e.target.closest(".opt[data-new]"); if (nw) { e.preventDefault(); setNewP(true); return; } const o = e.target.closest(".opt[data-i]"); if (!o) return; e.preventDefault(); $("fProj").value = $("pList")._cur[+o.dataset.i]; openPList(false); };
 async function loadEntities() { entities = await rest("entities?select=id,name&order=name"); }
 
 $("fBtn").onclick = async () => {
@@ -120,12 +127,12 @@ $("fBtn").onclick = async () => {
   if (!SEL) return showMsg($("fMsg"), false, "اختار اليوم الأول");
   if (!ENT) return showMsg($("fMsg"), false, "اختار الجهة من القائمة");
   if (!proj) return showMsg($("fMsg"), false, "اختار المشروع من القايمة");
-  if (projects.length && !projects.includes(proj)) return showMsg($("fMsg"), false, "اختار اسم المشروع من القايمة (اضغط على الخانة وابحث)");
+  if (!NEWP && projects.length && !projects.includes(proj)) return showMsg($("fMsg"), false, "اختار المشروع من القايمة، أو اختار «➕ إضافة مشروع جديد» واكتب اسمه");
   if (!rev) return showMsg($("fMsg"), false, "اكتب المطلوب مراجعته");
   $("fBtn").disabled = true;
   try {
     const r = await rpc("book", {p_entity: ENT.id, p_date: SEL, p_project: proj, p_review: rev, p_missing: $("fMiss").value});
-    if (r.ok) { ["fProj","fRev","fMiss"].forEach(i => $(i).value = ""); setEnt(null); }
+    if (r.ok) { ["fProj","fRev","fMiss"].forEach(i => $(i).value = ""); setNewP(false); setEnt(null); }
     await loadStatus();
     if (!SEL && r.ok) $("formEmpty").innerHTML = `<div class="msg ok" style="margin:0 0 14px">${esc(r.msg)}</div>تقدر تختار يوم تاني لجهة تانية.`;
     else showMsg($("fMsg"), r.ok, r.msg);
@@ -202,7 +209,7 @@ function rowHtml(b) {
     <td data-l="الجهة"><b style="font-weight:600">${esc(b.entity_name)}</b></td>
     <td data-l="المشروع">${esc(b.project_name)}</td>
     <td data-l="المطلوب مراجعته"><div class="pre">${esc(b.review_items)}</div></td>
-    <td data-l="النواقص">${b.missing_items ? `<div class="miss">${esc(b.missing_items)}</div>` : `<span class="none">لا يوجد</span>`}</td>
+    <td data-l="ملاحظات">${b.missing_items ? `<div class="miss">${esc(b.missing_items)}</div>` : `<span class="none">لا يوجد</span>`}</td>
     <td data-l="الحالة"><span class="tag ${st[1]}">${st[0]}</span></td>
     <td><div class="acts">
       ${b.status !== "attended" ? `<button class="btn xs okb" onclick="setSt('${b.id}','attended')">حضر</button>` : ""}
@@ -249,7 +256,7 @@ document.querySelectorAll("#rSt button").forEach(b => b.onclick = () => {
   RST = b.dataset.s; document.querySelectorAll("#rSt button").forEach(x => x.classList.toggle("on", x === b)); renderArchive();
 });
 $("rCsv").onclick = () => {
-  const rows = [["التاريخ","اليوم","الجهة","المشروع","المطلوب مراجعته","النواقص","الحالة"]].concat(
+  const rows = [["التاريخ","اليوم","الجهة","المشروع","المطلوب مراجعته","ملاحظات","الحالة"]].concat(
     archFiltered().map(b => [b.booking_date, DAYS[D(b.booking_date).getDay()], b.entity_name, b.project_name, b.review_items, b.missing_items || "", stOf(b)[0]]));
   const csv = "﻿" + rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\r\n");
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"}));

@@ -62,9 +62,9 @@
             </div>
             <div id="entChosen" class="chosen hidden"><span id="entName"></span><button type="button" id="entChange">تغيير</button></div>
           </div>
-          <div class="fld"><label>اسم المشروع <em>*</em></label><div id="projPick" class="combo"><input type="text" id="fProj" maxlength="200" placeholder="اضغط هنا واختار المشروع (أو ابحث بالاسم)…" autocomplete="off"><div class="list hidden" id="pList"></div></div></div>
+          <div class="fld"><label>اسم المشروع <em>*</em></label><div id="projPick" class="combo"><input type="text" id="fProj" maxlength="200" placeholder="اضغط هنا واختار المشروع (أو ابحث بالاسم)…" autocomplete="off"><div class="list hidden" id="pList"></div></div><button type="button" id="pBack" class="hidden" style="margin-top:6px;background:none;border:0;color:var(--navy3,#1d3a63);cursor:pointer;text-decoration:underline;font:inherit">← رجوع لقايمة المشاريع</button></div>
           <div class="fld"><label>المطلوب مراجعته <em>*</em></label><textarea id="fRev" maxlength="2000" placeholder="مثال: اللوحات المعمارية للدور الأرضي، المقايسة…"></textarea></div>
-          <div class="fld"><label>النواقص <small>— الحاجات اللي مش هتكون جاهزة يوم المراجعة</small></label><textarea id="fMiss" maxlength="2000" placeholder="اكتب كل بند في سطر، أو سيبها فاضية لو كله جاهز"></textarea></div>
+          <div class="fld"><label>ملاحظات <small>— اختياري</small></label><textarea id="fMiss" maxlength="2000" placeholder="اكتب أي ملاحظات (اختياري)"></textarea></div>
           <button class="btn block" id="fBtn">تأكيد الحجز</button>
           <div id="fMsg"></div>
           <div class="note">• الحد الأقصى جهتين في اليوم.<br>• الجهة اللي تحجز وما تحضرش، متقدرش تحجز تاني غير من الأسبوع اللي بعده.<br>• مسموح بحجز واحد قادم لكل جهة.</div>
@@ -118,7 +118,7 @@
         </div>
         <div class="count" id="bCount"></div>
         <div class="tblwrap"><table>
-          <thead><tr><th>التاريخ</th><th>الجهة</th><th>المشروع</th><th>المطلوب مراجعته</th><th>النواقص</th><th>الحالة</th><th>إجراء</th></tr></thead>
+          <thead><tr><th>التاريخ</th><th>الجهة</th><th>المشروع</th><th>المطلوب مراجعته</th><th>ملاحظات</th><th>الحالة</th><th>إجراء</th></tr></thead>
           <tbody id="bList"></tbody>
         </table></div>
       </div>
@@ -136,7 +136,7 @@
         </div>
         <div class="count" id="rCount"></div>
         <div class="tblwrap"><table>
-          <thead><tr><th>التاريخ</th><th>الجهة</th><th>المشروع</th><th>المطلوب مراجعته</th><th>النواقص</th><th>الحالة</th><th>تعديل</th></tr></thead>
+          <thead><tr><th>التاريخ</th><th>الجهة</th><th>المشروع</th><th>المطلوب مراجعته</th><th>ملاحظات</th><th>الحالة</th><th>تعديل</th></tr></thead>
           <tbody id="rList"></tbody>
         </table></div>
         <div class="note">الأرشيف بيعرض كل الحجوزات اللي يومها عدّى. أي حجز متعلّمش عليه "حضر" بيتحسب غياب، والجهة متقدرش تحجز غير من الأسبوع اللي بعده (الأسبوع بيبدأ السبت).</div>
