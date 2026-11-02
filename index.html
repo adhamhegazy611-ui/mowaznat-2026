@@ -100,7 +100,7 @@ main{max-width:1100px;margin:0 auto;padding:34px 20px 40px}
 body.viewing{overflow:hidden}
 /* شاشة التحميل: لون النظام وطريق بيتحرك */
 .vload{position:absolute;inset:0;z-index:2;display:grid;place-items:center;align-content:center;gap:18px;color:#fff;
-  background:radial-gradient(700px 420px at 50% 40%,color-mix(in srgb,var(--ac,#1e3a66) 70%,#fff 10%),var(--ac,#1e3a66) 70%);transition:opacity .35s ease}
+  background:var(--ac,#1e3a66);background:radial-gradient(700px 420px at 50% 40%,var(--ac2,#2c5590),var(--ac,#1e3a66) 70%);transition:opacity .45s ease}
 .vload.gone{opacity:0;pointer-events:none}
 .vload .lic{width:92px;height:92px;border-radius:24px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);display:grid;place-items:center;
   box-shadow:0 18px 50px rgba(0,0,0,.25);animation:pop .5s cubic-bezier(.2,1.4,.4,1) both}
@@ -282,6 +282,11 @@ const APPS = [...document.querySelectorAll('[data-sso]')].map((a) => ({ a, href:
 $('vSw').innerHTML = APPS.map((x, i) => `<button type="button" data-i="${i}"></button>`).join('');
 [...$('vSw').children].forEach((b, i) => { b.textContent = APPS[i].name; b.onclick = () => openApp(i, true); });
 const RM = false; // الأنيميشن شغال دايماً (المستخدم طالبه)
+// خلط لونين يدوي (بدل color-mix عشان المتصفحات القديمة)
+function mix(a, b, t) {
+  const h = (c) => { c = c.replace('#', ''); if (c.length === 3) c = [...c].map((x) => x + x).join(''); return [0, 2, 4].map((k) => parseInt(c.slice(k, k + 2), 16)); };
+  const x = h(a), y = h(b); return '#' + x.map((v, k) => Math.round(v * (1 - t) + y[k] * t).toString(16).padStart(2, '0')).join('');
+}
 let CUR = null;
 // شكل الكارت بالنسبة للشاشة (عشان النظام يكبر منه ويرجعله)
 function cardClip(i) {
@@ -294,17 +299,17 @@ async function openApp(i, replace) {
   if (wasOpen && CUR === i) return;
   const ac = getComputedStyle(app.a).getPropertyValue('--c').trim() || '#1e3a66';
   // شاشة التحميل بلون النظام وأيقونته
-  v.style.setProperty('--ac', ac);
+  v.style.setProperty('--ac', ac); v.style.setProperty('--ac2', mix(ac, '#ffffff', .22));
   $('vLic').innerHTML = app.a.querySelector('.ic').innerHTML; $('vLic').style.color = '#fff';
   $('vLname').textContent = app.name;
   const ld = $('vLoad'); ld.classList.remove('gone');
   $('vTitle').textContent = app.name;
   [...$('vSw').children].forEach((b, k) => b.classList.toggle('on', k === i));
-  v.querySelector('.vbar').style.background = `color-mix(in srgb, ${ac} 55%, #0b1b33)`;
+  v.querySelector('.vbar').style.background = mix(ac, '#0b1b33', .45);
   if (!wasOpen) {
     v.classList.remove('hidden'); document.body.classList.add('viewing');
     if (!RM) v.animate([{ clipPath: cardClip(i), opacity: 1 }, { clipPath: 'inset(0px 0px 0px 0px round 0px)', opacity: 1 }],
-      { duration: 520, easing: 'cubic-bezier(.2,.85,.25,1)' });
+      { duration: 650, easing: 'cubic-bezier(.2,.85,.25,1)' });
   }
   CUR = i;
   const st = { app: i };
@@ -318,7 +323,7 @@ async function openApp(i, replace) {
   const old = $('vFrame'), f = document.createElement('iframe');
   f.id = 'vFrame'; f.title = app.name; f.allow = old.allow;
   const t0 = Date.now();
-  f.onload = () => { if (f.src && CUR === i) setTimeout(() => ld.classList.add('gone'), Math.max(0, 650 - (Date.now() - t0))); };
+  f.onload = () => { if (f.src && CUR === i) setTimeout(() => ld.classList.add('gone'), Math.max(0, 1200 - (Date.now() - t0))); };
   f.src = url;
   old.replaceWith(f);
 }
@@ -334,7 +339,7 @@ function closeApp() {
   if (RM || i == null) return done();
   document.body.classList.remove('viewing');
   v.animate([{ clipPath: 'inset(0px 0px 0px 0px round 0px)', opacity: 1 }, { clipPath: cardClip(i), opacity: .4 }],
-    { duration: 380, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' }).onfinish = (e) => { done(); e.target.cancel(); };
+    { duration: 450, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' }).onfinish = (e) => { done(); e.target.cancel(); };
 }
 APPS.forEach((x, i) => (x.a.onclick = (e) => { e.preventDefault(); openApp(i); }));
 $('vBack').onclick = () => { if (history.state && history.state.app != null) history.back(); else closeApp(); };
