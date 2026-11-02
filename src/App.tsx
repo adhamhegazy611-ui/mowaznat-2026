@@ -6,7 +6,6 @@ import ProjectsPage from './components/ProjectsPage'
 import SummaryPage from './components/SummaryPage'
 import AdminPage from './components/AdminPage'
 import HistoryList from './components/HistoryList'
-import SignupRequests from './components/SignupRequests'
 import type { HistoryEntry } from './lib/types'
 import type { FieldKey } from './lib/columns'
 import type { QuickKey } from './lib/util'
@@ -26,8 +25,6 @@ export default function App() {
   const [reviewers, setReviewers] = useState<Reviewer[]>([])
   const [history, setHistory] = useState<HistoryEntry[] | null>(null)
   const [toastMsg, setToastMsg] = useState('')
-  const [reqOpen, setReqOpen] = useState(false)
-  const [reqCount, setReqCount] = useState(0)
   const [preset, setPreset] = useState<{ filters: Partial<Record<FieldKey, string[]>>; quick?: QuickKey | null; n: number }>({ filters: {}, n: 0 })
 
   const toast = useCallback((m: string) => {
@@ -75,9 +72,6 @@ export default function App() {
   const loadProjects = useCallback(() => {
     api.listProjects().then(setProjects).catch((e) => toast('مقدرتش أحمّل المشاريع: ' + e.message))
   }, [toast])
-  const loadReqCount = useCallback(() => {
-    api.listSignupRequests().then((r) => setReqCount(r.length)).catch(() => {})
-  }, [])
   const loadReviewers = useCallback(() => {
     api.listReviewers().then(setReviewers).catch(() => {})
   }, [])
@@ -86,17 +80,8 @@ export default function App() {
     if (!session) return
     loadProjects()
     loadReviewers()
-    if (session.role === 'admin') {
-      loadReqCount()
-      const t = window.setInterval(loadReqCount, 60000)
-      const off = api.onProjectsChange(loadProjects)
-      return () => {
-        window.clearInterval(t)
-        off()
-      }
-    }
     return api.onProjectsChange(loadProjects)
-  }, [session, loadProjects, loadReviewers, loadReqCount])
+  }, [session, loadProjects, loadReviewers])
 
   useEffect(() => {
     const h = () => setPage(pageFromHash())
@@ -161,11 +146,6 @@ export default function App() {
           )}
         </nav>
         <div className="user">
-          {isAdmin && (
-            <button className="req-btn" onClick={() => setReqOpen(true)} title="طلبات إنشاء حسابات جديدة">
-              👤 طلبات الحسابات{reqCount > 0 && <span className="req-n">{reqCount}</span>}
-            </button>
-          )}
           <span className="who">{session.name}</span>
           <span className="role">{ROLE_AR[session.role]}</span>
           {session.battalions?.length ? (
@@ -220,7 +200,6 @@ export default function App() {
           />
         )}
       </main>
-      {reqOpen && <SignupRequests onClose={() => setReqOpen(false)} onChanged={loadReqCount} toast={toast} />}
       {toastMsg && <div className="toast">{toastMsg}</div>}
     </>
   )
