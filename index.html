@@ -145,15 +145,19 @@ main{max-width:1100px;margin:0 auto;padding:34px 20px 40px}
 #pa .hint2 span.sw.e{background:#fff4cf;box-shadow:inset 0 0 0 1px #f0b429}
 #pa .tw{background:#fff;border-radius:16px;box-shadow:0 1px 3px rgba(15,23,42,.06),0 12px 34px rgba(15,23,42,.09);overflow:auto;border:0}
 #pa table{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%;font-family:"Cairo",system-ui,sans-serif;color:var(--pt)}
-#pa td{padding:11px 14px;line-height:1.65;font-size:14.5px;border-bottom:1px solid #edf1f6;font-variant-numeric:tabular-nums;vertical-align:middle;overflow-wrap:anywhere}
-#pa tr.hd td{background:var(--pn2);color:#fff;font-size:13.5px;font-weight:700;text-align:center;border-bottom:0;padding:13px 12px}
+#pa td{padding:11px 14px;line-height:1.65;font-size:14.5px;border-bottom:1px solid #d3dce8;border-inline-end:1px solid #d3dce8;font-variant-numeric:tabular-nums;vertical-align:middle;overflow-wrap:anywhere}
+#pa tr.hd td{background:var(--pn2);color:#fff;font-size:13.5px;font-weight:700;text-align:center;border-bottom:0;border-inline-end:1px solid rgba(255,255,255,.28);padding:13px 12px}
+#pa tr.sec td,#pa tr.ds td{border-inline-end:0}
 #pa tr.sec td{background:#e8eff9;color:var(--pn);font-weight:800;font-size:15px;border-inline-start:4px solid var(--pg)}
 #pa tr.ds td{background:#f8fafc;color:#475569;font-size:13.5px;line-height:1.9;border-inline-start:3px solid #94a3b8}
 #pa tr.zb td{background:#fafbfd}
 #pa tr.tt td{background:#eaf6ef;color:#0b5d3a;font-weight:800}
 #pa tr.fn td{background:var(--pn);color:#fff;font-weight:800;font-size:15.5px;border-bottom:0}
 #pa tr.fn td.nu{color:#f5d98a}
+#pa tr td:last-child{border-inline-end:0}
 #pa tr:last-child td{border-bottom:0}
+#pa tr.tt td{border-color:#bfdccb}
+#pa tr.fn td{border-inline-end:1px solid rgba(255,255,255,.18)}
 #pa td.nu{text-align:center;font-weight:600;direction:ltr}
 #pa td.in{background:#eaf2ff!important;color:#1d4ed8!important;font-weight:800;cursor:text;box-shadow:inset 0 0 0 1px #bcd3f7;transition:background .12s}
 #pa td.in:hover{background:#d8e7ff!important}
@@ -751,18 +755,6 @@ function paShow(it) {
   subs.forEach((t) => hl.appendChild(el('p', '', t)));
   const hb = el('div', 'hb'), rb = el('button', '', 'إعادة ضبط الشيت'); rb.type = 'button'; rb.onclick = () => { PAE.reset(si); paShow(it); };
   hb.appendChild(rb); hero.appendChild(hb);
-  // مؤشرات رئيسية (بتتحدث لحظياً)
-  const kp = [], seen = new Set(), reK = /سعر البند|بعد التخفيض|الاجمالي الشهري|اجمالي تكلفة|إجمالي تكلفة|اجمالي التكلفة|إجمالي التكلفة/;
-  rows.forEach((r) => { const t = label(r); if (!t || !reK.test(t) || seen.has(t)) return; const nc = r[1].filter(isNum); if (!nc.length) return; const c = nc[nc.length - 1]; if (typeof PAE.get(si, c[4], c[5]) !== 'number') return; seen.add(t); kp.push({ t, c, main: /سعر البند|بعد التخفيض/.test(t) }); });
-  if (kp.length) {
-    const kw = el('div', 'kpis');
-    kp.slice(0, 4).forEach((k) => {
-      const d = el('div', 'kpi' + (k.main ? ' main' : '')); d.appendChild(el('small', '', k.t.length > 48 ? k.t.slice(0, 46) + '…' : k.t));
-      const b = el('b'), v = el('span'); v.dataset.r = k.c[4]; v.dataset.c = k.c[5]; v._nf = sh.st[k.c[1]][9]; v.textContent = PAE.fmt(PAE.get(si, k.c[4], k.c[5]), v._nf);
-      b.appendChild(v); b.appendChild(el('i', '', 'ج')); d.appendChild(b); kw.appendChild(d);
-    });
-    m.appendChild(kw);
-  }
   const hint = el('div', 'hint2'); hint.appendChild(el('span', 'sw')); hint.append('خانات زرقا = أسعار تقدر تعدّلها، والحسابات بتتحدث فوراً'); const e1 = el('span', 'sw e'); e1.style.marginInlineStart = '10px'; hint.appendChild(e1); hint.append('خانة اتعدلت');
   m.appendChild(hint);
   // الجدول
