@@ -95,8 +95,24 @@ main{max-width:1100px;margin:0 auto;padding:34px 20px 40px}
 #view .vbar .sw button{font-weight:600;background:transparent;border-color:rgba(255,255,255,.18);color:#c9d6ea}
 #view .vbar .sw button.on{background:#fff;color:var(--navy);border-color:#fff}
 @media (max-width:600px){#view .vbar .sw{display:none}}
-#view iframe{flex:1;width:100%;border:0;display:block;background:#fff}
+#view .vbody{flex:1;position:relative;min-height:0}
+#view iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff}
 body.viewing{overflow:hidden}
+/* شاشة التحميل: لون النظام وطريق بيتحرك */
+.vload{position:absolute;inset:0;z-index:2;display:grid;place-items:center;align-content:center;gap:18px;color:#fff;
+  background:radial-gradient(700px 420px at 50% 40%,color-mix(in srgb,var(--ac,#1e3a66) 70%,#fff 10%),var(--ac,#1e3a66) 70%);transition:opacity .35s ease}
+.vload.gone{opacity:0;pointer-events:none}
+.vload .lic{width:92px;height:92px;border-radius:24px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);display:grid;place-items:center;
+  box-shadow:0 18px 50px rgba(0,0,0,.25);animation:pop .5s cubic-bezier(.2,1.4,.4,1) both}
+.vload .lic svg{width:50px;height:50px}
+.vload b{font-size:20px;font-weight:800;animation:up .5s .08s ease both}
+.vload .road{width:min(260px,60vw);height:10px;border-radius:6px;background:rgba(0,0,0,.28);position:relative;overflow:hidden;animation:up .5s .14s ease both}
+.vload .road:after{content:"";position:absolute;inset:4px 0;background:repeating-linear-gradient(90deg,#f5c542 0 22px,transparent 22px 40px);
+  animation:drive .6s linear infinite}
+@keyframes drive{from{transform:translateX(0)}to{transform:translateX(-40px)}}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+@keyframes up{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+.vbar{transition:background .3s}
 footer{text-align:center;color:var(--faint);font-size:12.5px;padding:10px 0 26px}
 body:not(.in) footer{color:#6f84a6}
 </style>
@@ -190,7 +206,10 @@ body:not(.in) footer{color:#6f84a6}
     <b id="vTitle"></b>
     <div class="sw" id="vSw"></div>
   </div>
-  <iframe id="vFrame" title="النظام" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
+  <div class="vbody">
+    <iframe id="vFrame" title="النظام" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
+    <div class="vload gone" id="vLoad"><div class="lic" id="vLic"></div><b id="vLname"></b><div class="road"></div></div>
+  </div>
 </div>
 
 <script>
@@ -262,26 +281,60 @@ $('out').onclick = async () => { await sb.auth.signOut(); show(null); };
 const APPS = [...document.querySelectorAll('[data-sso]')].map((a) => ({ a, href: a.href.split('#')[0], name: a.querySelector('h2').textContent }));
 $('vSw').innerHTML = APPS.map((x, i) => `<button type="button" data-i="${i}"></button>`).join('');
 [...$('vSw').children].forEach((b, i) => { b.textContent = APPS[i].name; b.onclick = () => openApp(i, true); });
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let CUR = null;
+// شكل الكارت بالنسبة للشاشة (عشان النظام يكبر منه ويرجعله)
+function cardClip(i) {
+  const r = APPS[i].a.getBoundingClientRect(), W = innerWidth, H = innerHeight;
+  if (!r.width) return 'inset(45% 35% 45% 35% round 14px)';
+  return `inset(${Math.max(0, r.top)}px ${Math.max(0, W - r.right)}px ${Math.max(0, H - r.bottom)}px ${Math.max(0, r.left)}px round 14px)`;
+}
 async function openApp(i, replace) {
-  const app = APPS[i];
-  let s = null;
-  try { const { data } = await sb.auth.getSession(); s = data.session; } catch (x) {}
-  let url = app.href;
-  if (s) url += '#' + new URLSearchParams({ access_token: s.access_token, refresh_token: s.refresh_token, expires_in: String(s.expires_in || 3600), expires_at: String(s.expires_at || ''), token_type: 'bearer', type: 'magiclink' }).toString();
+  const app = APPS[i], v = $('view'), wasOpen = !v.classList.contains('hidden');
+  if (wasOpen && CUR === i) return;
+  const ac = getComputedStyle(app.a).getPropertyValue('--c').trim() || '#1e3a66';
+  // شاشة التحميل بلون النظام وأيقونته
+  v.style.setProperty('--ac', ac);
+  $('vLic').innerHTML = app.a.querySelector('.ic').innerHTML; $('vLic').style.color = '#fff';
+  $('vLname').textContent = app.name;
+  const ld = $('vLoad'); ld.classList.remove('gone');
   $('vTitle').textContent = app.name;
   [...$('vSw').children].forEach((b, k) => b.classList.toggle('on', k === i));
+  v.querySelector('.vbar').style.background = `color-mix(in srgb, ${ac} 55%, #0b1b33)`;
+  if (!wasOpen) {
+    v.classList.remove('hidden'); document.body.classList.add('viewing');
+    if (!RM) v.animate([{ clipPath: cardClip(i), opacity: 1 }, { clipPath: 'inset(0px 0px 0px 0px round 0px)', opacity: 1 }],
+      { duration: 520, easing: 'cubic-bezier(.2,.85,.25,1)' });
+  }
+  CUR = i;
+  const st = { app: i };
+  if (replace && history.state && history.state.app != null) history.replaceState(st, ''); else if (!replace || !history.state || history.state.app == null) history.pushState(st, '');
+  let s = null;
+  try { const { data } = await sb.auth.getSession(); s = data.session; } catch (x) {}
+  if (CUR !== i) return;
+  let url = app.href;
+  if (s) url += '#' + new URLSearchParams({ access_token: s.access_token, refresh_token: s.refresh_token, expires_in: String(s.expires_in || 3600), expires_at: String(s.expires_at || ''), token_type: 'bearer', type: 'magiclink' }).toString();
   // بنعمل إطار جديد كل مرة عشان ما يتسجلش في تاريخ المتصفح وزرار الرجوع يفضل يرجعك للبوابة
   const old = $('vFrame'), f = document.createElement('iframe');
-  f.id = 'vFrame'; f.title = app.name; f.allow = old.allow; f.src = url;
+  f.id = 'vFrame'; f.title = app.name; f.allow = old.allow;
+  const t0 = Date.now();
+  f.onload = () => { if (f.src && CUR === i) setTimeout(() => ld.classList.add('gone'), Math.max(0, 650 - (Date.now() - t0))); };
+  f.src = url;
   old.replaceWith(f);
-  $('view').classList.remove('hidden'); document.body.classList.add('viewing');
-  const st = { app: i };
-  if (replace && history.state && history.state.app != null) history.replaceState(st, ''); else history.pushState(st, '');
 }
 function closeApp() {
-  $('view').classList.add('hidden'); document.body.classList.remove('viewing');
-  const old = $('vFrame'), f = document.createElement('iframe');
-  f.id = 'vFrame'; f.allow = old.allow; old.replaceWith(f);
+  const v = $('view');
+  if (v.classList.contains('hidden')) return;
+  const i = CUR; CUR = null;
+  const done = () => {
+    v.classList.add('hidden'); document.body.classList.remove('viewing');
+    const old = $('vFrame'), f = document.createElement('iframe');
+    f.id = 'vFrame'; f.allow = old.allow; old.replaceWith(f);
+  };
+  if (RM || i == null) return done();
+  document.body.classList.remove('viewing');
+  v.animate([{ clipPath: 'inset(0px 0px 0px 0px round 0px)', opacity: 1 }, { clipPath: cardClip(i), opacity: .4 }],
+    { duration: 380, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' }).onfinish = (e) => { done(); e.target.cancel(); };
 }
 APPS.forEach((x, i) => (x.a.onclick = (e) => { e.preventDefault(); openApp(i); }));
 $('vBack').onclick = () => { if (history.state && history.state.app != null) history.back(); else closeApp(); };
