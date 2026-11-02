@@ -305,7 +305,7 @@ async function openApp(i, replace) {
   const ld = $('vLoad'); ld.classList.remove('gone');
   $('vTitle').textContent = app.name;
   [...$('vSw').children].forEach((b, k) => b.classList.toggle('on', k === i));
-  v.querySelector('.vbar').style.background = mix(ac, '#0b1b33', .45);
+  v.querySelector('.vbar').style.boxShadow = `inset 0 -3px 0 ${ac}`; // الشريط كحلي ثابت وتحته خط رفيع بلون النظام
   if (!wasOpen) {
     v.classList.remove('hidden'); document.body.classList.add('viewing');
     if (!RM) v.animate([{ clipPath: cardClip(i), opacity: 1 }, { clipPath: 'inset(0px 0px 0px 0px round 0px)', opacity: 1 }],
