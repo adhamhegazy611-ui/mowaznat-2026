@@ -63,6 +63,11 @@ function supabaseApi(sb: SupabaseClient): Api {
   }
   return {
     async getSession() {
+      if (SSO) {
+        const t = SSO
+        SSO = null
+        try { await sb.auth.setSession(t) } catch { /* يكمّل بالجلسة العادية */ }
+      }
       const { data } = await sb.auth.getSession()
       const u = data.session?.user
       if (!u) return null
@@ -329,4 +334,17 @@ function demoApi(): Api {
   }
 }
 
-export const api: Api = DEMO ? demoApi() : supabaseApi(createClient(URL!, KEY!))
+// دخول مباشر من البوابة: الجلسة جاية في الرابط، بناخدها ونمسحها من شريط العنوان
+let SSO: { access_token: string; refresh_token: string } | null = (() => {
+  try {
+    const h = new URLSearchParams(window.location.hash.slice(1))
+    const a = h.get('access_token'), r = h.get('refresh_token')
+    if (a && r) {
+      history.replaceState(null, '', window.location.pathname + window.location.search)
+      return { access_token: a, refresh_token: r }
+    }
+  } catch { /* ignore */ }
+  return null
+})()
+
+export const api: Api = DEMO ? demoApi() : supabaseApi(createClient(URL!, KEY!, { auth: { detectSessionInUrl: false } }))
