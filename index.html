@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>مكتب التصميمات — الأنظمة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230b1b33'/><path d='M9 26 L14 6 M23 26 L18 6' stroke='white' stroke-width='2.4'/><path d='M16 9v3M16 16v3M16 23v2' stroke='%23f5c542' stroke-width='2.4'/></svg>">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --navy:#0b1b33;--navy2:#132a4d;--navy3:#1e3a66;--gold:#f5c542;
+  --ink:#0f172a;--ink2:#334155;--muted:#64748b;--faint:#94a3b8;--line:#e2e5ea;--line2:#cbd2db;--bg:#eef1f5;
+  --ok:#15803d;--okbg:#ecfdf3;--bad:#b91c1c;--badbg:#fef2f2;--r:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font-family:"Cairo",system-ui,sans-serif;color:var(--ink);background:var(--bg);min-height:100vh}
+button,input{font:inherit;color:inherit}
+.hidden{display:none!important}
+
+/* ---------- خلفية: تقاطع طرق (كوبري بلوبات) من فوق ---------- */
+.scene{position:fixed;inset:0;z-index:-1;overflow:hidden;
+  background:radial-gradient(1100px 700px at 80% -10%,#1f4275 0%,transparent 60%),radial-gradient(900px 600px at 0% 110%,#17345e 0%,transparent 55%),linear-gradient(160deg,#0d2140 0%,#0a1a33 60%,#081428 100%)}
+.scene svg{position:absolute;inset:-10% -10%;width:120%;height:120%;opacity:.55}
+.scene:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 35%,rgba(5,12,26,.55) 100%)}
+body.in .scene{background:linear-gradient(180deg,#0d2140 0,#0a1a33 300px,var(--bg) 300px)}
+body.in .scene svg{inset:auto -10% auto -10%;top:-160px;height:620px;opacity:.45}
+body.in .scene:after{background:linear-gradient(180deg,transparent 0,transparent 240px,var(--bg) 300px)}
+
+/* ---------- الشريط العلوي ---------- */
+.top{position:relative;z-index:1}
+.top .in{max-width:1100px;margin:0 auto;padding:0 20px;height:68px;display:flex;align-items:center;gap:12px;color:#fff}
+.mark{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);display:grid;place-items:center;flex:none}
+.brand b{display:block;font-size:17px;font-weight:700}
+.brand span{display:block;font-size:12px;color:#a9bcd8;margin-top:-3px}
+.top .sp{flex:1}
+.who{display:flex;align-items:center;gap:10px;font-size:13.5px;color:#dbe4f0}
+.who b{color:#fff}
+.lnk{background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:9px;padding:6px 14px;cursor:pointer;font-size:13px}
+.lnk:hover{background:rgba(255,255,255,.1)}
+
+/* ---------- الدخول ---------- */
+.auth{min-height:calc(100vh - 68px);display:grid;place-items:center;padding:20px}
+.box{width:min(420px,100%);background:#fff;border-radius:18px;box-shadow:0 30px 80px rgba(3,10,25,.45);overflow:hidden}
+.box .hd{padding:26px 28px 6px}
+.box h1{margin:0;font-size:24px;font-weight:800;color:var(--navy)}
+.box .hd p{margin:4px 0 0;color:var(--muted);font-size:14px}
+.tabs{display:flex;margin:16px 28px 0;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:0;padding:10px 0;cursor:pointer;color:var(--muted);font-weight:700;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button.on{color:var(--navy);border-bottom-color:var(--navy)}
+form{padding:20px 28px 26px;display:grid;gap:14px}
+.fld label{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:6px}
+.fld small{font-weight:400;color:var(--faint)}
+.fld input{width:100%;padding:11px 13px;border:1px solid var(--line2);border-radius:10px;background:#fff;direction:ltr;text-align:left}
+.fld input:focus{outline:none;border-color:var(--navy3);box-shadow:0 0 0 3px rgba(30,58,102,.14)}
+.btn{display:flex;align-items:center;justify-content:center;width:100%;border:0;background:var(--navy);color:#fff;padding:12px;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer}
+.btn:hover{background:var(--navy2)}
+.btn:disabled{opacity:.5;cursor:wait}
+.msg{padding:10px 12px;border-radius:10px;font-size:13.5px;font-weight:600;border:1px solid}
+.msg.ok{background:var(--okbg);color:var(--ok);border-color:#bbe5c8}
+.msg.bad{background:var(--badbg);color:var(--bad);border-color:#f3c4c4}
+.note{font-size:12.5px;color:var(--muted);line-height:1.8;margin:0}
+
+/* ---------- الأنظمة ---------- */
+main{max-width:1100px;margin:0 auto;padding:34px 20px 40px}
+.hero{color:#fff;margin-bottom:28px}
+.hero h1{margin:0;font-size:28px;font-weight:800}
+.hero p{margin:4px 0 0;color:#a9bcd8;font-size:15px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+@media (max-width:900px){.grid{grid-template-columns:1fr;max-width:520px}}
+.card{position:relative;display:flex;flex-direction:column;gap:14px;text-decoration:none;color:inherit;background:#fff;border:1px solid var(--line);
+  border-radius:var(--r);padding:26px 24px 22px;box-shadow:0 2px 4px rgba(15,23,42,.06),0 18px 44px rgba(15,23,42,.14);
+  transition:transform .15s ease,box-shadow .15s ease;overflow:hidden;cursor:pointer}
+.card:before{content:"";position:absolute;inset-inline:0;top:0;height:5px;background:var(--c)}
+.card:hover{transform:translateY(-4px);box-shadow:0 4px 8px rgba(15,23,42,.08),0 26px 56px rgba(15,23,42,.2)}
+.card:focus-visible{outline:3px solid var(--c);outline-offset:3px}
+.ic{width:72px;height:72px;border-radius:18px;display:grid;place-items:center;background:var(--soft);color:var(--c)}
+.ic svg{width:40px;height:40px}
+.card h2{margin:0;font-size:21px;font-weight:800}
+.card p{margin:0;color:var(--ink2);font-size:14px;line-height:1.75;flex:1}
+.go{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:14px;font-weight:700;color:var(--c);font-size:14.5px}
+.go small{font-weight:400;color:var(--muted);font-size:12px;direction:ltr}
+.c1{--c:#b8860b;--soft:#fdf6e3}.c2{--c:#1f5135;--soft:#e8f1eb}.c3{--c:#1e3a66;--soft:#eaf0f8}
+@media (max-width:600px){.hero h1{font-size:22px}.who span.nm{display:none}}
+footer{text-align:center;color:var(--faint);font-size:12.5px;padding:10px 0 26px}
+body:not(.in) footer{color:#6f84a6}
+</style>
+</head>
+<body>
+<div class="scene" aria-hidden="true">
+  <svg viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <g id="rd">
+        <!-- الطريقين الرئيسيين -->
+        <path d="M-50 400 H1250"/><path d="M600 -50 V850"/>
+        <!-- اللوبات الأربعة -->
+        <path d="M600 300 A100 100 0 1 1 500 400"/><path d="M700 400 A100 100 0 1 1 600 300"/>
+        <path d="M600 500 A100 100 0 1 1 700 400"/><path d="M500 400 A100 100 0 1 1 600 500"/>
+        <!-- طرق جانبية -->
+        <path d="M-50 130 C250 130 330 250 600 250 S960 120 1250 140"/>
+        <path d="M-50 680 C300 690 380 560 600 560 S900 690 1250 670"/>
+        <path d="M180 -50 C200 200 160 300 180 850"/><path d="M1020 -50 C1000 250 1040 520 1020 850"/>
+      </g>
+    </defs>
+    <g fill="none" stroke-linecap="round">
+      <use href="#rd" stroke="rgba(255,255,255,.07)" stroke-width="58"/>
+      <use href="#rd" stroke="rgba(18,38,70,.9)" stroke-width="50"/>
+      <use href="#rd" stroke="rgba(255,255,255,.22)" stroke-width="1.6" stroke-dasharray="16 14"/>
+      <path d="M-50 400 H1250 M600 -50 V850" stroke="rgba(245,197,66,.55)" stroke-width="2" stroke-dasharray="26 18"/>
+    </g>
+  </svg>
+</div>
+
+<div class="top"><div class="in">
+  <div class="mark"><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M7 29 L13 3 M25 29 L19 3" stroke="#fff" stroke-width="2.6" fill="none"/><path d="M16 7v4M16 15v4M16 23v4" stroke="#f5c542" stroke-width="2.6"/></svg></div>
+  <div class="brand"><b>مكتب التصميمات</b><span>بوابة الأنظمة</span></div>
+  <div class="sp"></div>
+  <div class="who hidden" id="who"><span class="nm">أهلاً <b id="uName"></b></span><button class="lnk" id="out">خروج</button></div>
+</div></div>
+
+<!-- ============ الدخول / حساب جديد ============ -->
+<section class="auth" id="auth">
+  <div class="box">
+    <div class="hd"><h1>أهلاً بيك</h1><p>ادخل بحسابك عشان تفتح الأنظمة</p></div>
+    <div class="tabs"><button id="tIn" class="on" type="button">تسجيل الدخول</button><button id="tUp" type="button">إنشاء حساب جديد</button></div>
+
+    <form id="fIn" autocomplete="on">
+      <div class="fld"><label for="u">اسم المستخدم</label><input id="u" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>
+      <div class="fld"><label for="p">كلمة المرور</label><input id="p" type="password" autocomplete="current-password" required></div>
+      <button class="btn" id="bIn">دخول</button>
+      <div id="mIn"></div>
+    </form>
+
+    <form id="fUp" class="hidden" autocomplete="off">
+      <div class="fld"><label for="su">اسم المستخدم <small>— حروف إنجليزي صغيرة وأرقام (3 لـ 30)</small></label><input id="su" autocapitalize="none" spellcheck="false" required></div>
+      <div class="fld"><label for="sp">كلمة المرور <small>— 8 حروف على الأقل</small></label><input id="sp" type="password" autocomplete="new-password" required></div>
+      <div class="fld"><label for="sp2">تأكيد كلمة المرور</label><input id="sp2" type="password" autocomplete="new-password" required></div>
+      <button class="btn" id="bUp">إرسال طلب إنشاء الحساب</button>
+      <div id="mUp"></div>
+      <p class="note">الطلب بيوصل للمسؤول، وبعد موافقته تقدر تدخل بنفس الحساب على البوابة وعلى الأنظمة.</p>
+    </form>
+  </div>
+</section>
+
+<!-- ============ الأنظمة ============ -->
+<main id="apps" class="hidden">
+  <div class="hero"><h1>اختار النظام اللي عايز تدخل عليه</h1><p>كل الأنظمة في مكان واحد</p></div>
+  <div class="grid">
+    <a class="card c1" href="https://mo2ysaaat.vercel.app/" data-sso>
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l1 2h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h3z"/><path d="M9 3v3h6V3"/><path d="M8 11h8M8 15h8M8 19h5"/></svg></div>
+      <h2>متابعة المقايسات</h2>
+      <p>متابعة المقايسات حسب الشركة والمشروع والكتيبة، وحالة كل مقايسة.</p>
+      <div class="go"><span>دخول ←</span><small>mo2ysaaat.vercel.app</small></div>
+    </a>
+    <a class="card c2" href="https://mowaznat-2026.vercel.app/" data-sso>
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16"/><path d="M6 20v-6M10 20V9M14 20v-8M18 20V5"/><path d="M5 10l5-5 4 4 5-5"/></svg></div>
+      <h2>الموازنات</h2>
+      <p>مشروعات الطرق وموقف الموازنات: اللوحات والموازنة والذاتي والعقود، والمقايسات المتوقفة.</p>
+      <div class="go"><span>دخول ←</span><small>mowaznat-2026.vercel.app</small></div>
+    </a>
+    <a class="card c3" href="https://hagz-moraga3a.vercel.app/" data-sso>
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M9 15l2 2 4-4"/></svg></div>
+      <h2>حجز مواعيد المراجعة</h2>
+      <p>الجهات بتحجز ميعاد مراجعة من النتيجة، والإدارة بتتابع الحضور والأرشيف.</p>
+      <div class="go"><span>دخول ←</span><small>hagz-moraga3a.vercel.app</small></div>
+    </a>
+  </div>
+</main>
+<footer>مكتب التصميمات</footer>
+
+<script>
+// نفس حسابات «متابعة المقايسات»: اسم المستخدم بيتحوّل لـ username@mo2ysaat.app
+const SB_URL = 'https://qadrtqtydtgzachfzpqw.supabase.co';
+const SB_KEY = 'sb_publishable_YWBHuhE3Eb3Qs9VkOP1jEA_335B_9SB';
+const DOM = '@mo2ysaat.app';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+const $ = (id) => document.getElementById(id);
+const say = (el, ok, t) => { el.innerHTML = t ? `<div class="msg ${ok ? 'ok' : 'bad'}"></div>` : ''; if (t) el.firstChild.textContent = t; };
+
+function tab(up) {
+  $('tIn').classList.toggle('on', !up); $('tUp').classList.toggle('on', up);
+  $('fIn').classList.toggle('hidden', up); $('fUp').classList.toggle('hidden', !up);
+  say($('mIn')); say($('mUp'));
+}
+$('tIn').onclick = () => tab(false);
+$('tUp').onclick = () => tab(true);
+
+function show(session) {
+  const inn = !!session;
+  document.body.classList.toggle('in', inn);
+  $('auth').classList.toggle('hidden', inn);
+  $('apps').classList.toggle('hidden', !inn);
+  $('who').classList.toggle('hidden', !inn);
+  if (inn) $('uName').textContent = (session.user.email || '').split('@')[0];
+}
+
+$('fIn').onsubmit = async (e) => {
+  e.preventDefault();
+  const u = $('u').value.trim().toLowerCase();
+  if (!u) return;
+  $('bIn').disabled = true; say($('mIn'));
+  const { data, error } = await sb.auth.signInWithPassword({ email: u.includes('@') ? u : u + DOM, password: $('p').value });
+  $('bIn').disabled = false;
+  if (error) {
+    const m = error.message || '';
+    if (/not confirmed/i.test(m)) return say($('mIn'), false, 'حسابك لسه مستني موافقة المسؤول.');
+    if (/invalid login/i.test(m)) return say($('mIn'), false, 'اسم المستخدم أو كلمة المرور غلط.');
+    return say($('mIn'), false, 'حصلت مشكلة، اتأكد من النت وحاول تاني.');
+  }
+  $('p').value = '';
+  show(data.session);
+};
+
+$('fUp').onsubmit = async (e) => {
+  e.preventDefault();
+  const u = $('su').value.trim().toLowerCase(), p = $('sp').value, p2 = $('sp2').value;
+  if (!/^[a-z0-9._-]{3,30}$/.test(u)) return say($('mUp'), false, 'اسم المستخدم لازم يكون حروف إنجليزي صغيرة أو أرقام أو . _ - (من 3 لـ 30 حرف).');
+  if (p.length < 8) return say($('mUp'), false, 'كلمة المرور لازم تكون 8 حروف على الأقل.');
+  if (p !== p2) return say($('mUp'), false, 'كلمتين المرور مش زي بعض.');
+  $('bUp').disabled = true; say($('mUp'), true, 'جاري إرسال الطلب…');
+  let s = 0, j = {};
+  try {
+    const r = await fetch('/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) });
+    s = r.status; try { j = await r.json(); } catch (x) {}
+  } catch (x) { s = 0; }
+  $('bUp').disabled = false;
+  if (s === 200) { ['su', 'sp', 'sp2'].forEach((i) => ($(i).value = '')); return say($('mUp'), true, '✓ اتبعت طلبك. هتقدر تدخل بعد موافقة المسؤول.'); }
+  if (s === 409) return say($('mUp'), false, 'اسم المستخدم ده موجود قبل كده، اختار اسم تاني.');
+  if (s === 400) return say($('mUp'), false, j.error === 'bad_password' ? 'كلمة المرور لازم تكون من 8 لـ 72 حرف.' : 'اسم المستخدم مش مظبوط.');
+  say($('mUp'), false, 'تعذّر إرسال الطلب، حاول تاني بعد شوية.');
+};
+
+$('out').onclick = async () => { await sb.auth.signOut(); show(null); };
+
+// المقايسات والموازنات والحجز على نفس الحسابات: بنفتحهم وإنت داخل على طول من غير تسجيل دخول تاني
+document.querySelectorAll('[data-sso]').forEach((a) => (a.onclick = async (e) => {
+  const { data } = await sb.auth.getSession();
+  const s = data.session;
+  if (!s) return;
+  e.preventDefault();
+  const h = new URLSearchParams({ access_token: s.access_token, refresh_token: s.refresh_token, expires_in: String(s.expires_in || 3600), expires_at: String(s.expires_at || ''), token_type: 'bearer', type: 'magiclink' });
+  location.href = a.href.split('#')[0] + '#' + h.toString();
+}));
+
+sb.auth.getSession().then(({ data }) => show(data.session));
+sb.auth.onAuthStateChange((_ev, session) => setTimeout(() => show(session), 0));
+</script>
+</body>
+</html>
