@@ -85,6 +85,18 @@ main{max-width:1100px;margin:0 auto;padding:34px 20px 40px}
 .go small{font-weight:400;color:var(--muted);font-size:12px;direction:ltr}
 .c1{--c:#b8860b;--soft:#fdf6e3}.c2{--c:#1f5135;--soft:#e8f1eb}.c3{--c:#1e3a66;--soft:#eaf0f8}
 @media (max-width:600px){.hero h1{font-size:22px}.who span.nm{display:none}}
+/* ---------- النظام مفتوح جوه البوابة ---------- */
+#view{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;background:#fff}
+#view .vbar{flex:none;height:46px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--navy);color:#fff}
+#view .vbar button{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:9px;padding:5px 12px;cursor:pointer;font-size:13px;font-weight:700}
+#view .vbar button:hover{background:rgba(255,255,255,.18)}
+#view .vbar b{font-size:14.5px}
+#view .vbar .sw{margin-inline-start:auto;display:flex;gap:6px}
+#view .vbar .sw button{font-weight:600;background:transparent;border-color:rgba(255,255,255,.18);color:#c9d6ea}
+#view .vbar .sw button.on{background:#fff;color:var(--navy);border-color:#fff}
+@media (max-width:600px){#view .vbar .sw{display:none}}
+#view iframe{flex:1;width:100%;border:0;display:block;background:#fff}
+body.viewing{overflow:hidden}
 footer{text-align:center;color:var(--faint);font-size:12.5px;padding:10px 0 26px}
 body:not(.in) footer{color:#6f84a6}
 </style>
@@ -171,6 +183,16 @@ body:not(.in) footer{color:#6f84a6}
 </main>
 <footer>مكتب التصميمات</footer>
 
+<!-- النظام بيفتح هنا جوه البوابة نفسها -->
+<div id="view" class="hidden">
+  <div class="vbar">
+    <button type="button" id="vBack">→ البوابة</button>
+    <b id="vTitle"></b>
+    <div class="sw" id="vSw"></div>
+  </div>
+  <iframe id="vFrame" title="النظام" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
+</div>
+
 <script>
 // نفس حسابات «متابعة المقايسات»: اسم المستخدم بيتحوّل لـ username@mo2ysaat.app
 const SB_URL = 'https://qadrtqtydtgzachfzpqw.supabase.co';
@@ -194,6 +216,7 @@ function show(session) {
   $('auth').classList.toggle('hidden', inn);
   $('apps').classList.toggle('hidden', !inn);
   $('who').classList.toggle('hidden', !inn);
+  if (!inn && typeof closeApp === 'function' && $('view')) closeApp();
   if (inn) $('uName').textContent = (session.user.email || '').split('@')[0];
 }
 
@@ -235,15 +258,35 @@ $('fUp').onsubmit = async (e) => {
 
 $('out').onclick = async () => { await sb.auth.signOut(); show(null); };
 
-// المقايسات والموازنات والحجز على نفس الحسابات: بنفتحهم وإنت داخل على طول من غير تسجيل دخول تاني
-document.querySelectorAll('[data-sso]').forEach((a) => (a.onclick = async (e) => {
-  e.preventDefault(); // لازم يتمنع فوراً قبل أي انتظار، وإلا المتصفح بيفتح الرابط من غير الجلسة
+// الأنظمة بتفتح جوه البوابة نفسها (من غير ما تروح لموقع تاني)، وبنفس الحساب من غير تسجيل دخول تاني
+const APPS = [...document.querySelectorAll('[data-sso]')].map((a) => ({ a, href: a.href.split('#')[0], name: a.querySelector('h2').textContent }));
+$('vSw').innerHTML = APPS.map((x, i) => `<button type="button" data-i="${i}"></button>`).join('');
+[...$('vSw').children].forEach((b, i) => { b.textContent = APPS[i].name; b.onclick = () => openApp(i, true); });
+async function openApp(i, replace) {
+  const app = APPS[i];
   let s = null;
   try { const { data } = await sb.auth.getSession(); s = data.session; } catch (x) {}
-  if (!s) { location.href = a.href; return; }
-  const h = new URLSearchParams({ access_token: s.access_token, refresh_token: s.refresh_token, expires_in: String(s.expires_in || 3600), expires_at: String(s.expires_at || ''), token_type: 'bearer', type: 'magiclink' });
-  location.href = a.href.split('#')[0] + '#' + h.toString();
-}));
+  let url = app.href;
+  if (s) url += '#' + new URLSearchParams({ access_token: s.access_token, refresh_token: s.refresh_token, expires_in: String(s.expires_in || 3600), expires_at: String(s.expires_at || ''), token_type: 'bearer', type: 'magiclink' }).toString();
+  $('vTitle').textContent = app.name;
+  [...$('vSw').children].forEach((b, k) => b.classList.toggle('on', k === i));
+  // بنعمل إطار جديد كل مرة عشان ما يتسجلش في تاريخ المتصفح وزرار الرجوع يفضل يرجعك للبوابة
+  const old = $('vFrame'), f = document.createElement('iframe');
+  f.id = 'vFrame'; f.title = app.name; f.allow = old.allow; f.src = url;
+  old.replaceWith(f);
+  $('view').classList.remove('hidden'); document.body.classList.add('viewing');
+  const st = { app: i };
+  if (replace && history.state && history.state.app != null) history.replaceState(st, ''); else history.pushState(st, '');
+}
+function closeApp() {
+  $('view').classList.add('hidden'); document.body.classList.remove('viewing');
+  const old = $('vFrame'), f = document.createElement('iframe');
+  f.id = 'vFrame'; f.allow = old.allow; old.replaceWith(f);
+}
+APPS.forEach((x, i) => (x.a.onclick = (e) => { e.preventDefault(); openApp(i); }));
+$('vBack').onclick = () => { if (history.state && history.state.app != null) history.back(); else closeApp(); };
+// زرار الرجوع في الموبايل بيقفل النظام ويرجعك للبوابة
+addEventListener('popstate', (e) => { if (!(e.state && e.state.app != null)) closeApp(); else openApp(e.state.app, true); });
 
 sb.auth.getSession().then(({ data }) => show(data.session));
 sb.auth.onAuthStateChange((_ev, session) => setTimeout(() => show(session), 0));
