@@ -91,13 +91,36 @@ function setEnt(e) {
   if (ENT) { $("entName").textContent = ENT.name; openList(false); } else $("fSearch").value = "";
 }
 $("entChange").onclick = () => { setEnt(null); $("fSearch").focus(); };
+/* أسماء المشاريع من الموازنات: قايمة بحث للاختيار (ولو المشروع مش فيها يقدر يكتبه) */
+let projects = [];
+async function loadProjects() {
+  try {
+    const r = await fetch(`${MZ_URL}/rest/v1/rpc/mz_project_names`, {method:"POST", headers:{apikey:MZ_KEY, Authorization:`Bearer ${MZ_KEY}`, "Content-Type":"application/json"}, body:"{}"});
+    const j = r.ok ? await r.json() : [];
+    projects = Array.isArray(j) ? j.map(x => x.name).filter(Boolean) : [];
+  } catch (e) { projects = []; }
+}
+const normP = s => String(s || "").replace(/[\u064B-\u065F]/g, "").replace(/[أإآ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").toLowerCase();
+function renderProjList() {
+  const q = normP($("fProj").value.trim()), words = q.split(/\s+/).filter(Boolean);
+  const list = (words.length ? projects.filter(n => { const t = normP(n); return words.every(w => t.includes(w)); }) : projects);
+  $("pList").innerHTML = list.length ? list.map((n, i) => `<div class="opt" data-i="${i}">${esc(n)}</div>`).join("")
+    : `<div class="opt none">${projects.length ? "مفيش مشروع بالاسم ده في الموازنات" : "اكتب اسم المشروع"}</div>`;
+  $("pList")._cur = list;
+}
+function openPList(o) { $("pList").classList.toggle("hidden", !o); $("projPick").classList.toggle("open", o); }
+$("fProj").onfocus = () => { renderProjList(); openPList(true); };
+$("fProj").oninput = () => { renderProjList(); openPList(true); };
+$("fProj").onblur = () => setTimeout(() => openPList(false), 150);
+$("pList").onmousedown = e => { const o = e.target.closest(".opt[data-i]"); if (!o) return; e.preventDefault(); $("fProj").value = $("pList")._cur[+o.dataset.i]; openPList(false); };
 async function loadEntities() { entities = await rest("entities?select=id,name&order=name"); }
 
 $("fBtn").onclick = async () => {
   const proj = $("fProj").value.trim(), rev = $("fRev").value.trim();
   if (!SEL) return showMsg($("fMsg"), false, "اختار اليوم الأول");
   if (!ENT) return showMsg($("fMsg"), false, "اختار الجهة من القائمة");
-  if (!proj) return showMsg($("fMsg"), false, "اكتب اسم المشروع");
+  if (!proj) return showMsg($("fMsg"), false, "اختار المشروع من القايمة");
+  if (projects.length && !projects.includes(proj)) return showMsg($("fMsg"), false, "اختار اسم المشروع من القايمة (اضغط على الخانة وابحث)");
   if (!rev) return showMsg($("fMsg"), false, "اكتب المطلوب مراجعته");
   $("fBtn").disabled = true;
   try {
@@ -288,4 +311,4 @@ function route() {
 }
 window.onhashchange = route; route();
 if (SSO) authToken();
-loadStatus(); loadEntities();
+loadStatus(); loadEntities(); loadProjects();
