@@ -377,3 +377,9 @@ label.zero { display: flex; gap: 8px; align-items: center; margin-top: 12px; fon
 
 /* شريط خطوط الطريق تحت الشريط العلوي */
 .road-strip { height: 10px; background: repeating-linear-gradient(90deg, #e9eee8 0 30px, transparent 30px 54px) center / 100% 2px no-repeat, #2b3a30; border-bottom: 1px solid #1c2820; }
+
+/* زرار الرجوع لبوابة الأنظمة */
+.portal-back { display: inline-flex; align-items: center; gap: 6px; color: #fff; text-decoration: none; font-weight: 700; font-size: 13px;
+  border: 1px solid rgba(255,255,255,.3); border-radius: 9px; padding: 5px 12px; white-space: nowrap; }
+.portal-back:hover { background: rgba(255,255,255,.12); }
+.login-wrap .portal-back { position: fixed; top: 16px; right: 16px; background: rgba(0,0,0,.18); }

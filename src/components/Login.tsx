@@ -24,6 +24,7 @@ export default function Login({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="login-wrap">
+      <a className="portal-back" href="https://tasmemat.vercel.app/"><span aria-hidden>→</span> البوابة</a>
       <div className="login">
         <h1>موازنات</h1>
         <p>متابعة مشروعات الطرق والموازنات</p>

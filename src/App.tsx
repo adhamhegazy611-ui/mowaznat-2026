@@ -130,6 +130,9 @@ export default function App() {
   return (
     <>
       <header className="topbar">
+        <a className="portal-back" href="https://tasmemat.vercel.app/" title="رجوع لبوابة الأنظمة">
+          <span aria-hidden>→</span> البوابة
+        </a>
         <div className="brand">
           <span className="logo">م</span>
           موازنات
