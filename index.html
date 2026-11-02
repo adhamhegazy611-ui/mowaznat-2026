@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>حجز مواعيد المراجعة</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png"><link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png"><link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#0b1b33"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="الحجز">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<link rel="stylesheet" href="/style.css?v=2">
+</head>
+<body>
+<div class="top"><div class="in">
+  <a href="https://tasmemat.vercel.app/" class="portal" title="رجوع لبوابة الأنظمة">→ البوابة</a>
+  <div class="mark"><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M7 29 L13 3 M25 29 L19 3" stroke="#fff" stroke-width="2.6" fill="none"/><path d="M16 7v4M16 15v4M16 23v4" stroke="#f5c542" stroke-width="2.6"/></svg></div>
+  <div class="brand"><b>مكتب التصميمات</b><span>نظام حجز مواعيد المراجعة</span></div>
+  <div class="sp"></div>
+  <a href="#admin" class="nav" id="navlink">لوحة الإدارة</a>
+</div></div>
+<div class="strip"></div>
+
+<main>
+<!-- ================= PUBLIC ================= -->
+<section id="pub">
+  <div class="ph">
+    <div><h1>حجز ميعاد مراجعة</h1><p>اختار اليوم المناسب من النتيجة، وبعدين سجّل بيانات المشروع والمطلوب مراجعته.</p></div>
+  </div>
+
+  <div class="book">
+    <div class="panel">
+      <div class="ph2"><span class="n">1</span><h2>اختيار اليوم</h2>
+        <div class="end"><button class="mnav" id="mPrev" title="الشهر اللي فات">&#8250;</button><span class="mtitle" id="mTitle"></span><button class="mnav" id="mNext" title="الشهر الجاي">&#8249;</button></div>
+      </div>
+      <div class="pb">
+        <div class="dg" id="pHead"></div>
+        <div class="dg" id="pDays" style="margin-top:4px"></div>
+        <div class="legend">
+          <span><i style="background:#cfe3d5"></i>مكان متاح</span>
+          <span><i style="background:var(--navy3)"></i>مكان محجوز</span>
+          <span><i style="background:var(--line2)"></i>اليوم مكتمل</span>
+          <span id="untilNote"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph2"><span class="n">2</span><h2>بيانات الحجز</h2></div>
+      <div class="pb">
+        <div id="formEmpty" class="empty"><div class="g">&#8594;</div>اختار يوم من النتيجة عشان تكمّل الحجز</div>
+        <div id="formBody" class="hidden">
+          <div class="sum">
+            <div class="ic"><b id="sMon"></b><span id="sDay"></span></div>
+            <div class="t"><b id="pDate"></b><span id="pBooked"></span></div>
+          </div>
+          <div class="fld">
+            <label>الجهة <em>*</em></label>
+            <div id="entPick" class="combo">
+              <input type="text" id="fSearch" placeholder="ابحث واختار اسم الجهة…" autocomplete="off">
+              <div class="list hidden" id="fList"></div>
+            </div>
+            <div id="entChosen" class="chosen hidden"><span id="entName"></span><button type="button" id="entChange">تغيير</button></div>
+          </div>
+          <div class="fld"><label>اسم المشروع <em>*</em></label><input type="text" id="fProj" maxlength="200"></div>
+          <div class="fld"><label>المطلوب مراجعته <em>*</em></label><textarea id="fRev" maxlength="2000" placeholder="مثال: اللوحات المعمارية للدور الأرضي، المقايسة…"></textarea></div>
+          <div class="fld"><label>النواقص <small>— الحاجات اللي مش هتكون جاهزة يوم المراجعة</small></label><textarea id="fMiss" maxlength="2000" placeholder="اكتب كل بند في سطر، أو سيبها فاضية لو كله جاهز"></textarea></div>
+          <button class="btn block" id="fBtn">تأكيد الحجز</button>
+          <div id="fMsg"></div>
+          <div class="note">• الحد الأقصى جهتين في اليوم.<br>• الجهة اللي تحجز وما تحضرش، متقدرش تحجز تاني غير من الأسبوع اللي بعده.<br>• مسموح بحجز واحد قادم لكل جهة.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ADMIN ================= -->
+<section id="adm" class="hidden">
+  <div class="panel login" id="aLogin">
+    <div class="ph2"><h2>دخول لوحة الإدارة</h2></div>
+    <div class="pb">
+      <div class="fld"><label>اسم المستخدم</label><input id="aUser" type="text" autocomplete="username" dir="ltr"></div>
+      <div class="fld"><label>كلمة المرور</label><input id="aPass" type="password" autocomplete="current-password" dir="ltr"></div>
+      <button class="btn block" id="aLoginBtn">دخول</button>
+      <div id="aLoginMsg"></div>
+      <div class="note">نفس حساب المقايسات والموازنات. لوحة الإدارة متاحة لحسابات «المسؤول» بس.</div>
+    </div>
+  </div>
+
+  <div id="aPanel" class="hidden">
+    <div class="ph">
+      <div><h1>لوحة الإدارة</h1><p id="aToday"></p></div>
+      <button class="btn ghost" id="aOut">تسجيل خروج</button>
+    </div>
+    <div class="stats">
+      <div class="panel stat"><span>مراجعات النهارده</span><b id="stToday">–</b><small id="stTodayN"></small></div>
+      <div class="panel stat"><span>حجوزات قادمة</span><b id="stUp">–</b><small>من بكرا لحد آخر الحجز</small></div>
+      <div class="panel stat"><span>غياب آخر ٣٠ يوم</span><b id="stMiss">–</b><small>حجز ما اتعلّمش عليه حضور</small></div>
+      <div class="panel stat"><span>الجهات المسجّلة</span><b id="stEnt">–</b><small id="stEntN"></small></div>
+    </div>
+
+    <div class="panel">
+      <div class="tabs">
+        <button data-t="bk" class="on">الحجوزات الحالية</button>
+        <button data-t="ar">الأرشيف</button>
+        <button data-t="en">الجهات</button>
+        <button data-t="st">الإعدادات</button>
+      </div>
+
+      <!-- current -->
+      <div class="pb" data-p="bk">
+        <div class="toolbar">
+          <div class="seg" id="quick">
+            <button data-q="today">النهارده</button>
+            <button data-q="week">الأسبوع ده</button>
+            <button data-q="up" class="on">كل القادمة</button>
+          </div>
+        </div>
+        <div class="count" id="bCount"></div>
+        <div class="tblwrap"><table>
+          <thead><tr><th>التاريخ</th><th>الجهة</th><th>المشروع</th><th>المطلوب مراجعته</th><th>النواقص</th><th>الحالة</th><th>إجراء</th></tr></thead>
+          <tbody id="bList"></tbody>
+        </table></div>
+      </div>
+
+      <!-- archive -->
+      <div class="pb hidden" data-p="ar">
+        <div class="toolbar">
+          <div class="fld"><label>من</label><input type="date" id="rFrom"></div>
+          <div class="fld"><label>إلى</label><input type="date" id="rTo"></div>
+          <div class="fld grow"><label>بحث</label><input type="search" id="rQ" placeholder="اسم الجهة أو المشروع…"></div>
+          <div class="seg" id="rSt">
+            <button data-s="" class="on">الكل</button><button data-s="attended">حضر</button><button data-s="miss">غاب</button>
+          </div>
+          <button class="btn ghost" id="rCsv">تصدير Excel</button>
+        </div>
+        <div class="count" id="rCount"></div>
+        <div class="tblwrap"><table>
+          <thead><tr><th>التاريخ</th><th>الجهة</th><th>المشروع</th><th>المطلوب مراجعته</th><th>النواقص</th><th>الحالة</th><th>تعديل</th></tr></thead>
+          <tbody id="rList"></tbody>
+        </table></div>
+        <div class="note">الأرشيف بيعرض كل الحجوزات اللي يومها عدّى. أي حجز متعلّمش عليه "حضر" بيتحسب غياب، والجهة متقدرش تحجز غير من الأسبوع اللي بعده (الأسبوع بيبدأ السبت).</div>
+      </div>
+
+      <!-- entities -->
+      <div class="pb hidden" data-p="en">
+        <div class="grid2">
+          <div>
+            <p class="sub">إضافة جهات</p>
+            <div class="fld"><textarea id="eNew" style="min-height:170px" placeholder="اكتب اسم كل جهة في سطر لوحده"></textarea></div>
+            <button class="btn" id="eAdd">إضافة</button>
+            <div id="eMsg"></div>
+          </div>
+          <div>
+            <p class="sub">كل الجهات <span id="eCount" style="font-weight:400;color:var(--muted);font-size:13px"></span></p>
+            <div class="fld"><input type="search" id="eSearch" placeholder="بحث…"></div>
+            <div id="eList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- settings -->
+      <div class="pb hidden" data-p="st">
+        <p class="sub">أيام الإجازة (مفيش فيها حجز)</p>
+        <div class="chk" id="sDays"></div>
+        <hr class="s">
+        <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+          <div class="fld"><label>الحجز متاح لحد يوم</label><input id="sUntil" type="date"></div>
+        </div>
+        <button class="btn" id="sSave">حفظ الإعدادات</button>
+        <div id="sMsg"></div>
+        <div class="note">الدخول للوحة دي بحسابات «المسؤول» في المقايسات. المسؤول يقدر يدّي أو يشيل الصلاحية من إدارة الحسابات في المقايسات.</div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+<footer>مكتب التصميمات — نظام حجز مواعيد المراجعة</footer>
+
+<script src="/app.js?v=2"></script>
+</body>
+</html>
