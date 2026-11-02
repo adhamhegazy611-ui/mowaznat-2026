@@ -383,3 +383,8 @@ label.zero { display: flex; gap: 8px; align-items: center; margin-top: 12px; fon
   border: 1px solid rgba(255,255,255,.3); border-radius: 9px; padding: 5px 12px; white-space: nowrap; }
 .portal-back:hover { background: rgba(255,255,255,.12); }
 .login-wrap .portal-back { position: fixed; top: 16px; right: 16px; background: rgba(0,0,0,.18); }
+
+/* زرار طلبات الحسابات (للمدير) */
+.user .req-btn { background: #c98a1b; border: 1px solid #c98a1b; color: #fff; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+.user .req-btn:hover { background: #b07714; }
+.req-n { background: #fff; color: #7a4f00; border-radius: 99px; min-width: 20px; padding: 0 6px; font-size: 12px; line-height: 20px; text-align: center; }

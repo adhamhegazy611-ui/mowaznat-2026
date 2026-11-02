@@ -21,6 +21,12 @@ export interface Session {
 export const LOGIN_DOMAIN = '@mo2ysaat.app'
 export const toEmail = (u: string) => (u.includes('@') ? u.trim() : u.trim().toLowerCase() + LOGIN_DOMAIN)
 
+export interface SignupRequest {
+  user_id: string
+  username: string
+  created_at: string
+}
+
 export interface Api {
   getSession(): Promise<Session | null>
   signIn(email: string, password: string): Promise<void>
@@ -42,6 +48,12 @@ export interface Api {
 
   listProfiles(): Promise<Profile[]>
   setRole(id: string, role: Role | null, battalions?: string[] | null): Promise<void>
+
+  /** طلبات إنشاء الحسابات المعلّقة (للمدير) */
+  listSignupRequests(): Promise<SignupRequest[]>
+  /** قبول تلقائي: مشاهد لكتيبته بس في المقايسات والموازنات — بيرجّع رقم الكتيبة */
+  approveSignup(userId: string): Promise<string>
+  rejectSignup(userId: string): Promise<void>
 
   listHistory(projectId?: number): Promise<HistoryEntry[]>
 
@@ -151,6 +163,24 @@ function supabaseApi(sb: SupabaseClient): Api {
     async setRole(id, role, battalions) {
       must(await sb.rpc('mz_set_role', { p_user: id, p_role: role, p_battalions: battalions ?? null }))
     },
+
+    async listSignupRequests() {
+      return must(await sb.from('signup_requests').select('user_id,username,created_at').eq('status', 'pending').order('created_at')) as SignupRequest[]
+    },
+    async approveSignup(userId) {
+      return must(await sb.rpc('approve_signup_auto', { p_user: userId })) as string
+    },
+    async rejectSignup(userId) {
+      must(await sb.rpc('reject_signup', { p_user: userId }))
+    },
+
+    async listSignupRequests() {
+      return []
+    },
+    async approveSignup() {
+      return ''
+    },
+    async rejectSignup() {},
 
     async listHistory(projectId) {
       let q = sb.from('mz_history').select('*').order('created_at', { ascending: false }).limit(300)
