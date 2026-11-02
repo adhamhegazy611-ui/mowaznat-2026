@@ -41,9 +41,9 @@ body.in .scene:after{background:linear-gradient(180deg,transparent 0,transparent
 .who b{color:#fff}
 .lnk{background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:9px;padding:6px 14px;cursor:pointer;font-size:13px}
 .lnk:hover{background:rgba(255,255,255,.1)}
-.reqb{background:#c98a1b;border:1px solid #c98a1b;color:#fff;border-radius:9px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px}
-.reqb:hover{background:#b07714}
-.reqb .n{background:#fff;color:#7a4f00;border-radius:99px;min-width:20px;padding:0 6px;font-size:12px;line-height:20px;text-align:center}
+.reqb{background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:9px;padding:6px 14px;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.reqb:hover{background:rgba(255,255,255,.1)}
+.reqb .n{background:#fff;color:var(--navy);border-radius:99px;min-width:20px;padding:0 6px;font-size:12px;line-height:20px;text-align:center}
 .rqm{position:fixed;inset:0;background:rgba(8,16,32,.6);z-index:300;display:grid;place-items:start center;padding:40px 12px;overflow:auto}
 .rqm.hidden{display:none}
 .rqb{background:#fff;color:#14213d;border-radius:14px;width:min(640px,100%);box-shadow:0 24px 60px rgba(0,0,0,.4)}
@@ -57,7 +57,7 @@ body.in .scene:after{background:linear-gradient(180deg,transparent 0,transparent
 .rqr .i small{display:block;color:#64748b;font-size:12.5px}
 .rqr .no{color:#b91c1c}
 .rqr button{border-radius:8px;padding:6px 14px;cursor:pointer;font:inherit;font-weight:600;border:1px solid #cbd5e1;background:#fff}
-.rqr .ok{background:#15803d;border-color:#15803d;color:#fff}
+.rqr .ok{background:var(--navy2);border-color:var(--navy2);color:#fff}
 .rqr .rj{color:#b91c1c;border-color:#fca5a5}
 .rqr button:disabled{opacity:.45;cursor:not-allowed}
 .rqe{padding:20px 0;text-align:center;color:#64748b}
@@ -167,7 +167,7 @@ body:not(.in) footer{color:#6f84a6}
   <div class="mark"><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M7 29 L13 3 M25 29 L19 3" stroke="#fff" stroke-width="2.6" fill="none"/><path d="M16 7v4M16 15v4M16 23v4" stroke="#f5c542" stroke-width="2.6"/></svg></div>
   <div class="brand"><b>مكتب التصميمات</b><span>بوابة الأنظمة</span></div>
   <div class="sp"></div>
-  <div class="who hidden" id="who"><button class="reqb hidden" id="reqBtn" type="button">👤 طلبات الحسابات <span class="n hidden" id="reqN"></span></button><span class="nm">أهلاً <b id="uName"></b></span><button class="lnk" id="out">خروج</button></div>
+  <div class="who hidden" id="who"><button class="reqb hidden" id="reqBtn" type="button">طلبات الحسابات <span class="n hidden" id="reqN"></span></button><span class="nm">أهلاً <b id="uName"></b></span><button class="lnk" id="out">خروج</button></div>
 </div></div>
 
 <!-- ============ الدخول / حساب جديد ============ -->
