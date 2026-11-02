@@ -62,7 +62,7 @@
             </div>
             <div id="entChosen" class="chosen hidden"><span id="entName"></span><button type="button" id="entChange">تغيير</button></div>
           </div>
-          <div class="fld"><label>اسم المشروع <em>*</em></label><input type="text" id="fProj" maxlength="200"></div>
+          <div class="fld"><label>اسم المشروع <em>*</em></label><div id="projPick" class="combo"><input type="text" id="fProj" maxlength="200" placeholder="اضغط هنا واختار المشروع (أو ابحث بالاسم)…" autocomplete="off"><div class="list hidden" id="pList"></div></div></div>
           <div class="fld"><label>المطلوب مراجعته <em>*</em></label><textarea id="fRev" maxlength="2000" placeholder="مثال: اللوحات المعمارية للدور الأرضي، المقايسة…"></textarea></div>
           <div class="fld"><label>النواقص <small>— الحاجات اللي مش هتكون جاهزة يوم المراجعة</small></label><textarea id="fMiss" maxlength="2000" placeholder="اكتب كل بند في سطر، أو سيبها فاضية لو كله جاهز"></textarea></div>
           <button class="btn block" id="fBtn">تأكيد الحجز</button>
