@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { isUrl } from '../lib/files'
 import {
   ACTION_SUGGESTIONS,
   BUDGET_STATUS_SUGGESTIONS,
@@ -293,9 +294,14 @@ export default function ProjectForm({ initial, reviewers, projects, canEdit, isA
                         value={d.file_path ?? ''}
                         readOnly={ro}
                         onChange={(e) => set('file_path', e.target.value || null)}
-                        placeholder="\\192.168.1.11\d\الموازنات\..."
+                        placeholder="الصق لينك الملف (Google Drive أو OneDrive) — Excel أو PDF"
                       />
-                      {d.file_path && (
+                      {d.file_path && isUrl(d.file_path) && (
+                        <a className="btn small" href={d.file_path.trim()} target="_blank" rel="noopener noreferrer">
+                          فتح
+                        </a>
+                      )}
+                      {d.file_path && !isUrl(d.file_path) && (
                         <button type="button" className="btn small" onClick={() => copyText(d.file_path!)}>
                           نسخ
                         </button>

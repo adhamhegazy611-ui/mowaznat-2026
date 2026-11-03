@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { COLUMNS, cellBg, emptyProject, type Column, type FieldKey } from '../lib/columns'
 import type { Mark, Project, Reviewer } from '../lib/types'
 import { BLANK, QUICK_LABEL, quickPass, type QuickKey, computeTotals, copyText, displayValue, fmtDate, fmtNum, loadPref, normalize, savePref } from '../lib/util'
+import { isUrl, fileKind } from '../lib/files'
 import { exportToExcel } from '../lib/exportExcel'
 import ColumnFilter, { type SortDir } from './ColumnFilter'
 import ProjectForm from './ProjectForm'
@@ -138,6 +139,15 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
       case 'date':
         return fmtDate(v as string)
       case 'path':
+        if (v && isUrl(v as string)) {
+          const k = fileKind(v as string)
+          return (
+            <a className={'file-link ' + k.cls} href={(v as string).trim()} target="_blank" rel="noopener noreferrer"
+              title={v as string} onClick={(e) => e.stopPropagation()}>
+              <span className="fi">{k.tag}</span>{k.label}
+            </a>
+          )
+        }
         return v ? (
           <div className="path" title={v as string}>
             <span>{String(v).split(/[\\/]/).pop()}</span>
