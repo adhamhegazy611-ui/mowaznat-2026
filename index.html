@@ -151,6 +151,46 @@ main{max-width:1100px;margin:0 auto;padding:34px 20px 40px}
 #pa .tw.cl td{padding:6px 8px;line-height:1.55;overflow:visible;border:0 solid transparent;white-space:normal;word-break:normal;overflow-wrap:anywhere}
 #pa .tw.cl td{border-radius:0}
 #pa .tw.cl tr:hover td:not(.ed){filter:brightness(.975)}
+#pa td.sel{outline:2.5px solid #0ea5e9;outline-offset:-2px}
+#pa .pinfo{position:sticky;bottom:12px;z-index:6;margin:14px 0 0;background:linear-gradient(135deg,#0f2747,#16365f);color:#fff;border-radius:16px;padding:14px 18px;box-shadow:0 14px 40px rgba(15,39,71,.4);max-height:44vh;overflow:auto;line-height:1.9}
+#pa .pinfo.hidden{display:none}
+#pa .pinfo .ph{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+#pa .pinfo .pt{font-weight:800;font-size:15px;flex:1}
+#pa .pinfo .pv{font-weight:800;font-size:18px;color:#fcd34d;direction:ltr}
+#pa .pinfo .px{border:0;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:14px}
+#pa .pinfo .pn{font-size:13px;color:#b9c9e3;margin:2px 0}
+#pa .pinfo .pe{font-size:14.5px;padding:6px 0}
+#pa .pinfo .op{color:#fcd34d;font-weight:800;margin:0 3px}
+#pa .pinfo .tx{margin:0 2px}#pa .pinfo .sm{font-size:12px;color:#b9c9e3}
+#pa .pinfo .ch{display:inline-flex;gap:8px;align-items:center;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:10px;padding:2px 10px;margin:2px 3px;cursor:pointer;font:inherit;font-size:13px}
+#pa .pinfo .ch:hover{background:rgba(255,255,255,.22)}
+#pa .pinfo .ch b{color:#fcd34d;direction:ltr}
+#pa .pinfo .pr{font-family:ui-monospace,monospace;font-size:11.5px;color:#8fa6c9;margin-top:6px;word-break:break-all}
+#pa .pbar{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+#pa .pq{width:100%;max-width:420px;border:1px solid #cbd5e1;background:#fff;border-radius:12px;padding:10px 14px;font:inherit;font-size:14px}
+#pa .pchips{display:flex;flex-wrap:wrap;gap:8px}
+#pa .pc{border:1px solid #cbd5e1;background:#fff;color:#1e3a66;border-radius:99px;padding:6px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+#pa .pc.on{background:#0f2747;color:#fff;border-color:#0f2747}
+#pa .tw.pt{padding:0;overflow:auto}
+#pa .pt table{table-layout:auto;border-collapse:separate;border-spacing:0;width:100%;margin:0;font-size:14px}
+#pa .pt th{position:sticky;top:0;background:#0f2747;color:#fff;padding:12px 10px;font-size:13px;font-weight:800;text-align:center;z-index:2}
+#pa .pt td{padding:12px 10px;border-bottom:1px solid #e5eaf2;vertical-align:middle;overflow:visible;text-align:center}
+#pa .pt tr:not(.sec):hover td{background:#f6f9ff}
+#pa .pt tr.sec td{background:#e9eef7;color:#0f2747;font-weight:800;text-align:right;padding:8px 14px;font-size:13.5px;border-bottom:1px solid #d5dbe5}
+#pa .pt td.n{color:#64748b;font-weight:700;width:44px}
+#pa .pt td.im{width:120px}
+#pa .pt td.im img{width:104px;height:78px;object-fit:cover;border-radius:10px;border:1px solid #d5dbe5;cursor:zoom-in;background:#f1f5f9;display:block;margin:0 auto}
+#pa .pt td.tt{text-align:right;min-width:260px}
+#pa .pt .h{font-weight:800;color:#0f172a;font-size:14.5px;line-height:1.6}
+#pa .pt .sp,#pa .pt .h{unicode-bidi:plaintext}
+#pa .pt .sp{color:#475569;font-size:12.5px;line-height:1.75;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#pa .pt .sp.open{display:block}
+#pa .pt .mr{border:0;background:none;color:#2563eb;font:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:2px 0}
+#pa .pt .ub{display:inline-block;background:#eaf2ff;color:#1e3a66;border-radius:8px;padding:3px 12px;font-weight:800;font-size:13px}
+#pa .pt td.pr{width:130px}#pa .pt td.pr b{font-size:17px;color:#0f2747;direction:ltr;display:inline-block;background:#fff7d6;border:1px solid #f0d98a;border-radius:10px;padding:4px 12px}
+#pa .pt td.emp{padding:30px;color:#64748b}
+.plb{position:fixed;inset:0;background:rgba(2,6,23,.85);z-index:99999;display:flex;align-items:center;justify-content:center;cursor:zoom-out}
+.plb img{max-width:92vw;max-height:90vh;border-radius:14px;background:#fff}
 #pa td.in{cursor:text}
 #pa td.in:hover{box-shadow:inset 0 0 0 2px #2563eb}
 #pa .tw.hi td.in{box-shadow:inset 0 0 0 2px #3b82f6}
@@ -644,6 +684,8 @@ function PAEngine(sheets) {
     reset: (si) => { OV[si].clear(); memo = new Map(); },
     resetAll: () => { OV.forEach((o) => o.clear()); memo = new Map(); },
     fmt, isErr: (v) => v instanceof XErr, parse,
+    fOf: (si, r, c) => { const ce = cells[si].get(r * 1000 + c); return ce ? ce.f : null; },
+    sheetIdx: (nm) => { let s = byName[nm]; if (s === undefined) s = byName[String(nm).trim()]; return s; },
   };
 }
 
@@ -671,7 +713,7 @@ function paNav(q) {
   let last = null; q = (q || '').trim();
   paItems().forEach((it) => {
     if (q) {
-      const hay = it.t + ' ' + (it.safety ? 'أمن سلامة لوحات علامات' : PA.sheets[it.i].rows.map((r) => r[1].map((c) => c[0]).join(' ')).join(' '));
+      const hay = it.t + ' ' + (it.safety ? 'أمن سلامة لوحات علامات ' + (PA.items || []).map((x) => x.t).join(' ') : PA.sheets[it.i].rows.map((r) => r[1].map((c) => c[0]).join(' ')).join(' '));
       if (!hay.includes(q)) return;
     }
     if (it.g !== last) { const h4 = document.createElement('h4'); h4.textContent = it.g; nav.appendChild(h4); last = it.g; }
@@ -683,6 +725,92 @@ function paNav(q) {
   if (!nav.children.length) { const d = document.createElement('div'); d.className = 'msg'; d.textContent = 'مفيش نتايج'; nav.appendChild(d); }
 }
 
+let PAsel = null;
+const PAFN = { SUM: 'مجموع', MIN: 'أقل قيمة', MAX: 'أكبر قيمة', AVERAGE: 'متوسط', ROUND: 'تقريب', ROUNDUP: 'تقريب لأعلى', ROUNDDOWN: 'تقريب لأسفل', ABS: 'القيمة المطلقة', IF: 'لو', IFERROR: 'لو حصل خطأ', XLOOKUP: 'بحث' };
+function paVal(v) { if (PAE.isErr(v)) return v.c; if (v == null || v === '') return '—'; if (typeof v === 'number') return String(Math.round(v * 1e4) / 1e4); return String(v); }
+function paLabel(si, r, c) {
+  const sh = PA.sheets[si];
+  if (!sh._idx) { const m = new Map(); sh.rows.forEach((rw) => rw[1].forEach((cl) => m.set(cl[4] * 1000 + cl[5], cl[0]))); (sh.x || []).forEach((x) => m.set(x[0] * 1000 + x[1], x[2])); sh._idx = m; }
+  const g = (rr, cc) => sh._idx.get(rr * 1000 + cc), isT = (v) => typeof v === 'string' && v.trim() && !/^[\d.,\s%\-=+*\/()]+$/.test(v.trim());
+  let rl = null; for (let cc = 1; cc <= 60; cc++) { if (cc === c) continue; const v = g(r, cc); if (isT(v)) { rl = v.trim(); break; } }
+  let cl = null; for (let rr = r - 1; rr >= Math.max(1, r - 14); rr--) { const v = g(rr, c); if (isT(v)) { cl = v.trim(); break; } }
+  const cut = (t, n) => (t.length > n ? t.slice(0, n) + '…' : t);
+  const parts = []; if (rl) parts.push(cut(rl.replace(/\s+/g, ' '), 42)); if (cl && cl !== rl) parts.push(cut(cl.replace(/\s+/g, ' '), 26));
+  return parts.length ? parts.join(' — ') : 'خانة ' + String.fromCharCode(64 + c) + r;
+}
+function paJump(si2, r, c) {
+  if (si2 !== PAcur) { const it = paItems().find((x) => !x.safety && x.i === si2); if (!it) return; PAsel = { si: si2, r, c }; paShow(it); }
+  const td = $('paMain').querySelector('[data-r="' + r + '"][data-c="' + c + '"]');
+  PAsel = { si: si2, r, c };
+  if (td) { td.scrollIntoView({ block: 'center', behavior: 'smooth' }); td.classList.remove('chg'); void td.offsetWidth; td.classList.add('chg'); }
+  paInfoRender();
+}
+function paSelect(td, si) { PAsel = { si, r: +td.dataset.r, c: +td.dataset.c }; paInfoRender(); }
+function paChip(si, r, c) {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'ch';
+  const l = document.createElement('span'); l.textContent = paLabel(si, r, c);
+  const v = document.createElement('b'); v.textContent = paVal(PAE.get(si, r, c));
+  b.append(l, v); b.title = 'اضغط للانتقال للخانة دي'; b.onclick = (e) => { e.stopPropagation(); paJump(si, r, c); };
+  return b;
+}
+function paDx(n, si, out, par) {
+  const T = (t, c) => { const s = document.createElement('span'); s.className = c || 'tx'; s.textContent = t; out.appendChild(s); };
+  const prec = (x) => (x.t === 'b' ? ({ '+': 1, '-': 1, '*': 2, '/': 2, '^': 3 }[x.o] || 0) : 9);
+  switch (n.t) {
+    case 'n': T(String(n.v), 'tx'); return;
+    case 's': T('"' + n.v + '"', 'tx'); return;
+    case 'bo': T(n.v ? 'صح' : 'خطأ'); return;
+    case 'empty': T('—'); return;
+    case 'e': T(n.v); return;
+    case 'ref': {
+      let s = si; if (n.sh) { const k = PAE.sheetIdx(n.sh); if (k === undefined) { T(n.sh + '!' + n.a); return; } s = k; }
+      const ad = (a) => { const m = /^([A-Za-z]+)(\d+)$/.exec(a); let col = 0; for (const ch of m[1].toUpperCase()) col = col * 26 + ch.charCodeAt(0) - 64; return [+m[2], col]; };
+      if (n.a.includes(':')) {
+        const [a, b] = n.a.split(':'), [r1, c1] = ad(a), [r2, c2] = ad(b), cs = [];
+        for (let r = Math.min(r1, r2); r <= Math.max(r1, r2); r++) for (let c = Math.min(c1, c2); c <= Math.max(c1, c2); c++) if (PAE.get(s, r, c) != null && typeof PAE.get(s, r, c) === 'number') cs.push([r, c]);
+        if (cs.length > 10) { T('نطاق ' + cs.length + ' خانة'); return; }
+        cs.forEach(([r, c], i) => { if (i) T(' + ', 'op'); out.appendChild(paChip(s, r, c)); }); return;
+      }
+      const [r, c] = ad(n.a);
+      if (s !== si) { const sp = document.createElement('span'); sp.className = 'tx sm'; sp.textContent = '(من شيت «' + PA.sheets[s].title + '») '; out.appendChild(sp); }
+      out.appendChild(paChip(s, r, c)); return;
+    }
+    case 'u': T('−', 'op'); paDx(n.x, si, out, { t: 'u' }); return;
+    case 'b': {
+      const op = { '+': '+', '-': '−', '*': '×', '/': '÷', '^': 'أُس', '&': 'يضاف نصّ', '=': 'يساوي', '<>': 'مش بيساوي', '<': 'أقل من', '>': 'أكبر من', '<=': 'أقل من أو يساوي', '>=': 'أكبر من أو يساوي' }[n.o] || n.o;
+      const wrap = (x, right) => { const need = x.t === 'b' && (prec(x) < prec(n) || (right && prec(x) === prec(n) && (n.o === '-' || n.o === '/'))); if (need) T('(', 'op'); paDx(x, si, out, n); if (need) T(')', 'op'); };
+      wrap(n.l, false); T(' ' + op + ' ', 'op'); wrap(n.r, true); return;
+    }
+    case 'f': {
+      const nm = n.name || n.n; T((PAFN[nm] || nm) + ' (', 'op');
+      (n.a || []).forEach((x, i) => { if (i) T(' ، ', 'op'); paDx(x, si, out, n); }); T(')', 'op'); return;
+    }
+  }
+  T('؟');
+}
+function paInfoRender() {
+  const box = $('paInfo'); if (!box) return;
+  $('paMain').querySelectorAll('td.sel').forEach((x) => x.classList.remove('sel'));
+  if (!PAsel || PAsel.si !== PAcur) { box.classList.add('hidden'); return; }
+  const { si, r, c } = PAsel, td = $('paMain').querySelector('[data-r="' + r + '"][data-c="' + c + '"]'); if (td) td.classList.add('sel');
+  box.classList.remove('hidden'); box.textContent = '';
+  const el = (t, cl, x) => { const e = document.createElement(t); if (cl) e.className = cl; if (x != null) e.textContent = x; return e; };
+  const hd = el('div', 'ph'), x = el('button', 'px', '✕'); x.type = 'button'; x.onclick = () => { PAsel = null; paInfoRender(); };
+  hd.append(el('span', 'pt', paLabel(si, r, c)), el('span', 'pv', '= ' + paVal(PAE.get(si, r, c))), x); box.appendChild(hd);
+  const f = PAE.fOf(si, r, c), ov = PAE.has(si, r, c);
+  if (ov) box.appendChild(el('div', 'pn', 'الرقم ده انت معدّله بإيدك' + (f ? '، والمعادلة الأصلية تحت (امسح الرقم يرجع لها)' : '')));
+  if (!f) { if (!ov) box.appendChild(el('div', 'pn', 'رقم مُدخل مباشرة (مش ناتج معادلة). لو غيّرته هتتحدث كل الخانات اللي بتعتمد عليه.')); return; }
+  const ex = el('div', 'pe'); let ast = null; try { ast = PAE.parse(f); } catch (e) { /* ignore */ }
+  if (ast) paDx(ast, si, ex); else ex.textContent = f;
+  box.appendChild(el('div', 'pn', 'الخانة دي ناتجها بيتحسب كده:')); box.appendChild(ex);
+  const raw = el('div', 'pr', '=' + f); raw.dir = 'ltr'; box.appendChild(raw);
+}
+function paInfoMount() {
+  if (PAcur === 's' || PAcur == null) return;
+  const box = document.createElement('div'); box.id = 'paInfo'; box.className = 'pinfo hidden'; $('paMain').appendChild(box);
+  if (PAsel && PAsel.si !== PAcur) PAsel = null;
+  paInfoRender();
+}
 function paRefresh(tb, si) {
   $('paMain').querySelectorAll('[data-r]').forEach((td) => {
     if (td.firstChild && td.firstChild.tagName === 'INPUT') return;
@@ -691,6 +819,7 @@ function paRefresh(tb, si) {
     td.textContent = nt;
     if (td.tagName === 'TD') { td.classList.toggle('ed', PAE.has(si, r, c)); if (changed) { td.classList.remove('chg'); void td.offsetWidth; td.classList.add('chg'); } }
   });
+  paInfoRender();
 }
 function editCell(td, si, nf) {
   if (td.firstChild && td.firstChild.tagName === 'INPUT') return;
@@ -718,7 +847,46 @@ function editCell(td, si, nf) {
   inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); fin(true); } else if (e.key === 'Escape') fin(false); };
   inp.onblur = () => fin(true);
 }
-function paShow(it) {
+
+let PAcat = 'الكل', PAq = '';
+function paPrices(m, hl, el) {
+  const IT = PA.items || [], cats = ['الكل'].concat([...new Set(IT.map((x) => x.cat))]);
+  hl.appendChild(el('p', '', IT.length + ' بند — الأسعار بالجنيه المصري، مايو 2026'));
+  const bar = el('div', 'pbar'), q = el('input', 'pq'); q.type = 'search'; q.placeholder = 'ابحث في البنود…'; q.value = PAq;
+  const chips = el('div', 'pchips');
+  const tw = el('div', 'tw pt'), tb = document.createElement('table');
+  const render = () => {
+    chips.textContent = '';
+    cats.forEach((c) => { const b = el('button', 'pc' + (c === PAcat ? ' on' : ''), c + (c === 'الكل' ? '' : ' (' + IT.filter((x) => x.cat === c).length + ')')); b.type = 'button'; b.onclick = () => { PAcat = c; render(); }; chips.appendChild(b); });
+    tb.textContent = '';
+    const th = document.createElement('thead'), hr = document.createElement('tr');
+    ['م', 'صورة', 'البند', 'الوحدة', 'الفئة (ج.م)'].forEach((t) => hr.appendChild(el('th', '', t))); th.appendChild(hr); tb.appendChild(th);
+    const tbd = document.createElement('tbody'); let last = null, n = 0;
+    IT.forEach((x) => {
+      if (PAcat !== 'الكل' && x.cat !== PAcat) return;
+      if (PAq && !(x.t + ' ' + x.s + ' ' + x.cat).includes(PAq)) return;
+      n++;
+      if (x.cat !== last) { const sr = document.createElement('tr'); sr.className = 'sec'; const sc = el('td', '', x.cat); sc.colSpan = 5; sr.appendChild(sc); tbd.appendChild(sr); last = x.cat; }
+      const tr = document.createElement('tr');
+      tr.appendChild(el('td', 'n', String(x.n)));
+      const ti = el('td', 'im'), im = document.createElement('img'); im.src = 'data:image/jpeg;base64,' + x.img; im.alt = x.t; im.loading = 'lazy';
+      im.onclick = () => { const lb = el('div', 'plb'); const b = document.createElement('img'); b.src = im.src; lb.appendChild(b); lb.onclick = () => lb.remove(); document.body.appendChild(lb); };
+      ti.appendChild(im); tr.appendChild(ti);
+      const tt = el('td', 'tt'), h4 = el('div', 'h', x.t), sp = el('div', 'sp', x.s);
+      const more = el('button', 'mr', 'التفاصيل'); more.type = 'button'; more.onclick = () => { const o = sp.classList.toggle('open'); more.textContent = o ? 'إخفاء' : 'التفاصيل'; };
+      tt.append(h4, sp, more); tr.appendChild(tt);
+      const un = el('td', 'un'); un.appendChild(el('span', 'ub', x.unit.replace('م2', 'م²'))); tr.appendChild(un);
+      const pr = el('td', 'pr'); pr.appendChild(el('b', '', x.price.toLocaleString('en-US'))); tr.appendChild(pr);
+      tbd.appendChild(tr);
+    });
+    if (!n) { const e = document.createElement('tr'), c = el('td', 'emp', 'مفيش بنود مطابقة'); c.colSpan = 5; e.appendChild(c); tbd.appendChild(e); }
+    tb.appendChild(tbd);
+  };
+  q.oninput = () => { PAq = q.value.trim(); render(); };
+  bar.append(q, chips); m.appendChild(bar); render(); tw.appendChild(tb); m.appendChild(tw);
+}
+function paShow(it) { paShow0(it); paInfoMount(); }
+function paShow0(it) {
   PAcur = it.safety ? 's' : it.i;
   const m = $('paMain'); m.textContent = ''; m.scrollTop = 0;
   const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
@@ -726,12 +894,7 @@ function paShow(it) {
   hl.appendChild(el('span', 'chip', it.safety ? 'أعمال الأمن والسلامة' : it.g));
   hl.appendChild(el('h2', '', it.safety ? 'أسعار أعمال الأمن والسلامة — مايو 2026' : it.t));
   hero.appendChild(hl); m.appendChild(hero);
-  if (it.safety) {
-    hl.appendChild(el('p', '', 'جدول الأسعار الرسمي بالصور والمواصفات.'));
-    const w = el('div', 'pg');
-    PA.safety.forEach((b, k) => { const im = document.createElement('img'); im.alt = 'صفحة ' + (k + 1); im.src = 'data:image/jpeg;base64,' + b; w.appendChild(im); });
-    m.appendChild(w); paNav($('paQ').value); return;
-  }
+  if (it.safety) { paPrices(m, hl, el); paNav($('paQ').value); return; }
   const sh = PA.sheets[it.i], si = it.i;
   const hb = el('div', 'hb'), rb = el('button', '', 'إعادة ضبط الشيت'); rb.type = 'button'; rb.onclick = () => { PAE.reset(si); paShow(it); };
   hb.appendChild(rb); hero.appendChild(hb);
@@ -769,7 +932,7 @@ function paShow(it) {
       let wch = 0; for (let k = 0; k < (cl[3] || 1); k++) wch += (sh.w[c0 - 1 + k] || 8.43) * 7 + 5;
       td._nd = Math.max(3, Math.floor((wch - 8) / (s[4] * 1.333 * (s[2] ? 0.7 : 0.62))));
       const cur = PAE.get(si, r0, c0); td.textContent = PAE.fmt(cur, s[9], td._nd);
-      if (typeof cur === 'number') { td.className = 'in'; td.title = isF ? 'خانة فيها معادلة: اضغط وعدّل الرقم، أو امسحه عشان ترجع للمعادلة' : 'اضغط لتعديل الرقم'; td.onclick = () => editCell(td, si, s[9]); }
+      if (typeof cur === 'number') { td.className = 'in'; td.title = isF ? 'خانة فيها معادلة: اضغط وعدّل الرقم، أو امسحه عشان ترجع للمعادلة' : 'اضغط لتعديل الرقم'; td.onclick = () => { paSelect(td, si); editCell(td, si, s[9]); }; }
       if (PAE.has(si, r0, c0)) td.classList.add('ed');
       const S = td.style;
       if (s[0] && s[0] !== 'FFFFFF') S.background = paSoft(s[0]);
@@ -843,7 +1006,7 @@ function paClean(sh, si, tb) {
       td.dataset.r = r0; td.dataset.c = c; td._nf = s[9]; td._nd = 14;
       const cur = PAE.get(si, r0, c); td.textContent = PAE.fmt(cur, s[9], 14);
       const num = typeof cur === 'number';
-      if (num) { td.className = 'in'; td.title = isF ? 'خانة فيها معادلة: اضغط وعدّل الرقم، أو امسحه عشان ترجع للمعادلة' : 'اضغط لتعديل الرقم'; td.onclick = () => editCell(td, si, s[9]); }
+      if (num) { td.className = 'in'; td.title = isF ? 'خانة فيها معادلة: اضغط وعدّل الرقم، أو امسحه عشان ترجع للمعادلة' : 'اضغط لتعديل الرقم'; td.onclick = () => { paSelect(td, si); editCell(td, si, s[9]); }; }
       if (PAE.has(si, r0, c)) td.classList.add('ed');
       const S = td.style, filled = s[0] && s[0] !== 'FFFFFF';
       if (filled) S.background = paSoft(s[0]);
