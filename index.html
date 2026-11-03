@@ -394,6 +394,7 @@ body:not(.in) footer{color:#6f84a6}
 
 <div id="pa" class="hidden">
   <div class="vbar"><button type="button" id="paBack">→ البوابة</button><button type="button" class="menu" id="paMenu">☰</button><b>تحليل أسعار</b><input id="paQ" type="search" placeholder="بحث في البنود…" autocomplete="off"></div>
+  <div class="vload gone" id="paLoad" style="top:46px;--ac:#9a3412;--ac2:#c2501f"><div class="lic" id="paLic"></div><b>تحليل أسعار</b><div class="road"></div></div>
   <div class="pbody"><nav id="paNav"></nav><div class="pmain" id="paMain"><div class="msg">جاري التحميل…</div></div></div>
 </div>
 
@@ -1283,9 +1284,18 @@ function paClean(sh, si, tb) {
     tb.appendChild(tr);
   });
 }
+function paClip() {
+  const r = $('paCard').getBoundingClientRect(), W = innerWidth, H = innerHeight;
+  if (!r.width) return 'inset(45% 35% 45% 35% round 14px)';
+  return `inset(${Math.max(0, r.top)}px ${Math.max(0, W - r.right)}px ${Math.max(0, H - r.bottom)}px ${Math.max(0, r.left)}px round 14px)`;
+}
 async function openPA() {
   if (!IS_ADMIN) return;
-  $('pa').classList.remove('hidden'); document.body.classList.add('viewing');
+  const pa = $('pa'), ld = $('paLoad'), t0 = Date.now();
+  $('paLic').innerHTML = $('paCard').querySelector('.ic').innerHTML; $('paLic').style.color = '#fff';
+  ld.classList.remove('gone');
+  pa.classList.remove('hidden'); document.body.classList.add('viewing');
+  pa.animate([{ clipPath: paClip() }, { clipPath: 'inset(0px 0px 0px 0px round 0px)' }], { duration: 650, easing: 'cubic-bezier(.2,.85,.25,1)' });
   history.pushState({ pa: 1 }, '');
   const m = $('paMain');
   try {
@@ -1293,10 +1303,13 @@ async function openPA() {
     await loadPA(); paNav('');
     paShow(paItems()[1] || paItems()[0]);
   } catch (e) { m.innerHTML = '<div class="msg">تعذّر تحميل البيانات (للأدمن فقط).</div>'; }
+  setTimeout(() => ld.classList.add('gone'), Math.max(0, 1200 - (Date.now() - t0)));
 }
 function closePA() {
-  if ($('pa').classList.contains('hidden')) return;
-  $('pa').classList.add('hidden'); document.body.classList.remove('viewing');
+  const pa = $('pa'); if (pa.classList.contains('hidden')) return;
+  $('paLoad').classList.add('gone');
+  const fin = () => { pa.classList.add('hidden'); document.body.classList.remove('viewing'); };
+  try { pa.animate([{ clipPath: 'inset(0px 0px 0px 0px round 0px)' }, { clipPath: paClip() }], { duration: 420, easing: 'cubic-bezier(.4,0,.2,1)' }).onfinish = fin; } catch (e) { fin(); }
 }
 $('paCard').onclick = (e) => { e.preventDefault(); openPA(); };
 $('paBack').onclick = () => { if (history.state && history.state.pa) history.back(); else closePA(); };
