@@ -842,7 +842,7 @@ function paChip(si, r, c) {
   const b = document.createElement('button'); b.type = 'button'; b.className = 'ch';
   const l = document.createElement('span'); l.textContent = paLabel(si, r, c);
   const v = document.createElement('b'); v.textContent = paVal(PAE.get(si, r, c));
-  b.append(l, v); b.title = 'اضغط للانتقال للخانة دي'; b.onclick = (e) => { e.stopPropagation(); paJump(si, r, c); };
+  b.append(l, v); b.title = 'اضغط للانتقال للخانة دي'; b.onmousedown = (e) => { e.preventDefault(); e.stopPropagation(); paJump(si, r, c); };
   return b;
 }
 function paDx(n, si, out, par) {
@@ -907,6 +907,7 @@ function paHL(si, r, c) {
   p.forEach(([s, a, b]) => { if (s !== si) return; const x = m.querySelector('[data-r="' + a + '"][data-c="' + b + '"]'); if (x && x !== t) x.classList.add('src'); });
 }
 (function () {
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && PAsel && !(e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName))) { PAsel = null; paInfoRender(); } });
   document.addEventListener('mouseover', (e) => {
     const td = e.target.closest && e.target.closest('#paMain td[data-r]'); if (!td || PAcur === 's' || PAcur == null) return;
     paHL(PAcur, +td.dataset.r, +td.dataset.c);
@@ -924,7 +925,7 @@ function paInfoRender() {
   paHL(si, r, c);
   box.classList.remove('hidden'); box.textContent = '';
   const el = (t, cl, x) => { const e = document.createElement(t); if (cl) e.className = cl; if (x != null) e.textContent = x; return e; };
-  const hd = el('div', 'ph'), x = el('button', 'px', '✕'); x.type = 'button'; x.onclick = () => { PAsel = null; paInfoRender(); };
+  const hd = el('div', 'ph'), x = el('button', 'px', '✕'); x.type = 'button'; x.onmousedown = (e) => { e.preventDefault(); e.stopPropagation(); const ae = document.activeElement; if (ae && ae.tagName === 'INPUT' && ae.closest('#paMain')) ae.blur(); PAsel = null; paInfoRender(); };
   hd.append(el('span', 'pt', paLabel(si, r, c)), el('span', 'pv', '= ' + paVal(PAE.get(si, r, c))), x); box.appendChild(hd);
   const f = PAE.fOf(si, r, c), ov = PAE.has(si, r, c);
   if (PAE.uf(si, r, c)) box.appendChild(el('div', 'pn', 'المعادلة دي انت كاتبها (امسح الخانة ترجع للأصل)')); else if (ov) box.appendChild(el('div', 'pn', 'الرقم ده انت معدّله بإيدك' + (f ? '، والمعادلة الأصلية تحت (امسح الرقم يرجع لها)' : '')));
