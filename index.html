@@ -133,38 +133,21 @@ main{max-width:1100px;margin:0 auto;padding:34px 20px 40px}
 #pa .hero2 .hb{margin-inline-start:auto;position:relative;z-index:1}
 #pa .hero2 button{border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.1);color:#fff;border-radius:10px;padding:7px 16px;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
 #pa .hero2 button:hover{background:rgba(255,255,255,.2)}
-#pa .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px}
-#pa .kpi{background:#fff;border-radius:14px;padding:14px 18px;box-shadow:0 1px 3px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.07);border-top:4px solid var(--pg)}
-#pa .kpi small{display:block;color:var(--pm);font-size:12.5px;font-weight:700;margin-bottom:4px}
-#pa .kpi b{font-size:26px;font-weight:800;color:var(--pn);font-variant-numeric:tabular-nums}
-#pa .kpi b i{font-style:normal;font-size:13px;color:var(--pm);font-weight:600;margin-inline-start:5px}
-#pa .kpi.main{background:linear-gradient(135deg,#0f7b4d,#0b5d3a);border-top-color:#8fe0b6}
-#pa .kpi.main small,#pa .kpi.main b i{color:#bff0d6}#pa .kpi.main b{color:#fff}
 #pa .hint2{display:flex;align-items:center;gap:8px;margin:0 2px 12px;font-size:13px;color:var(--pm)}
 #pa .hint2 span.sw{width:26px;height:16px;border-radius:5px;background:#eaf2ff;box-shadow:inset 0 0 0 1px #9fc0f2;flex:none}
 #pa .hint2 span.sw.e{background:#fff4cf;box-shadow:inset 0 0 0 1px #f0b429}
-#pa .tw{background:#fff;border-radius:16px;box-shadow:0 1px 3px rgba(15,23,42,.06),0 12px 34px rgba(15,23,42,.09);overflow:auto;border:0}
-#pa table{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%;font-family:"Cairo",system-ui,sans-serif;color:var(--pt)}
-#pa td{padding:11px 14px;line-height:1.65;font-size:14.5px;border-bottom:1px solid #d3dce8;border-inline-end:1px solid #d3dce8;font-variant-numeric:tabular-nums;vertical-align:middle;overflow-wrap:anywhere}
-#pa tr.hd td{background:var(--pn2);color:#fff;font-size:13.5px;font-weight:700;text-align:center;border-bottom:0;border-inline-end:1px solid rgba(255,255,255,.28);padding:13px 12px}
-#pa tr.sec td,#pa tr.ds td{border-inline-end:0}
-#pa tr.sec td{background:#e8eff9;color:var(--pn);font-weight:800;font-size:15px;border-inline-start:4px solid var(--pg)}
-#pa tr.ds td{background:#f8fafc;color:#475569;font-size:13.5px;line-height:1.9;border-inline-start:3px solid #94a3b8}
-#pa tr.zb td{background:#fafbfd}
-#pa tr.tt td{background:#eaf6ef;color:#0b5d3a;font-weight:800}
-#pa tr.fn td{background:var(--pn);color:#fff;font-weight:800;font-size:15.5px;border-bottom:0}
-#pa tr.fn td.nu{color:#f5d98a}
-#pa tr td:last-child{border-inline-end:0}
-#pa tr:last-child td{border-bottom:0}
-#pa tr.tt td{border-color:#bfdccb}
-#pa tr.fn td{border-inline-end:1px solid rgba(255,255,255,.18)}
-#pa td.nu{text-align:center;font-weight:600;direction:ltr}
-#pa td.in{background:#eaf2ff!important;color:#1d4ed8!important;font-weight:800;cursor:text;box-shadow:inset 0 0 0 1px #bcd3f7;transition:background .12s}
-#pa td.in:hover{background:#d8e7ff!important}
-#pa td.ed{background:#fff4cf!important;color:#8a5a00!important;box-shadow:inset 0 0 0 2px #f0b429!important}
-#pa td input{width:100%;min-width:60px;box-sizing:border-box;border:0;outline:2px solid #2563eb;border-radius:6px;background:#fff;color:#000;font:inherit;font-weight:700;text-align:center;direction:ltr;padding:2px 4px}
 #pa .pg img{display:block;width:100%;max-width:900px;margin:0 auto 18px;border-radius:14px;background:#fff;box-shadow:0 2px 6px rgba(15,23,42,.08),0 14px 36px rgba(15,23,42,.1)}
 @media (max-width:760px){#pa .pmain{padding:14px}#pa .hero2{padding:16px}#pa .hero2 h2{font-size:20px}}
+#pa .tw{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(15,23,42,.06),0 12px 34px rgba(15,23,42,.09);overflow:auto;border:0;padding:14px}
+#pa table{border-collapse:collapse;table-layout:fixed;font-family:"Cairo",system-ui,sans-serif;color:#000;margin:0 auto}
+#pa td{padding:1px 3px;line-height:1.45;overflow:hidden;border:0 solid #000;font-variant-numeric:tabular-nums}
+#pa td.in{cursor:text}
+#pa td.in:hover{box-shadow:inset 0 0 0 2px #2563eb}
+#pa .tw.hi td.in{box-shadow:inset 0 0 0 2px #3b82f6}
+#pa td.ed{box-shadow:inset 0 0 0 3px #f59e0b!important;font-weight:800}
+#pa td.chg,#pa span.chg{animation:chg 1.8s ease-out}
+@keyframes chg{0%,35%{box-shadow:inset 0 0 0 3px #22c55e;outline:3px solid #22c55e;outline-offset:-3px}100%{outline:0 solid transparent}}
+#pa .tgl{margin-inline-start:auto;border:1px solid #cbd5e1;background:#fff;color:#1e3a66;border-radius:8px;padding:4px 12px;cursor:pointer;font:inherit;font-size:12.5px;font-weight:700}
 #pa .msg{padding:60px 20px;text-align:center;color:var(--muted)}
 @media (max-width:760px){#pa nav{position:absolute;z-index:3;inset-block:46px 0;inset-inline-start:0;width:82%;box-shadow:0 0 40px rgba(0,0,0,.3);display:none}#pa nav.open{display:block}#pa .menu{display:inline-block!important}}
 #pa .menu{display:none}
@@ -632,14 +615,17 @@ function PAEngine(sheets) {
     }
     return E('#NAME?');
   }
-  function fmt(v, nf) {
+  function fmt(v, nf, nd) {
     if (v instanceof XErr) return v.c; if (v == null || v === '') return ''; if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE'; if (typeof v === 'string') return v;
     nf = nf || 'General';
     const grp = (x, d, th) => { const s = Math.abs(x).toFixed(d), [i, f] = s.split('.'); const ii = th ? i.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : i; return (x < 0 && Number(s) !== 0 ? '-' : '') + ii + (f ? '.' + f : ''); };
     if (nf.includes('%')) { const m = /0\.(0+)%/.exec(nf); return grp(v * 100, m ? m[1].length : 0, false) + '%'; }
-    if (nf === 'General' || nf === '@') { const r2 = Math.round(v * 100) / 100; return grp(r2, Number.isInteger(r2) ? 0 : (Number.isInteger(Math.round(r2 * 10 * 1e6) / 1e6) ? 1 : 2), Math.abs(v) >= 1000); }
+    if (nf === 'General' || nf === '@') {
+      if (nd && v !== 0) { const id = Math.max(1, Math.floor(Math.log10(Math.abs(v))) + 1), dec = Math.max(0, nd - id), p = Math.pow(10, dec); return String(Math.round(v * p) / p); }
+      return String(Math.round(v * 1e6) / 1e6);
+    }
     const sec = nf.split(';')[0]; if (!/[0#]/.test(sec)) return String(Math.round(v * 1e3) / 1e3);
-    const m = /\.(0+|#+)/.exec(sec); return grp(v, m ? m[1].length : 0, true);
+    const m = /\.(0+|#+)/.exec(sec); return grp(v, m ? m[1].length : 0, sec.includes(','));
   }
   return {
     get: (si, r, c) => cellVal(si, r, c),
@@ -691,8 +677,9 @@ function paRefresh(tb, si) {
   $('paMain').querySelectorAll('[data-r]').forEach((td) => {
     if (td.firstChild && td.firstChild.tagName === 'INPUT') return;
     const r = +td.dataset.r, c = +td.dataset.c;
-    td.textContent = PAE.fmt(PAE.get(si, r, c), td._nf);
-    if (td.tagName === 'TD') td.classList.toggle('ed', PAE.has(si, r, c));
+    const nt = PAE.fmt(PAE.get(si, r, c), td._nf, td._nd), changed = td.textContent !== nt;
+    td.textContent = nt;
+    if (td.tagName === 'TD') { td.classList.toggle('ed', PAE.has(si, r, c)); if (changed) { td.classList.remove('chg'); void td.offsetWidth; td.classList.add('chg'); } }
   });
 }
 function editCell(td, si, nf) {
@@ -736,60 +723,39 @@ function paShow(it) {
     m.appendChild(w); paNav($('paQ').value); return;
   }
   const sh = PA.sheets[it.i], si = it.i;
-  const isNum = (cl) => typeof cl[0] === 'number' || !!cl[6];
-  const label = (r) => { const c = r[1].find((cl) => typeof cl[0] === 'string' && cl[0].trim() !== '' && !cl[6]); return c ? c[0].trim() : ''; };
-  const firstTxt = Math.max(0, sh.rows.findIndex((r) => r[1].some((cl) => cl[0] !== '' || cl[6])));
-  let rows = sh.rows.slice(firstTxt).filter((r) => r[1].some((cl) => cl[0] !== '' || cl[6] || cl[2] > 1));
-  const rowInfo = (r) => {
-    const texts = r[1].filter((cl) => typeof cl[0] === 'string' && cl[0].trim() !== '' && !cl[6]).length;
-    const nums = r[1].filter(isNum).length, ne = r[1].filter((cl) => cl[0] !== '' || cl[6]).length;
-    const bordered = r[1].some((cl) => sh.st[cl[1]][8].some((x) => x));
-    return { texts, nums, ne, head: texts >= 3 && nums === 0 && bordered, sparse: ne <= 1 && nums === 0 && ne === 1 };
-  };
-  // الأسطر التمهيدية (اسم المكتب / عنوان التحليل) فوق أول صف عناوين تروح للهيرو
-  const hi = rows.findIndex((r) => rowInfo(r).head);
-  const pre = hi > 0 ? hi : 0, subs = [];
-  let keep = 0;
-  for (let k = 0; k < pre; k++) { const inf = rowInfo(rows[k]), t = label(rows[k]); if (inf.sparse && t && t.length <= 150) subs.push(t); else { keep = k; break; } keep = k + 1; }
-  rows = rows.slice(keep);
-  subs.forEach((t) => hl.appendChild(el('p', '', t)));
   const hb = el('div', 'hb'), rb = el('button', '', 'إعادة ضبط الشيت'); rb.type = 'button'; rb.onclick = () => { PAE.reset(si); paShow(it); };
   hb.appendChild(rb); hero.appendChild(hb);
-  const hint = el('div', 'hint2'); hint.appendChild(el('span', 'sw')); hint.append('خانات زرقا = أسعار تقدر تعدّلها، والحسابات بتتحدث فوراً'); const e1 = el('span', 'sw e'); e1.style.marginInlineStart = '10px'; hint.appendChild(e1); hint.append('خانة اتعدلت');
-  m.appendChild(hint);
-  // الجدول
+  const hint = el('div', 'hint2'); hint.appendChild(el('span', 'sw')); hint.append('اضغط على أي رقم ثابت وعدّله، والحسابات بتتحدث فوراً (الخانات اللي بتتغير بتومض بالأخضر)');
+  const tg = el('button', 'tgl', 'إظهار خانات الإدخال'); tg.type = 'button'; hint.appendChild(tg); m.appendChild(hint);
   const tw = el('div', 'tw'), tb = document.createElement('table'); tb.dir = sh.rtl ? 'rtl' : 'ltr';
-  const wts = sh.w.map((w) => Math.max(w, 9)), tot = wts.reduce((a, b) => a + b, 0);
-  const cg = document.createElement('colgroup'); wts.forEach((w) => { const c = document.createElement('col'); c.style.width = (w / tot * 100).toFixed(2) + '%'; cg.appendChild(c); });
-  tb.appendChild(cg); tb.style.minWidth = Math.max(640, Math.round(tot * 9)) + 'px';
-  let zi = 0;
-  rows.forEach((r) => {
-    const inf = rowInfo(r), tr = document.createElement('tr'), lab = label(r);
-    const nonEmpty = r[1].filter((cl) => cl[0] !== '' || cl[6]);
-    let cls = '';
-    if (inf.head) { cls = 'hd'; zi = 0; }
-    else if (inf.sparse) { const s0 = sh.st[nonEmpty[0][1]]; cls = (lab.length > 90 || !s0[2]) ? 'ds' : 'sec'; }
-    else if (/سعر البند|بعد التخفيض|الاجمالي الشهري/.test(lab) && inf.nums) cls = 'fn';
-    else if (/^\s*(اجمالي|إجمالي)/.test(lab) && inf.nums) cls = 'tt';
-    else if (inf.nums) { zi++; if (zi % 2 === 0) cls = 'zb'; }
-    if (cls) tr.className = cls;
-    const skip = new Set(); let spanOf = null, spanN = 1;
-    if (inf.sparse && nonEmpty[0][3] === 1 && nonEmpty[0][2] === 1) {
-      let k = r[1].indexOf(nonEmpty[0]) + 1;
-      while (k < r[1].length && r[1][k][0] === '' && !r[1][k][6] && r[1][k][2] === 1 && r[1][k][3] === 1) { skip.add(r[1][k]); spanN++; k++; }
-      spanOf = nonEmpty[0];
-    }
+  tg.onclick = () => { tw.classList.toggle('hi'); tg.textContent = tw.classList.contains('hi') ? 'إخفاء خانات الإدخال' : 'إظهار خانات الإدخال'; };
+  const ZF = 0.72, cg = document.createElement('colgroup'); let tot = 0;
+  sh.w.forEach((w) => { const c = document.createElement('col'), px = Math.max(16, Math.round((w * 7 + 5) * ZF)); c.style.width = px + 'px'; tot += px; cg.appendChild(c); });
+  tb.style.width = tot + 'px'; tb.appendChild(cg);
+  const bw = (x) => (x ? (x > 1 ? '2px' : '1px') + ' solid #000' : 'none');
+  const firstTxt = Math.max(0, sh.rows.findIndex((r) => r[1].some((cl) => cl[0] !== '' || cl[6])));
+  sh.rows.slice(firstTxt).forEach((r) => {
+    if (!r[1].length) return;
+    const tr = document.createElement('tr'); if (r[0]) tr.style.height = Math.round(r[0] * 1.333 * ZF) + 'px';
     r[1].forEach((cl) => {
-      if (skip.has(cl)) return;
       const td = document.createElement('td'), s = sh.st[cl[1]], v = cl[0], r0 = cl[4], c0 = cl[5], isF = !!cl[6];
-      if (cl[2] > 1) td.rowSpan = cl[2]; if (cl[3] > 1) td.colSpan = cl[3]; if (cl === spanOf && spanN > 1) td.colSpan = spanN;
+      if (cl[2] > 1) td.rowSpan = cl[2]; if (cl[3] > 1) td.colSpan = cl[3];
       td.dataset.r = r0; td.dataset.c = c0; td._nf = s[9];
-      const cur = PAE.get(si, r0, c0); td.textContent = PAE.fmt(cur, s[9]);
-      const num = typeof cur === 'number'; if (num) td.classList.add('nu');
-      if (!isF && typeof v === 'number' && c0 > 1) { td.classList.add('in'); td.title = 'اضغط لتعديل الرقم'; td.onclick = () => editCell(td, si, s[9]); }
+      let wch = 0; for (let k = 0; k < (cl[3] || 1); k++) wch += (sh.w[c0 - 1 + k] || 8.43) * 7 + 5;
+      td._nd = Math.max(3, Math.floor((wch - 8) / (s[4] * 1.333 * (s[2] ? 0.7 : 0.62))));
+      const cur = PAE.get(si, r0, c0); td.textContent = PAE.fmt(cur, s[9], td._nd);
+      if (!isF && typeof v === 'number') { td.className = 'in'; td.title = 'اضغط لتعديل الرقم'; td.onclick = () => editCell(td, si, s[9]); }
       if (PAE.has(si, r0, c0)) td.classList.add('ed');
-      if (!num && !cls) { if (s[2]) td.style.fontWeight = '700'; const ha = s[5]; td.style.textAlign = ha === 'center' ? 'center' : (sh.rtl ? 'right' : 'left'); }
-      if (!num && inf.head) td.style.textAlign = 'center';
+      const S = td.style;
+      if (s[0]) S.background = '#' + s[0];
+      S.color = '#' + (s[1] || '000000');
+      if (s[2]) S.fontWeight = '700'; if (s[3]) S.fontStyle = 'italic';
+      S.fontSize = Math.max(9, Math.round(s[4] * 1.333 * ZF)) + 'px';
+      const num = typeof cur === 'number', ha = s[5];
+      S.textAlign = ha === 'center' || ha === 'centerContinuous' ? 'center' : ha === 'left' ? 'left' : ha === 'right' ? 'right' : (num ? 'center' : (sh.rtl ? 'right' : 'left'));
+      S.verticalAlign = s[6] === 'top' ? 'top' : s[6] === 'bottom' ? 'bottom' : 'middle';
+      S.whiteSpace = (s[7] || cl[3] > 1) ? 'pre-wrap' : 'nowrap';
+      S.borderTop = bw(s[8][0]); S.borderRight = bw(s[8][1]); S.borderBottom = bw(s[8][2]); S.borderLeft = bw(s[8][3]);
       tr.appendChild(td);
     });
     tb.appendChild(tr);
