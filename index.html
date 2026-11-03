@@ -1160,7 +1160,8 @@ function paPro(sh, si, tb) {
   out.forEach((o, oi) => {
     const tr = document.createElement('tr'); if (o.rn != null) tr.dataset.rn = o.rn;
     if (o.sp) { tr.className = 'sp'; const td = document.createElement('td'); td.colSpan = nc; tr.appendChild(td); tb.appendChild(tr); return; }
-    const roles = o.ne.map((c) => paRole(sh.st[c[1]], c[3] || 1, nc));
+    let pk = null; o.ne.forEach((c) => { const t = typeof c[0] === 'string' ? c[0].replace(/\s+/g, ' ').trim() : ''; if (/^سعر البند شامل/.test(t) && /ضريبة/.test(t)) pk = /غير شامل/.test(t) ? 'wn' : 'gd'; });
+    const roles = o.ne.map((c) => { const x = paRole(sh.st[c[1]], c[3] || 1, nc); return pk && ['hd', 'dk', 'ttl', 'p', 'b'].includes(x) ? pk : x; });
     const hdrow = o.ne.length >= 3 && roles.every((x) => x === 'hd' || x === 'dk' || x === 'ttl');
     if (hdrow) tr.className = 'hr';
     const byC = {}; o.r[1].forEach((c) => { byC[c[5]] = c; });
@@ -1181,7 +1182,7 @@ function paPro(sh, si, tb) {
       if (num) { td.classList.add('in'); td.title = isF ? 'خانة فيها معادلة: اضغط وعدّل الرقم، أو امسحه عشان ترجع للمعادلة' : 'اضغط لتعديل الرقم'; td.onclick = () => { paSelect(td, si); editCell(td, si, s[9]); }; }
       else if (typeof cur === 'string' && cur !== '') { td.classList.add('te'); td.title = 'اضغط لتعديل النص (امسحه ترجع للأصل)'; td.onclick = () => editText(td, si); }
       if (PAE.has(si, r0, c0)) td.classList.add('ed');
-      const role = paRole(s, cs, nc); let k = 'p';
+      let role = paRole(s, cs, nc); if (pk && ['hd', 'dk', 'ttl', 'p', 'b'].includes(role)) role = pk; let k = 'p';
       if (role === 'hd' || role === 'dk' || role === 'ttl') k = hdrow ? 'h1' : (role === 'ttl' && has ? 'ttl' : (has || cs > 1 ? 'h2' : 'p'));
       else if (has && ['key', 'nt', 'gd', 'wn', 'rd', 'bl'].includes(role)) k = 'pl-' + role;
       else if (!num && typeof cur === 'string' && cur.length <= 12 && /[\/²³]/.test(cur) && unitRe.test(cur)) k = 'un';
