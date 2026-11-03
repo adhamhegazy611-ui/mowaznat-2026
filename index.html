@@ -906,7 +906,7 @@ function paShow0(it) {
   if (PAmode === 'clean') { tw.classList.add('cl'); paClean(sh, si, tb); tw.appendChild(tb); m.appendChild(tw); tg.onclick = () => { tw.classList.toggle('hi'); tg.textContent = tw.classList.contains('hi') ? 'إخفاء خانات الإدخال' : 'إظهار خانات الإدخال'; }; paNav($('paQ').value); return; }
   tg.onclick = () => { tw.classList.toggle('hi'); tg.textContent = tw.classList.contains('hi') ? 'إخفاء خانات الإدخال' : 'إظهار خانات الإدخال'; };
   let lo = 1, hi = sh.w.length, side = null;
-  if (/رابطة|سطحية/.test(sh.title)) {
+  if (/رابطة|سطحية|برابخ|البرابخ/.test(sh.title)) {
     let best = null; sh.rows.forEach((r) => r[1].forEach((c) => { if (c[0] !== '' && c[3] > 1 && (!best || c[3] > best[3])) best = c; }));
     if (best) {
       lo = best[5]; hi = lo + best[3] - 1;
