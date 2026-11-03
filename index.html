@@ -154,6 +154,11 @@ main{max-width:1100px;margin:0 auto;padding:34px 20px 40px}
 
 #pa td.src{outline:2.5px solid #f59e0b;outline-offset:-2px;background-image:linear-gradient(rgba(245,158,11,.22),rgba(245,158,11,.22))!important}
 #pa td.tgt{outline:2.5px solid #0ea5e9;outline-offset:-2px}
+#pa .hmode .pro td{cursor:crosshair!important}
+#pa .hmode .pro td:hover{background-image:linear-gradient(rgba(239,68,68,.12),rgba(239,68,68,.12))}
+.pmenu{position:fixed;z-index:9999;background:#fff;border:1px solid #d7deea;border-radius:12px;box-shadow:0 10px 30px rgba(15,39,71,.22);padding:6px;display:flex;flex-direction:column;min-width:170px}
+.pmenu button{border:0;background:none;text-align:right;padding:9px 12px;border-radius:8px;font:600 13.5px inherit;color:#0f2747;cursor:pointer;font-family:inherit}
+.pmenu button:hover{background:#eef3fb}
 #pa td.sel{outline:2.5px solid #0ea5e9;outline-offset:-2px}
 #pa .pinfo{position:sticky;bottom:12px;z-index:6;margin:14px 0 0;background:linear-gradient(135deg,#0f2747,#16365f);color:#fff;border-radius:16px;padding:14px 18px;box-shadow:0 14px 40px rgba(15,39,71,.4);max-height:44vh;overflow:auto;line-height:1.9}
 #pa .pinfo.hidden{display:none}
@@ -779,9 +784,9 @@ function paNav(q) {
   if (!nav.children.length) { const d = document.createElement('div'); d.className = 'msg'; d.textContent = 'مفيش نتايج'; nav.appendChild(d); }
 }
 
-let PAsel = null, PAnames = {}, PAtx = {};
-function paSave() { try { localStorage.setItem('pa_edits_v1', JSON.stringify({ o: PAE.dump(), n: PAnames, p: PAtx })); } catch (e) { /* ignore */ } }
-function paLoadSaved() { try { const j = JSON.parse(localStorage.getItem('pa_edits_v1') || 'null'); if (j) { PAE.load(j.o || []); PAnames = j.n || {}; PAtx = j.p || {}; } } catch (e) { /* ignore */ } }
+let PAsel = null, PAnames = {}, PAtx = {}, PAhid = {}, PAhm = false;
+function paSave() { try { localStorage.setItem('pa_edits_v1', JSON.stringify({ o: PAE.dump(), n: PAnames, p: PAtx, h: PAhid })); } catch (e) { /* ignore */ } }
+function paLoadSaved() { try { const j = JSON.parse(localStorage.getItem('pa_edits_v1') || 'null'); if (j) { PAE.load(j.o || []); PAnames = j.n || {}; PAtx = j.p || {}; PAhid = j.h || {}; } } catch (e) { /* ignore */ } }
 /* تعديل نص في أي مكان: يرجّع القيمة الجديدة عبر cb (فاضي = رجوع للأصل) */
 function paEditText(node, cur, cb, multi) {
   if (node.querySelector && node.querySelector('textarea')) return;
@@ -1008,6 +1013,47 @@ function paPrices(m, hl, el) {
   bar.append(q, chips); m.appendChild(bar); render(); tw.appendChild(tb); m.appendChild(tw);
 }
 function paShow(it) { paShow0(it); paInfoMount(); }
+
+function paHidN(si) { const x = PAhid[si]; return x ? (x.r || []).length + (x.c || []).length : 0; }
+function paHideApply(si) {
+  const x = PAhid[si] || {}, hr = new Set(x.r || []), hc = new Set(x.c || []);
+  $('paMain').querySelectorAll('.pro table').forEach((tb) => {
+    const cols = tb._cols || [], cg = tb.querySelector('colgroup');
+    if (cg) [...cg.children].forEach((e, i) => { e.style.display = hc.has(cols[i]) ? 'none' : ''; });
+    tb.querySelectorAll('tr').forEach((tr) => {
+      const rn = tr.dataset.rn; tr.style.display = rn != null && hr.has(+rn) ? 'none' : '';
+      tr.querySelectorAll('td').forEach((td) => {
+        if (td._c0 == null) return;
+        if (td._cs1 === undefined) td._cs1 = td.colSpan;
+        let vis = 0; for (let k = 0; k < td._cs0; k++) if (!hc.has(td._c0 + k)) vis++;
+        td.style.display = vis === 0 ? 'none' : ''; if (vis > 0) td.colSpan = vis;
+      });
+    });
+  });
+  const b = $('paMain').querySelector('.hshow'); if (b) { const n = paHidN(si); b.style.display = n ? '' : 'none'; b.textContent = 'إظهار المخفي (' + n + ')'; }
+}
+function paMenu(e, si, td) {
+  const old = document.getElementById('paMenu'); if (old) old.remove();
+  const tr = td.closest('tr'), rn = tr && tr.dataset.rn != null ? +tr.dataset.rn : null, c0 = td._c0;
+  if (rn == null && c0 == null) return;
+  const m = document.createElement('div'); m.id = 'paMenu'; m.className = 'pmenu';
+  const add = (t, f) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.onclick = (ev) => { ev.stopPropagation(); m.remove(); f(); }; m.appendChild(b); };
+  const H = () => (PAhid[si] = PAhid[si] || { r: [], c: [] });
+  if (rn != null) add('إخفاء الصف ده', () => { const x = H(); if (!x.r.includes(rn)) x.r.push(rn); paSave(); paHideApply(si); });
+  if (c0 != null) add('إخفاء العمود ده', () => { const x = H(); if (!x.c.includes(c0)) x.c.push(c0); paSave(); paHideApply(si); });
+  if (paHidN(si)) add('إظهار كل المخفي', () => { delete PAhid[si]; paSave(); paHideApply(si); });
+  document.body.appendChild(m);
+  m.style.left = Math.min(e.clientX, innerWidth - 190) + 'px'; m.style.top = Math.min(e.clientY, innerHeight - 130) + 'px';
+}
+(function () {
+  const tdOf = (e) => e.target.closest && e.target.closest('#paMain .pro td');
+  document.addEventListener('contextmenu', (e) => { const td = tdOf(e); if (!td || PAcur === 's' || PAcur == null) return; e.preventDefault(); paMenu(e, PAcur, td); });
+  document.addEventListener('click', (e) => {
+    const mn = document.getElementById('paMenu');
+    if (PAhm && !(mn && mn.contains(e.target))) { const td = tdOf(e); if (td && PAcur !== 's' && PAcur != null) { e.preventDefault(); e.stopPropagation(); paMenu(e, PAcur, td); return; } }
+    if (mn && !mn.contains(e.target)) mn.remove();
+  }, true);
+})();
 function paShow0(it) {
   PAcur = it.safety ? 's' : it.i;
   const m = $('paMain'); m.textContent = ''; m.scrollTop = 0;
@@ -1020,10 +1066,14 @@ function paShow0(it) {
   hero.appendChild(hl); m.appendChild(hero);
   if (it.safety) { paPrices(m, hl, el); paNav($('paQ').value); return; }
   const sh = PA.sheets[it.i], si = it.i;
-  const hb = el('div', 'hb'), rb = el('button', '', 'إعادة ضبط الشيت'); rb.type = 'button'; rb.onclick = () => { PAE.reset(si); delete PAnames[si]; paSave(); paNav($('paQ').value); paShow(Object.assign({}, it, { t: PA.sheets[si].title })); };
+  const hb = el('div', 'hb'), rb = el('button', '', 'إعادة ضبط الشيت'); rb.type = 'button'; rb.onclick = () => { PAE.reset(si); delete PAnames[si]; delete PAhid[si]; paSave(); paNav($('paQ').value); paShow(Object.assign({}, it, { t: PA.sheets[si].title })); };
   hb.appendChild(rb); hero.appendChild(hb);
   const hint = el('div', 'hint2'); hint.appendChild(el('span', 'sw')); hint.append('اضغط على أي رقم وعدّله، والحسابات بتتحدث فوراً (الخانات اللي بتتغير بتومض بالأخضر). لو عدّلت خانة فيها معادلة هتتثبت على رقمك، وامسح الرقم عشان ترجع للمعادلة.');
-  const tg = el('button', 'tgl', 'إظهار خانات الإدخال'); tg.type = 'button'; hint.appendChild(tg); m.appendChild(hint);
+  const tg = el('button', 'tgl', 'إظهار خانات الإدخال'); tg.type = 'button'; hint.appendChild(tg);
+  const hm = el('button', 'tgl', PAhm ? 'إنهاء وضع الإخفاء' : 'إخفاء صف/عمود'); hm.type = 'button'; hm.title = 'اضغط على أي خانة واختار تخفي صفها أو عمودها (أو كليك يمين على الخانة)';
+  hm.onclick = () => { PAhm = !PAhm; hm.textContent = PAhm ? 'إنهاء وضع الإخفاء' : 'إخفاء صف/عمود'; m.classList.toggle('hmode', PAhm); };
+  const hs = el('button', 'tgl hshow', ''); hs.type = 'button'; hs.onclick = () => { delete PAhid[si]; paSave(); paHideApply(si); };
+  hint.append(hm, hs); m.appendChild(hint); m.classList.toggle('hmode', PAhm);
   const tw = el('div', 'tw'), tb = document.createElement('table'); tb.dir = sh.rtl ? 'rtl' : 'ltr';
   tg.onclick = () => { tw.classList.toggle('hi'); tg.textContent = tw.classList.contains('hi') ? 'إخفاء خانات الإدخال' : 'إظهار خانات الإدخال'; };
   tw.classList.add('pro'); const sp = paSplit(sh); paPro(sp.main, si, tb); tw.appendChild(tb);
@@ -1032,7 +1082,7 @@ function paShow0(it) {
     sd.appendChild(el('div', 'sidet', 'حسابات مساعدة (خارج منطقة الطباعة)')); paPro(sp.side, si, t2); sd.appendChild(t2);
     wrap.appendChild(sd); wrap.appendChild(tw); m.appendChild(wrap);
   } else m.appendChild(tw);
-  paNav($('paQ').value);
+  paHideApply(si); paNav($('paQ').value);
 }
 
 function paSoft(hex) {
@@ -1058,7 +1108,7 @@ function paPro(sh, si, tb) {
   const wt = cols.map((c) => { const w = sh.w[c - 1] || 8.43; return hasC[c] ? Math.max(10, Math.min(w, 60)) : Math.min(w, 1.2); });
   const ws = wt.reduce((a, b) => a + b, 0), cg = document.createElement('colgroup');
   wt.forEach((x) => { const e = document.createElement('col'); e.style.width = (x * 100 / ws).toFixed(3) + '%'; cg.appendChild(e); });
-  tb.appendChild(cg);
+  tb.appendChild(cg); tb._cols = cols;
   const out = []; let prevSp = true; const rowDom = {};
   sh.rows.forEach((r) => {
     if (!r[1].length) return;
@@ -1070,7 +1120,7 @@ function paPro(sh, si, tb) {
   const domOf = (rn) => { let k = rn; while (k > 0 && rowDom[k] === undefined) k--; return rowDom[k] === undefined ? 0 : Math.min(rowDom[k], out.length - 1); };
   const unitRe = /^[\sجمطكسلتنرب0-9²³\/\.\-×]{1,12}$/, nc = cols.length, occ = new Set();
   out.forEach((o, oi) => {
-    const tr = document.createElement('tr');
+    const tr = document.createElement('tr'); if (o.rn != null) tr.dataset.rn = o.rn;
     if (o.sp) { tr.className = 'sp'; const td = document.createElement('td'); td.colSpan = nc; tr.appendChild(td); tb.appendChild(tr); return; }
     const roles = o.ne.map((c) => paRole(sh.st[c[1]], c[3] || 1, nc));
     const hdrow = o.ne.length >= 3 && roles.every((x) => x === 'hd' || x === 'dk' || x === 'ttl');
@@ -1080,13 +1130,13 @@ function paPro(sh, si, tb) {
     cols.forEach((cc, ci) => {
       if (ci < skip || occ.has(oi + ':' + ci)) return;
       const cl = byC[cc];
-      if (!cl) { tr.appendChild(document.createElement('td')); return; }
+      if (!cl) { const ft = document.createElement('td'); ft._c0 = cc; ft._cs0 = 1; tr.appendChild(ft); return; }
       const cs = Math.max(1, Math.min(cl[3] || 1, nc - ci)), rs0 = cl[2] || 1;
       let rs = 1; if (rs0 > 1) { const last = domOf(cl[4] + rs0 - 1); rs = Math.max(1, last - oi + 1); }
       for (let a = 0; a < rs; a++) for (let b = 0; b < cs; b++) if (a || b) occ.add((oi + a) + ':' + (ci + b));
       skip = ci + cs;
       const td = document.createElement('td'), s = sh.st[cl[1]], v = cl[0], isF = !!cl[6], r0 = cl[4], c0 = cl[5];
-      if (rs > 1) td.rowSpan = rs; if (cs > 1) td.colSpan = cs;
+      if (rs > 1) td.rowSpan = rs; if (cs > 1) td.colSpan = cs; td._c0 = cc; td._cs0 = cs;
       td.dataset.r = r0; td.dataset.c = c0; td._nf = s[9]; td._nd = 14;
       const cur = PAE.get(si, r0, c0); td.textContent = PAE.fmt(cur, s[9], 14);
       const num = typeof cur === 'number', has = v !== '' || isF;
