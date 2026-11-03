@@ -159,6 +159,8 @@ main{max-width:1100px;margin:0 auto;padding:34px 20px 40px}
 .pmenu{position:fixed;z-index:9999;background:#fff;border:1px solid #d7deea;border-radius:12px;box-shadow:0 10px 30px rgba(15,39,71,.22);padding:6px;display:flex;flex-direction:column;min-width:170px}
 .pmenu button{border:0;background:none;text-align:right;padding:9px 12px;border-radius:8px;font:600 13.5px inherit;color:#0f2747;cursor:pointer;font-family:inherit}
 .pmenu button:hover{background:#eef3fb}
+#pa td input.pfi{direction:ltr;text-align:center}
+#pa td input.pfi.bad{outline:2px solid #ef4444;background:#fef2f2}
 #pa td.sel{outline:2.5px solid #0ea5e9;outline-offset:-2px}
 #pa .pinfo{position:sticky;bottom:12px;z-index:6;margin:14px 0 0;background:linear-gradient(135deg,#0f2747,#16365f);color:#fff;border-radius:16px;padding:14px 18px;box-shadow:0 14px 40px rgba(15,39,71,.4);max-height:44vh;overflow:auto;line-height:1.9}
 #pa .pinfo.hidden{display:none}
@@ -654,7 +656,15 @@ function PAEngine(sheets) {
   function cellVal(si, r, c) {
     const key = si * 1e9 + r * 1000 + c;
     if (memo.has(key)) return memo.get(key);
-    const ov = OV[si].get(r * 1000 + c); if (ov !== undefined) return ov;
+    const ov = OV[si].get(r * 1000 + c);
+    if (ov !== undefined) {
+      if (ov && typeof ov === 'object' && ov.uf !== undefined) {
+        if (busy.has(key)) return E('#CIRC!');
+        busy.add(key); let v; try { v = ev(parse(ov.uf), si); if (v && v.range) v = v.rows[0][0]; } catch (x) { v = E('#NAME?'); }
+        busy.delete(key); memo.set(key, v); return v;
+      }
+      return ov;
+    }
     const ce = cells[si].get(r * 1000 + c); if (!ce) return null;
     if (!ce.f) { return ce.raw === '' ? null : ce.raw; }
     if (busy.has(key)) return E('#CIRC!');
@@ -740,7 +750,9 @@ function PAEngine(sheets) {
     fmt, isErr: (v) => v instanceof XErr, parse,
     dump: () => OV.map((m) => [...m]),
     load: (arr) => { (arr || []).forEach((a, i) => { if (OV[i] && Array.isArray(a)) a.forEach(([k, v]) => OV[i].set(k, v)); }); memo = new Map(); },
-    fOf: (si, r, c) => { const ce = cells[si].get(r * 1000 + c); return ce ? ce.f : null; },
+    uf: (si, r, c) => { const o = OV[si].get(r * 1000 + c); return o && typeof o === 'object' && o.uf !== undefined ? o.uf : null; },
+    setF: (si, r, c, f) => { OV[si].set(r * 1000 + c, { uf: f }); memo = new Map(); },
+    fOf: (si, r, c) => { const o = OV[si].get(r * 1000 + c); if (o && typeof o === 'object' && o.uf !== undefined) return o.uf; const ce = cells[si].get(r * 1000 + c); return ce ? ce.f : null; },
     sheetIdx: (nm) => { let s = byName[nm]; if (s === undefined) s = byName[String(nm).trim()]; return s; },
   };
 }
@@ -915,7 +927,7 @@ function paInfoRender() {
   const hd = el('div', 'ph'), x = el('button', 'px', '✕'); x.type = 'button'; x.onclick = () => { PAsel = null; paInfoRender(); };
   hd.append(el('span', 'pt', paLabel(si, r, c)), el('span', 'pv', '= ' + paVal(PAE.get(si, r, c))), x); box.appendChild(hd);
   const f = PAE.fOf(si, r, c), ov = PAE.has(si, r, c);
-  if (ov) box.appendChild(el('div', 'pn', 'الرقم ده انت معدّله بإيدك' + (f ? '، والمعادلة الأصلية تحت (امسح الرقم يرجع لها)' : '')));
+  if (PAE.uf(si, r, c)) box.appendChild(el('div', 'pn', 'المعادلة دي انت كاتبها (امسح الخانة ترجع للأصل)')); else if (ov) box.appendChild(el('div', 'pn', 'الرقم ده انت معدّله بإيدك' + (f ? '، والمعادلة الأصلية تحت (امسح الرقم يرجع لها)' : '')));
   if (!f) { if (!ov) box.appendChild(el('div', 'pn', 'رقم مُدخل مباشرة (مش ناتج معادلة). لو غيّرته هتتحدث كل الخانات اللي بتعتمد عليه.')); return; }
   const ex = el('div', 'pe'); let ast = null; try { ast = PAE.parse(f); } catch (e) { /* ignore */ }
   if (ast) paDx(ast, si, ex); else ex.textContent = f;
@@ -938,18 +950,42 @@ function paRefresh(tb, si) {
   });
   paInfoRender();
 }
+let PAfe = null;
+function paColL(c) { let s = ''; while (c > 0) { const m = (c - 1) % 26; s = String.fromCharCode(65 + m) + s; c = Math.floor((c - 1) / 26); } return s; }
+(function () {
+  const ok = (e) => PAfe && PAfe.inp.value.trim().startsWith('=') && e.target.closest && e.target.closest('#paMain td[data-r]');
+  document.addEventListener('mousedown', (e) => {
+    const td = ok(e); if (!td || td === PAfe.td) return; e.preventDefault(); e.stopPropagation();
+    const inp = PAfe.inp, ad = paColL(+td.dataset.c) + td.dataset.r, s = inp.selectionStart == null ? inp.value.length : inp.selectionStart, en = inp.selectionEnd == null ? s : inp.selectionEnd;
+    inp.value = inp.value.slice(0, s) + ad + inp.value.slice(en); const p = s + ad.length; inp.setSelectionRange(p, p); inp.focus();
+  }, true);
+  document.addEventListener('click', (e) => { const td = ok(e); if (td && td !== PAfe.td) { e.preventDefault(); e.stopPropagation(); } }, true);
+})();
 function editCell(td, si, nf) {
   if (td.firstChild && td.firstChild.tagName === 'INPUT') return;
   const r = +td.dataset.r, c = +td.dataset.c, tb = td.closest('table');
-  const old = PAE.get(si, r, c);
-  const inp = document.createElement('input'); inp.type = 'text'; inp.inputMode = 'decimal';
-  inp.value = (nf || '').includes('%') ? String(Math.round(old * 1e6) / 1e4) + '%' : String(Math.round(old * 1e6) / 1e6);
-  td.textContent = ''; td.appendChild(inp); inp.focus(); inp.select();
+  const old = PAE.get(si, r, c), uf = PAE.uf(si, r, c);
+  const inp = document.createElement('input'); inp.type = 'text'; inp.inputMode = 'text'; inp.dir = 'ltr'; inp.className = 'pfi';
+  inp.title = 'اكتب رقم، أو = وبعدها معادلة (مثلاً =F5*H5+100) واضغط على الخانات عشان تضيفها';
+  inp.value = uf ? '=' + uf : typeof old !== 'number' ? '' : (nf || '').includes('%') ? String(Math.round(old * 1e6) / 1e4) + '%' : String(Math.round(old * 1e6) / 1e6);
+  td.textContent = ''; td.appendChild(inp); inp.focus(); inp.select(); PAfe = { inp, td };
   let done = false;
   const fin = (commit) => {
-    if (done) return; done = true;
+    if (done) return;
+    const raw = inp.value.replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[٬]/g, '').trim();
+    if (commit && raw.startsWith('=')) {
+      let f = raw.slice(1).replace(/،/g, ',').replace(/×/g, '*').replace(/÷/g, '/').replace(/٫/g, '.');
+      if (f.trim() === '') { PAE.set(si, r, c, undefined); }
+      else {
+        let bad = false; try { PAE.parse(f); } catch (x) { bad = true; }
+        if (bad) { inp.classList.add('bad'); inp.title = 'المعادلة مش مظبوطة، راجعها'; setTimeout(() => inp.focus(), 0); return; }
+        PAE.setF(si, r, c, f);
+      }
+      done = true; PAfe = null; td.textContent = ''; paRefresh(tb, si); paSave(); return;
+    }
+    done = true; PAfe = null;
     if (commit) {
-      const t = inp.value.replace(/[,\s٬]/g, '').replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+      const t = raw.replace(/[,\s]/g, '');
       if (t === '') PAE.set(si, r, c, undefined);
       else {
         let v = parseFloat(t.replace('%', ''));
@@ -961,7 +997,8 @@ function editCell(td, si, nf) {
     }
     td.textContent = ''; paRefresh(tb, si); if (commit) paSave();
   };
-  inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); fin(true); } else if (e.key === 'Escape') fin(false); };
+  inp.oninput = () => inp.classList.remove('bad');
+  inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); fin(true); } else if (e.key === 'Escape') { e.preventDefault(); fin(false); } };
   inp.onblur = () => fin(true);
 }
 
@@ -1068,7 +1105,7 @@ function paShow0(it) {
   const sh = PA.sheets[it.i], si = it.i;
   const hb = el('div', 'hb'), rb = el('button', '', 'إعادة ضبط الشيت'); rb.type = 'button'; rb.onclick = () => { PAE.reset(si); delete PAnames[si]; delete PAhid[si]; paSave(); paNav($('paQ').value); paShow(Object.assign({}, it, { t: PA.sheets[si].title })); };
   hb.appendChild(rb); hero.appendChild(hb);
-  const hint = el('div', 'hint2'); hint.appendChild(el('span', 'sw')); hint.append('اضغط على أي رقم وعدّله، والحسابات بتتحدث فوراً (الخانات اللي بتتغير بتومض بالأخضر). لو عدّلت خانة فيها معادلة هتتثبت على رقمك، وامسح الرقم عشان ترجع للمعادلة.');
+  const hint = el('div', 'hint2'); hint.appendChild(el('span', 'sw')); hint.append('اضغط على أي رقم وعدّله، والحسابات بتتحدث فوراً (الخانات اللي بتتغير بتومض بالأخضر). لو عدّلت خانة فيها معادلة هتتثبت على رقمك، وامسح الرقم عشان ترجع للمعادلة. وتقدر تكتب معادلتك بنفسك: ابدأ بـ = واضغط على الخانات وحط + − × ÷ بينهم (مثلاً =خانة×خانة+100).');
   const tg = el('button', 'tgl', 'إظهار خانات الإدخال'); tg.type = 'button'; hint.appendChild(tg);
   const hm = el('button', 'tgl', PAhm ? 'إنهاء وضع الإخفاء' : 'إخفاء صف/عمود'); hm.type = 'button'; hm.title = 'اضغط على أي خانة واختار تخفي صفها أو عمودها (أو كليك يمين على الخانة)';
   hm.onclick = () => { PAhm = !PAhm; hm.textContent = PAhm ? 'إنهاء وضع الإخفاء' : 'إخفاء صف/عمود'; m.classList.toggle('hmode', PAhm); };
@@ -1139,7 +1176,7 @@ function paPro(sh, si, tb) {
       if (rs > 1) td.rowSpan = rs; if (cs > 1) td.colSpan = cs; td._c0 = cc; td._cs0 = cs;
       td.dataset.r = r0; td.dataset.c = c0; td._nf = s[9]; td._nd = 14;
       const cur = PAE.get(si, r0, c0); td.textContent = PAE.fmt(cur, s[9], 14);
-      const num = typeof cur === 'number', has = v !== '' || isF;
+      const num = typeof cur === 'number' || (PAE.isErr(cur) && PAE.has(si, r0, c0)), has = v !== '' || isF;
       if (num) { td.classList.add('in'); td.title = isF ? 'خانة فيها معادلة: اضغط وعدّل الرقم، أو امسحه عشان ترجع للمعادلة' : 'اضغط لتعديل الرقم'; td.onclick = () => { paSelect(td, si); editCell(td, si, s[9]); }; }
       else if (typeof cur === 'string' && cur !== '') { td.classList.add('te'); td.title = 'اضغط لتعديل النص (امسحه ترجع للأصل)'; td.onclick = () => editText(td, si); }
       if (PAE.has(si, r0, c0)) td.classList.add('ed');
