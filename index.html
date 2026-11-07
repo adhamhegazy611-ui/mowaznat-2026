@@ -169,7 +169,7 @@ body.in footer{color:#7f94b8}
 #pa .pjeqs .chip2{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:2px 4px 2px 10px;color:#fff}
 #pa .pjeqs .chip2 button{border:0;background:none;color:#fca5a5;cursor:pointer;font-weight:800;padding:0 4px}
 
-#pa .pjfbar{display:grid;grid-template-columns:auto repeat(2,minmax(160px,1fr));gap:12px;align-items:end}
+#pa .pjfbar{display:grid;grid-template-columns:auto;gap:12px;align-items:end}
 @media (max-width:900px){#pa .pjfbar{grid-template-columns:1fr 1fr}}
 #pa .pjseg{display:inline-flex;border:1px solid #cbd2db;border-radius:10px;overflow:hidden}
 #pa .pjseg button{border:0;background:#fff;padding:8px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer;color:#334155;white-space:nowrap}
@@ -2211,7 +2211,7 @@ function pjBOQ() {
   [['incl', 'شامل الضريبة'], ['excl', 'غير شامل الضريبة']].forEach(([v, l]) => { const x = pjEl('button', mode === v ? 'on' : '', l); x.type = 'button'; x.onclick = () => { b.mode = v; paSave(); pjBOQ(); }; seg.appendChild(x); });
   const fld = (l, key, ph) => { const f = pjEl('label', 'pjf'); f.appendChild(pjEl('span', '', l)); const i = pjEl('input', 'pjtx'); i.type = 'text'; i.value = b.form[key] || ''; i.placeholder = ph; i.oninput = () => { b.form[key] = i.value; paSave(); draw(); }; f.appendChild(i); return f; };
   const segw = pjEl('label', 'pjf'); segw.append(pjEl('span', '', 'المشروع'), seg);
-  bar.append(segw, fld('التوقيع (الرتبة / الاسم)', 'signer', 'مثلاً مقدم / ...'), fld('الصفة', 'title', 'قائد ' + pjBatLabel(p.battalion).replace(/^ك/, 'كتيبة ') + ' طرق'));
+  bar.append(segw);
   m.appendChild(bar);
   const paper = pjEl('div', 'pjpaper'); paper.id = 'pjPaper'; m.appendChild(paper);
   const order = paItems().filter((it) => !it.safety).map((it) => it.i);
@@ -2266,11 +2266,6 @@ function pjBOQ() {
     const gt = pjEl('tr', 'grand'), gl = pjEl('td', 'c', 'الاجمالى العام'); gl.colSpan = 5; gt.append(gl, pjEl('td', 'c b', pjAr(grand, 2)), pjEl('td', 'e', ''));
     t.appendChild(gt);
     paper.appendChild(t);
-    const sg = pjEl('div', 'pjsign');
-    sg.appendChild(pjEl('div', '', 'التوقيع (                    )'));
-    if (F.signer) sg.appendChild(pjEl('div', '', pjD(F.signer)));
-    sg.appendChild(pjEl('div', '', pjD(F.title || ('قائد ' + pjBatLabel(p.battalion).replace(/^ك/, 'كتيبة ') + ' طرق'))));
-    paper.appendChild(sg);
     if (!order.length) paper.appendChild(pjEl('div', 'pjnote noexp', 'المشروع لسه مفيهوش بنود. اختار البنود الأول.'));
   }
   draw();
