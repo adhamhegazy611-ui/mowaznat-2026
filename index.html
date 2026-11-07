@@ -1922,7 +1922,12 @@ function pjWizState() {
   return (b.wiz = { n: secs.length || null, secs });
 }
 function pjWizard() {
-  const p = PJ.cur; if (!p) return; PJ.view = 'wiz';
+  const p = PJ.cur; if (!p) return;
+  // لما الصفحة بتترسم تاني بعد اختيار بند: نفضل في نفس المكان ونفس البحث
+  const mm = $('paMain'), again = PJ.view === 'wiz';
+  const keep = again ? { y: mm.scrollTop, ly: (mm.querySelector('.pjwpl') || {}).scrollTop || 0, q: (mm.querySelector('.pjwp input') || {}).value || '', a: [...mm.querySelectorAll('.pjws')].findIndex((x) => x.classList.contains('act')) } : null;
+  PJ.view = 'wiz';
+  setTimeout(() => { if (!keep || PJ.view !== 'wiz') return; const same = [...mm.querySelectorAll('.pjws')].findIndex((x) => x.classList.contains('act')) === keep.a; if (!same) { mm.scrollTop = keep.y; return; } const qi = mm.querySelector('.pjwp input'); if (qi && keep.q && !qi.value) { qi.value = keep.q; qi.dispatchEvent(new Event('input')); } const l = mm.querySelector('.pjwpl'); if (l) l.scrollTop = keep.ly; mm.scrollTop = keep.y; }, 0);
   const W = pjWizState();
   const m = pjHero(pjBatLabel(p.battalion) + ' — ' + p.name, 'اختيار البنود', 'حدد الأقسام الرئيسية للموازنة، وتحت كل قسم اختار البنود الفرعية بتاعته بالترتيب.', p.items.length ? [['الموازنة ←', pjBOQ]] : []);
   const save = () => { paSave(); };
@@ -2032,7 +2037,7 @@ function pjWizard() {
       p.items = items; paSave(); paNav($('paQ').value); pjBOQ();
     };
     fin.appendChild(fb); m.appendChild(fin);
-    fin.scrollIntoView({ block: 'nearest' });
+    if (!keep) fin.scrollIntoView({ block: 'nearest' });
   }
 }
 
