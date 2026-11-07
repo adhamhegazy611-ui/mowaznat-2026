@@ -131,7 +131,7 @@ body.in footer{color:#7f94b8}
 .card[hidden]{display:none}
 /* ---------- تحليل الأسعار (أدمن) ---------- */
 /* تحليل سعر لمشروع جديد */
-#pa .pjfbar{display:grid;grid-template-columns:auto repeat(4,minmax(140px,1fr));gap:12px;align-items:end}
+#pa .pjfbar{display:grid;grid-template-columns:auto repeat(2,minmax(160px,1fr));gap:12px;align-items:end}
 @media (max-width:900px){#pa .pjfbar{grid-template-columns:1fr 1fr}}
 #pa .pjseg{display:inline-flex;border:1px solid #cbd2db;border-radius:10px;overflow:hidden}
 #pa .pjseg button{border:0;background:#fff;padding:8px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer;color:#334155;white-space:nowrap}
@@ -1880,7 +1880,7 @@ function pjBOQ() {
   [['incl', 'شامل الضريبة'], ['excl', 'غير شامل الضريبة']].forEach(([v, l]) => { const x = pjEl('button', mode === v ? 'on' : '', l); x.type = 'button'; x.onclick = () => { b.mode = v; paSave(); pjBOQ(); }; seg.appendChild(x); });
   const fld = (l, key, ph) => { const f = pjEl('label', 'pjf'); f.appendChild(pjEl('span', '', l)); const i = pjEl('input', 'pjtx'); i.type = 'text'; i.value = b.form[key] || ''; i.placeholder = ph; i.oninput = () => { b.form[key] = i.value; paSave(); draw(); }; f.appendChild(i); return f; };
   const segw = pjEl('label', 'pjf'); segw.append(pjEl('span', '', 'المشروع'), seg);
-  bar.append(segw, fld('اللواء', 'lewaa', 'مثلاً ١٩ طرق'), fld('التاريخ', 'date', new Date().toLocaleDateString('en-CA')), fld('التوقيع (الرتبة / الاسم)', 'signer', 'مثلاً مقدم / ...'), fld('الصفة', 'title', 'قائد ' + pjBatLabel(p.battalion).replace(/^ك/, 'كتيبة ') + ' طرق'));
+  bar.append(segw, fld('التوقيع (الرتبة / الاسم)', 'signer', 'مثلاً مقدم / ...'), fld('الصفة', 'title', 'قائد ' + pjBatLabel(p.battalion).replace(/^ك/, 'كتيبة ') + ' طرق'));
   m.appendChild(bar);
   const paper = pjEl('div', 'pjpaper'); paper.id = 'pjPaper'; m.appendChild(paper);
   const order = paItems().filter((it) => !it.safety).map((it) => it.i);
@@ -1892,10 +1892,6 @@ function pjBOQ() {
   function draw() {
     paper.textContent = '';
     const F = b.form, bat = pjBatLabel(p.battalion).replace(/^ك/, '');
-    const hd = pjEl('div', 'pjhead');
-    const org = pjEl('div', 'org');
-    ['الهيئة الهندسية للقوات المسلحة', 'إدارة المهندسين العسكريين', F.lewaa ? 'اللواء ' + F.lewaa : '', p.battalion ? 'الكتيبة ' + bat + ' طرق' : '', 'التاريخ : ' + (F.date || new Date().toLocaleDateString('en-CA'))].filter(Boolean).forEach((t) => org.appendChild(pjEl('div', '', pjD(t))));
-    hd.appendChild(org); paper.appendChild(hd);
     paper.appendChild(pjEl('div', 'pjtitle', pjD('موازنة مشروع ' + p.name)));
     const t = pjEl('table', 'pjform'); t.id = 'pjBoqT';
     const cg = pjEl('colgroup'); [4, 40, 7, 11, 9, 11, 18].forEach((w) => { const c = pjEl('col'); c.style.width = w + '%'; cg.appendChild(c); }); t.appendChild(cg);
