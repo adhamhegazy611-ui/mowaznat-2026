@@ -1797,6 +1797,16 @@ function pjSheetTools(it) {
     }
   }
 }
+function pjMakeCopy(si, name) {
+  const p = PJ.cur; p.extra = p.extra || {}; p.extra.copies = p.extra.copies || [];
+  const base = PA.sheets[si].copyOf != null ? PA.sheets[si].copyOf : si;
+  p.extra.copies.push({ key: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), base, name, eq: [] });
+  const ov = PAE.dump(); pjRebuild();
+  const ni = PA.sheets.length - 1;
+  if (ov[base]) { const d = PAE.dump(); d[ni] = JSON.parse(JSON.stringify(ov[base])); PAE.resetAll(); PAE.load(d); }
+  PAnames[ni] = name;
+  return ni;
+}
 async function pjCopyItem(si) {
   const p = PJ.cur; p.extra = p.extra || {}; p.extra.copies = p.extra.copies || [];
   const base = PA.sheets[si].copyOf != null ? PA.sheets[si].copyOf : si;
@@ -1904,9 +1914,10 @@ function pjWizard() {
   };
   ni.onkeydown = (e) => { if (e.key === 'Enter') nb.click(); };
   if (!W.n) { setTimeout(() => ni.focus(), 50); return; }
-  const used = new Map(); W.secs.forEach((s, k) => s.items.forEach((si) => used.set(si, k)));
+  const baseOf = (si) => (PA.sheets[si] && PA.sheets[si].copyOf != null ? PA.sheets[si].copyOf : si);
+  const cnt = new Map(); W.secs.forEach((s) => s.items.forEach((si) => { const b0 = baseOf(si); cnt.set(b0, (cnt.get(b0) || 0) + 1); }));
   const active = W.secs.findIndex((s) => !s.done);
-  const all = pjAllItems().filter((it) => it.k >= 0);
+  const all = pjAllItems().filter((it) => it.k >= 0 && PA.sheets[it.k].copyKey == null);
   W.secs.forEach((s, k) => {
     let okb = null;
     const c = pjEl('div', 'pjcard pjws' + (s.done ? ' done' : '') + (k === active ? ' act' : ''));
@@ -1928,7 +1939,12 @@ function pjWizard() {
         const li = pjEl('li'); li.appendChild(pjEl('span', '', PAnames[si] || PA.sheets[si].title.trim()));
         if (k === active) {
           const up = pjEl('button', '', '▲'); up.type = 'button'; up.title = 'لفوق'; up.disabled = !j; up.onclick = () => { [s.items[j - 1], s.items[j]] = [s.items[j], s.items[j - 1]]; save(); pjWizard(); };
-          const rm = pjEl('button', 'x', '✕'); rm.type = 'button'; rm.title = 'شيل'; rm.onclick = () => { s.items.splice(j, 1); save(); pjWizard(); };
+          const rm = pjEl('button', 'x', '✕'); rm.type = 'button'; rm.title = 'شيل';
+          rm.onclick = async () => {
+            s.items.splice(j, 1);
+            const ck = PA.sheets[si].copyKey; if (ck != null) { const c0 = p.extra.copies.find((x) => x.key === ck); if (c0) c0.del = true; pjRebuild(); await pjSaveExtra(); }
+            save(); pjWizard();
+          };
           li.append(up, rm);
         }
         ol.appendChild(li);
@@ -1946,12 +1962,14 @@ function pjWizard() {
         all.forEach((it) => {
           if (nq && !pjNorm(it.t + ' ' + it.g).includes(nq)) return;
           if (it.g !== last) { lst.appendChild(pjEl('h5', '', it.g)); last = it.g; }
-          const u = used.get(it.k), b2 = pjEl('button', 'pjwi' + (u === k ? ' in' : u != null ? ' other' : ''), (u === k ? '✓ ' : '+ ') + it.t); b2.type = 'button';
-          if (u != null && u !== k) b2.title = 'موجود في ' + (PJ_ORD2[u] || '') + ' — اضغط تنقله هنا';
-          b2.onclick = () => {
-            if (u === k) s.items = s.items.filter((x) => x !== it.k);
-            else { if (u != null) W.secs[u].items = W.secs[u].items.filter((x) => x !== it.k); s.items.push(it.k); }
-            save(); pjWizard();
+          const n0 = cnt.get(it.k) || 0, b2 = pjEl('button', 'pjwi' + (n0 ? ' in' : ''), '+ ' + it.t + (n0 ? '  ×' + n0 : '')); b2.type = 'button';
+          b2.title = n0 ? 'مضاف ' + n0 + ' مرة — اضغط تضيفه تاني' : 'اضغط تضيفه';
+          b2.onclick = async () => {
+            const allUsed = new Set(); W.secs.forEach((x) => x.items.forEach((y) => allUsed.add(y)));
+            if (!allUsed.has(it.k)) { s.items.push(it.k); save(); return pjWizard(); }
+            // متضاف قبل كده: نسخة جديدة بنفس أرقامه عشان كل مرة تبقى ليها كميتها
+            const ni = pjMakeCopy(it.k, it.t + ' (' + (n0 + 1) + ')');
+            s.items.push(ni); await pjSaveExtra(); save(); paUndoReset(); pjWizard();
           };
           lst.appendChild(b2);
         });
