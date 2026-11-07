@@ -131,6 +131,10 @@ body.in footer{color:#7f94b8}
 .card[hidden]{display:none}
 /* ---------- تحليل الأسعار (أدمن) ---------- */
 /* تحليل سعر لمشروع جديد */
+#pa table.pjform tr.part td{background:#0f2747;color:#fff;font-weight:800;font-size:15px;letter-spacing:.3px}
+#pa table.pjform tr.ptot td{background:#ffe08a;font-weight:800;font-size:14px}
+#pa table.pjform tr.ptot td.e{background:#fff}
+
 #pa input.pjtype{border:1px solid #cbd2db;border-radius:9px;padding:6px 10px;font:inherit;font-size:13px;width:170px;background:#fff}
 #pa th.sec input.pjtype{margin-inline-start:10px;font-size:12px;padding:3px 8px;width:150px;font-weight:600;text-decoration:none}
 #pa th.sec .tyv{display:none}
@@ -180,7 +184,7 @@ body.in footer{color:#7f94b8}
 #pa .pjeqs .chip2{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:2px 4px 2px 10px;color:#fff}
 #pa .pjeqs .chip2 button{border:0;background:none;color:#fca5a5;cursor:pointer;font-weight:800;padding:0 4px}
 
-#pa .pjfbar{display:grid;grid-template-columns:auto;gap:12px;align-items:end}
+#pa .pjfbar{display:flex;flex-wrap:wrap;gap:16px;gap:12px;align-items:end}
 @media (max-width:900px){#pa .pjfbar{grid-template-columns:1fr 1fr}}
 #pa .pjseg{display:inline-flex;border:1px solid #cbd2db;border-radius:10px;overflow:hidden}
 #pa .pjseg button{border:0;background:#fff;padding:8px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer;color:#334155;white-space:nowrap}
@@ -1922,6 +1926,14 @@ function pjWizard() {
   const W = pjWizState();
   const m = pjHero(pjBatLabel(p.battalion) + ' — ' + p.name, 'اختيار البنود', 'حدد الأقسام الرئيسية للموازنة، وتحت كل قسم اختار البنود الفرعية بتاعته بالترتيب.', p.items.length ? [['الموازنة ←', pjBOQ]] : []);
   const save = () => { paSave(); };
+  // ٠) نوع الأعمال: شركات / ذاتي / الاتنين (نفس الأقسام والبنود للاتنين)
+  const b0 = p.basics, q0 = pjEl('div', 'pjcard pjwq');
+  q0.appendChild(pjEl('h3', '', 'المشروع أعمال شركات ولا أعمال ذاتي؟'));
+  q0.appendChild(pjEl('div', 'pjh2', 'لو «الاتنين»، الأقسام والبنود اللي هتختارها بتتكرر في الاتنين، وكل نوع ليه كمياته في الموازنة.'));
+  const sg0 = pjEl('div', 'pjseg');
+  [['co', 'أعمال شركات'], ['self', 'أعمال ذاتي'], ['both', 'الاتنين']].forEach(([v, l]) => { const x = pjEl('button', b0.works === v ? 'on' : '', l); x.type = 'button'; x.onclick = () => { b0.works = v; save(); pjWizard(); }; sg0.appendChild(x); });
+  q0.appendChild(sg0); m.appendChild(q0);
+  if (!b0.works && !p.items.length) return;
   // ١) كام قسم رئيسي؟
   const q1 = pjEl('div', 'pjcard pjwq');
   q1.appendChild(pjEl('h3', '', 'كام قسم رئيسي في الموازنة؟'));
@@ -1947,10 +1959,10 @@ function pjWizard() {
     if (k === active) {
       const nm = pjEl('input', 'pjtx'); nm.type = 'text'; nm.placeholder = 'اسم القسم (مثلاً التسويات)'; nm.value = s.name; nm.oninput = () => { s.name = nm.value; save(); if (okb) okb.disabled = !(s.name.trim() && s.items.length); };
       h.appendChild(nm); setTimeout(() => { if (!s.name) nm.focus(); }, 50);
-      const ti = pjTypeInput(p.basics, s.name, null); ti.onfocus = () => { ti.value = (p.basics.secType || {})[s.name.trim()] || ti.value; }; ti.onchange = () => { const v = ti.value.trim(); p.basics.secType = p.basics.secType || {}; if (v) p.basics.secType[s.name.trim()] = v; else delete p.basics.secType[s.name.trim()]; save(); }; h.appendChild(ti);
+
     } else {
       h.appendChild(pjEl('b', '', s.name || '—'));
-      if ((p.basics.secType || {})[s.name]) h.appendChild(pjEl('span', 'pjtyp', p.basics.secType[s.name]));
+
       if (s.done) h.appendChild(pjEl('span', 'ok', '✓ ' + s.items.length + ' بند'));
       if (s.done || k < active || active < 0) { const e = pjEl('button', 'pjbtn', 'تعديل'); e.type = 'button'; e.onclick = () => { W.secs.forEach((x, j) => { if (j !== k && x.name && x.items.length) x.done = true; }); s.done = false; save(); pjWizard(); }; h.appendChild(e); }
     }
@@ -2246,7 +2258,10 @@ function pjBOQ() {
   [['incl', 'شامل الضريبة'], ['excl', 'غير شامل الضريبة']].forEach(([v, l]) => { const x = pjEl('button', mode === v ? 'on' : '', l); x.type = 'button'; x.onclick = () => { b.mode = v; paSave(); pjBOQ(); }; seg.appendChild(x); });
   const fld = (l, key, ph) => { const f = pjEl('label', 'pjf'); f.appendChild(pjEl('span', '', l)); const i = pjEl('input', 'pjtx'); i.type = 'text'; i.value = b.form[key] || ''; i.placeholder = ph; i.oninput = () => { b.form[key] = i.value; paSave(); draw(); }; f.appendChild(i); return f; };
   const segw = pjEl('label', 'pjf'); segw.append(pjEl('span', '', 'المشروع'), seg);
-  bar.append(segw);
+  const seg2 = pjEl('div', 'pjseg');
+  [['co', 'أعمال شركات'], ['self', 'أعمال ذاتي'], ['both', 'الاتنين']].forEach(([v, l]) => { const x = pjEl('button', (b.works || 'co') === v ? 'on' : '', l); x.type = 'button'; x.onclick = () => { b.works = v; paSave(); pjBOQ(); }; seg2.appendChild(x); });
+  const segw2 = pjEl('label', 'pjf'); segw2.append(pjEl('span', '', 'نوع الأعمال'), seg2);
+  bar.append(segw, segw2);
   m.appendChild(bar);
   const paper = pjEl('div', 'pjpaper'); paper.id = 'pjPaper'; m.appendChild(paper);
   const order = paItems().filter((it) => !it.safety || it.ss != null).map((it) => (it.ss != null ? it.ss : it.i));
@@ -2258,55 +2273,63 @@ function pjBOQ() {
   };
   function draw() {
     paper.textContent = '';
-    const F = b.form, bat = pjBatLabel(p.battalion).replace(/^ك/, '');
     paper.appendChild(pjEl('div', 'pjtitle', pjD('موازنة مشروع ' + p.name)));
     const t = pjEl('table', 'pjform'); t.id = 'pjBoqT';
     const cg = pjEl('colgroup'); [4, 40, 7, 11, 9, 11, 18].forEach((w) => { const c = pjEl('col'); c.style.width = w + '%'; cg.appendChild(c); }); t.appendChild(cg);
     const secs = []; order.forEach((si) => { const s = b.sec[si] || pjAutoSec(si); let g = secs.find((x) => x.n === s); if (!g) secs.push(g = { n: s, l: [] }); g.l.push(si); });
     const so = b.secOrder || []; secs.sort((a, c) => (so.length ? ((so.indexOf(a.n) + 1) || 99) - ((so.indexOf(c.n) + 1) || 99) : 0) || (PJ_SECS.indexOf(a.n) + 1 || 99) - (PJ_SECS.indexOf(c.n) + 1 || 99));
-    let k = 0, grand = 0; const byType = {};
-    secs.forEach((g, gi) => {
-      const h1 = pjEl('tr', 'yh'), h2 = pjEl('tr');
-      const th = (x, rs, cls) => { const c = pjEl('th', cls || '', x); if (rs) c.rowSpan = rs; return c; };
-      h1.append(th('م', 2), th('البند'), th('الوحدة', 2), th('الكمية', 2), th('الفئة', 2), th('الاجمالي\n( مليون جنية )', 2), th('ملاحظات', 2));
-      const typ = (b.secType || {})[g.n] || '';
-      const sn = pjEl('th', 'sec'); sn.appendChild(pjEl('span', '', (PJ_ORD[gi] || '') + ': ' + g.n));
-      const tv = pjEl('span', 'pv tyv', typ ? ' — ' + typ : ''); sn.appendChild(tv);
-      const ti = pjTypeInput(b, g.n, () => draw()); ti.classList.add('noexp'); sn.appendChild(ti);
-      h2.appendChild(sn);
-      t.append(h1, h2);
-      let sub = 0;
-      g.l.forEach((si) => {
-        k++;
-        const it = si >= PJ_SAF ? { desc: pjItemName(si), std: true, unit: (PA.items[pjSafIdx(si)] || {}).unit || '' } : X.item[si], pr = priceOf(si), q = p.qty[si];
-        const tot = q != null && pr != null ? (q * pr) / 1e6 : null; sub += tot || 0;
-        const tr = pjEl('tr', 'ir');
-        tr.appendChild(pjEl('td', 'c', pjAr(k, 0)));
-        const dt = pjEl('td', 'd'); dt.appendChild(pjEl('div', 'dx', pjD(it.std ? it.desc : (PAnames[si] || it.desc))));
-        const sel = pjEl('select', 'noexp pjsec'); [...new Set([...PJ_SECS, b.sec[si] || pjAutoSec(si)])].forEach((s) => { const o = pjEl('option', '', s); o.value = s; if (s === (b.sec[si] || pjAutoSec(si))) o.selected = true; sel.appendChild(o); });
-        sel.title = 'القسم'; sel.onchange = () => { b.sec[si] = sel.value; paSave(); draw(); };
-        const op = pjEl('button', 'noexp pjop', 'فتح التحليل'); op.type = 'button'; op.onclick = () => { const x = paItems().find((y) => (si >= PJ_SAF ? y.ss === si : !y.safety && y.i === si)); if (x) paShow(x); };
-        const tools = pjEl('div', 'noexp pjitools'); tools.append(sel, op); dt.appendChild(tools);
-        tr.appendChild(dt);
-        tr.appendChild(pjEl('td', 'c', pjD(it.unit)));
-        const qt = pjEl('td', 'c'), qi = pjEl('input', 'pjq'); qi.type = 'text'; qi.inputMode = 'decimal'; qi.value = q == null ? '' : pjAr(q, 0, 3); qi.placeholder = '٠';
-        qi.onchange = () => { const v = pjParse(qi.value); if (v == null || isNaN(v)) delete p.qty[si]; else p.qty[si] = v; paSave(); draw(); };
-        qi.onfocus = () => { qi.select(); };
-        qt.appendChild(qi); qt.appendChild(pjEl('span', 'pv', q == null ? '' : pjAr(q, 0, 3))); tr.appendChild(qt);
-        tr.appendChild(pjEl('td', 'c', pr == null ? '—' : pjAr(pr, 0)));
-        tr.appendChild(pjEl('td', 'c b', tot == null ? '' : pjAr(tot, 2)));
-        const nt = pjEl('td', 'c'), ni = pjEl('textarea', 'pjn'); ni.rows = 2; ni.value = b.note[si] || ''; ni.oninput = () => { if (ni.value.trim()) b.note[si] = ni.value; else delete b.note[si]; paSave(); nt.querySelector('.pv').textContent = ni.value; };
-        nt.appendChild(ni); nt.appendChild(pjEl('span', 'pv', b.note[si] || '')); tr.appendChild(nt);
-        t.appendChild(tr);
+    // أعمال شركات / ذاتي / الاتنين: نفس الأقسام ونفس البنود، وكل نوع ليه كمياته
+    const works = b.works || 'co';
+    const parts = works === 'both' ? [['co', 'أعمال الشركات'], ['self', 'أعمال الذاتي']] : [['co', works === 'self' ? 'أعمال الذاتي' : 'أعمال الشركات']];
+    let grand = 0; const ptots = [];
+    parts.forEach(([pk, plabel], pi) => {
+      const qm = pk === 'self' ? (b.qtyS = b.qtyS || {}) : p.qty, nm = pk === 'self' ? (b.noteS = b.noteS || {}) : b.note;
+      const pr0 = pjEl('tr', 'part'), pd = pjEl('td', 'c', plabel); pd.colSpan = 7; pr0.appendChild(pd); t.appendChild(pr0);
+      let k = 0, ptot = 0;
+      secs.forEach((g, gi) => {
+        const h1 = pjEl('tr', 'yh'), h2 = pjEl('tr');
+        const th = (x, rs, cls) => { const c = pjEl('th', cls || '', x); if (rs) c.rowSpan = rs; return c; };
+        h1.append(th('م', 2), th('البند'), th('الوحدة', 2), th('الكمية', 2), th('الفئة', 2), th('الاجمالي\n( مليون جنية )', 2), th('ملاحظات', 2));
+        h2.appendChild(pjEl('th', 'sec', (PJ_ORD[gi] || '') + ': ' + g.n));
+        t.append(h1, h2);
+        let sub = 0;
+        g.l.forEach((si) => {
+          k++;
+          const it = si >= PJ_SAF ? { desc: pjItemName(si), std: true, unit: (PA.items[pjSafIdx(si)] || {}).unit || '' } : X.item[si], pr = priceOf(si), q = qm[si];
+          const tot = q != null && pr != null ? (q * pr) / 1e6 : null; sub += tot || 0;
+          const tr = pjEl('tr', 'ir');
+          tr.appendChild(pjEl('td', 'c', pjAr(k, 0)));
+          const dt = pjEl('td', 'd'); dt.appendChild(pjEl('div', 'dx', pjD(it.std ? it.desc : (PAnames[si] || it.desc))));
+          if (pi === 0) {
+            const sel = pjEl('select', 'noexp pjsec'); [...new Set([...PJ_SECS, b.sec[si] || pjAutoSec(si)])].forEach((s) => { const o = pjEl('option', '', s); o.value = s; if (s === (b.sec[si] || pjAutoSec(si))) o.selected = true; sel.appendChild(o); });
+            sel.title = 'القسم'; sel.onchange = () => { b.sec[si] = sel.value; paSave(); draw(); };
+            const op = pjEl('button', 'noexp pjop', 'فتح التحليل'); op.type = 'button'; op.onclick = () => { const x = paItems().find((y) => (si >= PJ_SAF ? y.ss === si : !y.safety && y.i === si)); if (x) paShow(x); };
+            const tools = pjEl('div', 'noexp pjitools'); tools.append(sel, op); dt.appendChild(tools);
+          }
+          tr.appendChild(dt);
+          tr.appendChild(pjEl('td', 'c', pjD(it.unit)));
+          const qt = pjEl('td', 'c'), qi = pjEl('input', 'pjq'); qi.type = 'text'; qi.inputMode = 'decimal'; qi.value = q == null ? '' : pjAr(q, 0, 3); qi.placeholder = '٠';
+          qi.onchange = () => { const v = pjParse(qi.value); if (v == null || isNaN(v)) delete qm[si]; else qm[si] = v; paSave(); draw(); };
+          qi.onfocus = () => { qi.select(); };
+          qt.appendChild(qi); qt.appendChild(pjEl('span', 'pv', q == null ? '' : pjAr(q, 0, 3))); tr.appendChild(qt);
+          tr.appendChild(pjEl('td', 'c', pr == null ? '—' : pjAr(pr, 0)));
+          tr.appendChild(pjEl('td', 'c b', tot == null ? '' : pjAr(tot, 2)));
+          const nt = pjEl('td', 'c'), ni = pjEl('textarea', 'pjn'); ni.rows = 2; ni.value = nm[si] || ''; ni.oninput = () => { if (ni.value.trim()) nm[si] = ni.value; else delete nm[si]; paSave(); nt.querySelector('.pv').textContent = ni.value; };
+          nt.appendChild(ni); nt.appendChild(pjEl('span', 'pv', nm[si] || '')); tr.appendChild(nt);
+          t.appendChild(tr);
+        });
+        ptot += sub;
+        const st = pjEl('tr', 'sub'), sl = pjEl('td', 'c', 'الاجمالى ( مليون جنية )'); sl.colSpan = 5; st.append(sl, pjEl('td', 'c b', pjAr(sub, 2)), pjEl('td', 'e', ''));
+        t.appendChild(st);
+        const sp = pjEl('tr', 'sp'), spd = pjEl('td'); spd.colSpan = 7; sp.appendChild(spd); t.appendChild(sp);
       });
-      grand += sub; byType[typ || ''] = (byType[typ || ''] || 0) + sub;
-      const st = pjEl('tr', 'sub'), sl = pjEl('td', 'c', 'الاجمالى ( مليون جنية )'); sl.colSpan = 5; st.append(sl, pjEl('td', 'c b', pjAr(sub, 2)), pjEl('td', 'e', ''));
-      t.appendChild(st);
-      const sp = pjEl('tr', 'sp'), spd = pjEl('td'); spd.colSpan = 7; sp.appendChild(spd); t.appendChild(sp);
+      grand += ptot; ptots.push([plabel, ptot]);
+      if (parts.length > 1) {
+        const tr = pjEl('tr', 'ptot'), l = pjEl('td', 'c', 'إجمالي ' + plabel + ' ( مليون جنية )'); l.colSpan = 5; tr.append(l, pjEl('td', 'c b', pjAr(ptot, 2)), pjEl('td', 'e', '')); t.appendChild(tr);
+        const sp = pjEl('tr', 'sp'), spd = pjEl('td'); spd.colSpan = 7; sp.appendChild(spd); t.appendChild(sp);
+      }
     });
-    Object.entries(byType).filter(([ty]) => ty).forEach(([ty, v]) => {
-      const tr = pjEl('tr', 'sub'), l = pjEl('td', 'c', 'إجمالي ' + ty + ' ( مليون جنية )'); l.colSpan = 5; tr.append(l, pjEl('td', 'c b', pjAr(v, 2)), pjEl('td', 'e', '')); t.appendChild(tr);
-    });
+    if (parts.length > 1) ptots.forEach(([l0, v]) => { const tr = pjEl('tr', 'sub'), l = pjEl('td', 'c', 'إجمالي ' + l0 + ' ( مليون جنية )'); l.colSpan = 5; tr.append(l, pjEl('td', 'c b', pjAr(v, 2)), pjEl('td', 'e', '')); t.appendChild(tr); });
     const gt = pjEl('tr', 'grand'), gl = pjEl('td', 'c', 'الاجمالى العام'); gl.colSpan = 5; gt.append(gl, pjEl('td', 'c b', pjAr(grand, 2)), pjEl('td', 'e', ''));
     t.appendChild(gt);
     paper.appendChild(t);
@@ -2314,7 +2337,7 @@ function pjBOQ() {
   }
   draw();
 }
-const PJ_FORM_CSS = `body{font-family:"Cairo","Arial",sans-serif;direction:rtl;margin:0;color:#000}
+const PJ_FORM_CSS = `body{font-family:"Cairo","Arial",sans-serif;direction:rtl;margin:0;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .pjpaper{background:#fff;padding:18px 22px;max-width:1100px;margin:0 auto}
 .pjhead{display:flex;justify-content:flex-start;margin-bottom:6px}
 .pjhead .org{font-weight:800;font-size:13px;line-height:1.55;text-decoration:underline}
@@ -2330,6 +2353,9 @@ table.pjform tr.sub td{background:#c9ccd1;font-weight:800;font-size:13.5px}
 table.pjform tr.sub td.e,table.pjform tr.grand td.e{background:#fff}
 table.pjform tr.sp td{border:0;height:14px;padding:0}
 table.pjform tr.grand td{background:#bbb6a8;font-weight:800;font-size:15px}
+table.pjform tr.part td{background:#0f2747;color:#fff;font-weight:800;font-size:15px}
+table.pjform tr.ptot td{background:#ffe08a;font-weight:800;font-size:14px}
+table.pjform tr.ptot td.e{background:#fff}
 .pjsign{margin-top:22px;font-weight:800;font-size:14px;line-height:1.8}
 .noexp,.pjq,.pjn{display:none}`;
 function pjBoqHtml() {
