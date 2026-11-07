@@ -131,6 +131,11 @@ body.in footer{color:#7f94b8}
 .card[hidden]{display:none}
 /* ---------- تحليل الأسعار (أدمن) ---------- */
 /* تحليل سعر لمشروع جديد */
+#pa input.pjtype{border:1px solid #cbd2db;border-radius:9px;padding:6px 10px;font:inherit;font-size:13px;width:170px;background:#fff}
+#pa th.sec input.pjtype{margin-inline-start:10px;font-size:12px;padding:3px 8px;width:150px;font-weight:600;text-decoration:none}
+#pa th.sec .tyv{display:none}
+#pa .pjtyp{background:#eef3fb;color:#1d4a86;border-radius:99px;padding:2px 10px;font-size:12.5px;font-weight:700}
+
 #pa nav .pjh button.pjhome{background:#fff;border:1px solid #d7deea;color:#0f2747;font-weight:800;text-align:center;border-radius:10px;margin-bottom:10px;width:100%}
 #pa nav .pjh button.pjhome:hover{background:#eef3fb}
 
@@ -1942,8 +1947,10 @@ function pjWizard() {
     if (k === active) {
       const nm = pjEl('input', 'pjtx'); nm.type = 'text'; nm.placeholder = 'اسم القسم (مثلاً التسويات)'; nm.value = s.name; nm.oninput = () => { s.name = nm.value; save(); if (okb) okb.disabled = !(s.name.trim() && s.items.length); };
       h.appendChild(nm); setTimeout(() => { if (!s.name) nm.focus(); }, 50);
+      const ti = pjTypeInput(p.basics, s.name, null); ti.onfocus = () => { ti.value = (p.basics.secType || {})[s.name.trim()] || ti.value; }; ti.onchange = () => { const v = ti.value.trim(); p.basics.secType = p.basics.secType || {}; if (v) p.basics.secType[s.name.trim()] = v; else delete p.basics.secType[s.name.trim()]; save(); }; h.appendChild(ti);
     } else {
       h.appendChild(pjEl('b', '', s.name || '—'));
+      if ((p.basics.secType || {})[s.name]) h.appendChild(pjEl('span', 'pjtyp', p.basics.secType[s.name]));
       if (s.done) h.appendChild(pjEl('span', 'ok', '✓ ' + s.items.length + ' بند'));
       if (s.done || k < active || active < 0) { const e = pjEl('button', 'pjbtn', 'تعديل'); e.type = 'button'; e.onclick = () => { W.secs.forEach((x, j) => { if (j !== k && x.name && x.items.length) x.done = true; }); s.done = false; save(); pjWizard(); }; h.appendChild(e); }
     }
@@ -2216,6 +2223,15 @@ function pjAutoSec(si) {
   return PJ_SECS[6];
 }
 const pjD = (x) => String(x == null ? '' : x).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
+// نوع الأعمال لكل قسم: أعمال شركات / أعمال ذاتي (أو أي كلام تكتبه)
+const PJ_TYPES = ['أعمال شركات', 'أعمال ذاتي'];
+function pjTypeInput(b, name, onDone) {
+  b.secType = b.secType || {};
+  const i = pjEl('input', 'pjtype'); i.type = 'text'; i.value = b.secType[name] || ''; i.placeholder = 'أعمال شركات / ذاتي'; i.setAttribute('list', 'pjTypeL'); i.title = 'نوع الأعمال في القسم ده';
+  if (!document.getElementById('pjTypeL')) { const dl = pjEl('datalist'); dl.id = 'pjTypeL'; PJ_TYPES.forEach((t) => { const o = pjEl('option'); o.value = t; dl.appendChild(o); }); document.body.appendChild(dl); }
+  i.onchange = () => { const v = i.value.trim(); if (v) b.secType[name] = v; else delete b.secType[name]; paSave(); if (onDone) onDone(); };
+  return i;
+}
 const pjAr = (n, d, dmax) => (n == null || isNaN(n) ? '' : pjD(Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: dmax == null ? d : dmax })));
 const pjParse = (v) => { const t = String(v || '').replace(/[٠-٩]/g, (x) => '٠١٢٣٤٥٦٧٨٩'.indexOf(x)).replace(/[٬,\s]/g, '').replace(/٫/g, '.'); return t === '' ? null : +t; };
 function pjBOQ() {
@@ -2248,12 +2264,16 @@ function pjBOQ() {
     const cg = pjEl('colgroup'); [4, 40, 7, 11, 9, 11, 18].forEach((w) => { const c = pjEl('col'); c.style.width = w + '%'; cg.appendChild(c); }); t.appendChild(cg);
     const secs = []; order.forEach((si) => { const s = b.sec[si] || pjAutoSec(si); let g = secs.find((x) => x.n === s); if (!g) secs.push(g = { n: s, l: [] }); g.l.push(si); });
     const so = b.secOrder || []; secs.sort((a, c) => (so.length ? ((so.indexOf(a.n) + 1) || 99) - ((so.indexOf(c.n) + 1) || 99) : 0) || (PJ_SECS.indexOf(a.n) + 1 || 99) - (PJ_SECS.indexOf(c.n) + 1 || 99));
-    let k = 0, grand = 0;
+    let k = 0, grand = 0; const byType = {};
     secs.forEach((g, gi) => {
       const h1 = pjEl('tr', 'yh'), h2 = pjEl('tr');
       const th = (x, rs, cls) => { const c = pjEl('th', cls || '', x); if (rs) c.rowSpan = rs; return c; };
       h1.append(th('م', 2), th('البند'), th('الوحدة', 2), th('الكمية', 2), th('الفئة', 2), th('الاجمالي\n( مليون جنية )', 2), th('ملاحظات', 2));
-      const sn = pjEl('th', 'sec', (PJ_ORD[gi] || '') + ': ' + g.n); h2.appendChild(sn);
+      const typ = (b.secType || {})[g.n] || '';
+      const sn = pjEl('th', 'sec'); sn.appendChild(pjEl('span', '', (PJ_ORD[gi] || '') + ': ' + g.n));
+      const tv = pjEl('span', 'pv tyv', typ ? ' — ' + typ : ''); sn.appendChild(tv);
+      const ti = pjTypeInput(b, g.n, () => draw()); ti.classList.add('noexp'); sn.appendChild(ti);
+      h2.appendChild(sn);
       t.append(h1, h2);
       let sub = 0;
       g.l.forEach((si) => {
@@ -2279,10 +2299,13 @@ function pjBOQ() {
         nt.appendChild(ni); nt.appendChild(pjEl('span', 'pv', b.note[si] || '')); tr.appendChild(nt);
         t.appendChild(tr);
       });
-      grand += sub;
+      grand += sub; byType[typ || ''] = (byType[typ || ''] || 0) + sub;
       const st = pjEl('tr', 'sub'), sl = pjEl('td', 'c', 'الاجمالى ( مليون جنية )'); sl.colSpan = 5; st.append(sl, pjEl('td', 'c b', pjAr(sub, 2)), pjEl('td', 'e', ''));
       t.appendChild(st);
       const sp = pjEl('tr', 'sp'), spd = pjEl('td'); spd.colSpan = 7; sp.appendChild(spd); t.appendChild(sp);
+    });
+    Object.entries(byType).filter(([ty]) => ty).forEach(([ty, v]) => {
+      const tr = pjEl('tr', 'sub'), l = pjEl('td', 'c', 'إجمالي ' + ty + ' ( مليون جنية )'); l.colSpan = 5; tr.append(l, pjEl('td', 'c b', pjAr(v, 2)), pjEl('td', 'e', '')); t.appendChild(tr);
     });
     const gt = pjEl('tr', 'grand'), gl = pjEl('td', 'c', 'الاجمالى العام'); gl.colSpan = 5; gt.append(gl, pjEl('td', 'c b', pjAr(grand, 2)), pjEl('td', 'e', ''));
     t.appendChild(gt);
