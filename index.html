@@ -130,6 +130,52 @@ body.in footer{color:#7f94b8}
 .c4{--c:#9a3412;--soft:#fdeee6}
 .card[hidden]{display:none}
 /* ---------- تحليل الأسعار (أدمن) ---------- */
+/* تحليل سعر لمشروع جديد */
+#pa nav .pjh{margin:0 2px 8px;padding:10px;border-radius:12px;background:#f6f8fc;border:1px solid #e3e9f2}
+#pa nav .pjh button.pjgo{background:linear-gradient(135deg,#9a3412,#c2501f);color:#fff;font-weight:800;text-align:center;border-radius:10px}
+#pa nav .pjh button.pjgo:hover{filter:brightness(1.07);background:linear-gradient(135deg,#9a3412,#c2501f)}
+#pa nav .pjh .pjn{font-weight:800;color:#0f2747;font-size:14px;margin:0 4px 2px}
+#pa nav .pjh .pjb{font-size:12px;color:#64748b;margin:0 4px 8px}
+#pa nav .pjh .row{display:flex;gap:6px}
+#pa nav .pjh .row button{flex:1;text-align:center;border:1px solid #d7deea;background:#fff;font-weight:700;font-size:12.5px;padding:7px 6px}
+#pa nav .pjh .row button:hover{background:#eef3fb}
+#pa .pjtools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 2px 14px}
+#pa .pjtools input{flex:1;min-width:180px;border:1px solid #d7deea;border-radius:10px;padding:8px 12px;font:inherit;font-size:13.5px;background:#fff}
+#pa .pjbtn{border:1px solid #d7deea;background:#fff;color:#0f2747;border-radius:10px;padding:8px 14px;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
+#pa .pjbtn:hover{background:#eef3fb}
+#pa .pjbtn.on{background:#0f2747;color:#fff;border-color:#0f2747}
+#pa .pjgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+#pa .pjc{background:#fff;border-radius:14px;padding:16px 16px 12px;box-shadow:0 1px 3px rgba(15,23,42,.06),0 10px 28px rgba(15,23,42,.08);border-top:4px solid #9a3412;cursor:pointer;display:flex;flex-direction:column;gap:6px;transition:transform .12s}
+#pa .pjc:hover{transform:translateY(-2px)}
+#pa .pjc b{font-size:15.5px;color:#0f2747;line-height:1.5}
+#pa .pjc .m{font-size:12.5px;color:#64748b;display:flex;gap:10px;flex-wrap:wrap}
+#pa .pjc .m span{background:#f1f5f9;border-radius:99px;padding:1px 10px}
+#pa .pjc .a{display:flex;gap:6px;margin-top:6px;border-top:1px solid #eef2f7;padding-top:8px}
+#pa .pjc .a button{border:0;background:none;color:#64748b;cursor:pointer;font:inherit;font-size:12.5px;font-weight:700;padding:2px 6px;border-radius:6px}
+#pa .pjc .a button:hover{background:#f1f5f9;color:#0f2747}
+#pa .pjc .a button.del:hover{background:#fef2f2;color:#b91c1c}
+#pa .pjempty{background:#fff;border-radius:14px;padding:30px;text-align:center;color:#64748b;line-height:1.9}
+.pjm{position:fixed;inset:0;z-index:10000;background:rgba(8,20,40,.45);display:grid;place-items:center;padding:16px}
+.pjm .bx{background:#fff;border-radius:16px;width:min(560px,100%);max-height:86vh;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(3,10,25,.45);font-family:"Cairo",system-ui,sans-serif;color:#1e293b}
+.pjm .hd{padding:16px 18px 10px;border-bottom:1px solid #eef2f7}
+.pjm .hd b{display:block;font-size:17px;color:#0f2747}
+.pjm .hd small{color:#64748b;font-size:12.5px}
+.pjm .bd{padding:12px 18px;overflow:auto;flex:1}
+.pjm .ft{padding:12px 18px;border-top:1px solid #eef2f7;display:flex;gap:8px;justify-content:flex-start}
+.pjm label.f{display:block;font-size:13px;font-weight:700;margin:8px 0 5px;color:#334155}
+.pjm input[type=text],.pjm input[type=search]{width:100%;border:1px solid #cbd2db;border-radius:10px;padding:9px 12px;font:inherit;font-size:14px}
+.pjm input:focus{outline:none;border-color:#1e3a66;box-shadow:0 0 0 3px rgba(30,58,102,.12)}
+.pjm .ok{background:#0f2747;color:#fff;border:0;border-radius:10px;padding:9px 20px;font:inherit;font-weight:800;cursor:pointer}
+.pjm .no{background:#fff;color:#334155;border:1px solid #cbd2db;border-radius:10px;padding:9px 16px;font:inherit;font-weight:700;cursor:pointer}
+.pjm h5{margin:12px 0 4px;font-size:12px;color:#64748b;font-weight:800}
+.pjm .it{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:13.5px}
+.pjm .it:hover{background:#f1f5f9}
+.pjm .it input{width:17px;height:17px;accent-color:#0f2747;flex:none}
+.pjm .tl{display:flex;gap:6px;margin:8px 0 2px;flex-wrap:wrap}
+.pjm .tl button{border:1px solid #d7deea;background:#fff;border-radius:8px;padding:4px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#0f2747}
+.pjm .cnt{margin-inline-start:auto;font-size:12.5px;color:#64748b;align-self:center}
+.pjm .err{color:#b91c1c;font-size:13px;font-weight:700;margin-top:8px}
+
 #pa{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;background:#f4f6f9;color:var(--ink)}
 #pa .vbar{flex:none;height:46px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--navy);color:#fff;box-shadow:inset 0 -3px 0 #9a3412}
 #pa .vbar button{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:9px;padding:5px 12px;cursor:pointer;font-size:13px;font-weight:700}
@@ -837,10 +883,11 @@ async function loadPA() {
 function paItems() {
   const out = [{ g: 'أعمال الأمن والسلامة (مايو 2026)', t: PAnames.s || 'جدول الأسعار', safety: true }];
   PA.sheets.forEach((s, i) => out.push({ g: s.grp, t: PAnames[i] || s.title, i }));
+  if (PJ.cur) return out.filter((it) => PJ.cur.items.includes(it.safety ? -1 : it.i));
   return out;
 }
 function paNav(q) {
-  const nav = $('paNav'); nav.textContent = '';
+  const nav = $('paNav'); nav.textContent = ''; pjNavHead(nav);
   let last = null; q = (q || '').trim();
   paItems().forEach((it) => {
     if (q) {
@@ -857,7 +904,7 @@ function paNav(q) {
 }
 
 let PAsel = null, PAnames = {}, PAtx = {}, PAhid = {}, PAhm = false;
-function paSave() { try { localStorage.setItem('pa_edits_v1', JSON.stringify({ o: PAE.dump(), n: PAnames, p: PAtx, h: PAhid })); } catch (e) { /* ignore */ } }
+function paSave() { if (PJ.cur) return pjSaveSoon(); try { localStorage.setItem('pa_edits_v1', JSON.stringify({ o: PAE.dump(), n: PAnames, p: PAtx, h: PAhid })); } catch (e) { /* ignore */ } }
 function paLoadSaved() { try { const j = JSON.parse(localStorage.getItem('pa_edits_v1') || 'null'); if (j) { PAE.load(j.o || []); PAnames = j.n || {}; PAtx = j.p || {}; PAhid = j.h || {}; } } catch (e) { /* ignore */ } }
 /* تعديل نص في أي مكان: يرجّع القيمة الجديدة عبر cb (فاضي = رجوع للأصل) */
 function paEditText(node, cur, cb, multi) {
@@ -1363,6 +1410,211 @@ $('paQ').oninput = () => { if (PA) paNav($('paQ').value); };
 addEventListener('popstate', (e) => { if (!(e.state && e.state.pa)) closePA(); });
 let paRT = null, paRW = 0;
 addEventListener('resize', () => { if ($('pa').classList.contains('hidden') || !PA || PAcur === 's' || PAcur == null) return; const w = $('paMain').clientWidth; if (Math.abs(w - paRW) < 24) return; clearTimeout(paRT); paRT = setTimeout(() => { paRW = $('paMain').clientWidth; const it = paItems().find((x) => !x.safety && x.i === PAcur); if (it) { const st = $('paMain').scrollTop; paShow(it); $('paMain').scrollTop = st; } }, 250); });
+
+/* ===== تحليل سعر لمشروع جديد =====
+   كل مشروع ليه اسم وكتيبة وبنود بيختارها، وتعديلات الأرقام بتاعته منفصلة عن التحليل العام.
+   المشروعات محفوظة في قاعدة البيانات (pa_projects) وللأدمن بس. */
+const PJ = { cur: null, stash: null, list: [], bat: '', q: '', saveT: null };
+const pjEl = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+const pjBatLabel = (b) => (b ? (/^\d/.test(b) ? 'ك' + b : b) : 'بدون كتيبة');
+function pjAllItems() {
+  const out = [{ g: 'أعمال الأمن والسلامة (مايو 2026)', t: (PJ.stash ? PJ.stash.n.s : PAnames.s) || 'جدول الأسعار', k: -1 }];
+  PA.sheets.forEach((s, i) => out.push({ g: s.grp, t: (PJ.stash ? PJ.stash.n[i] : PAnames[i]) || s.title, k: i }));
+  return out;
+}
+function pjNavHead(nav) {
+  const box = pjEl('div', 'pjh');
+  if (!PJ.cur) {
+    const b = pjEl('button', 'pjgo', '📁 تحليل سعر لمشروع جديد'); b.type = 'button';
+    b.onclick = () => { pjList(); nav.classList.remove('open'); };
+    box.appendChild(b);
+  } else {
+    box.appendChild(pjEl('div', 'pjn', '📁 ' + PJ.cur.name));
+    box.appendChild(pjEl('div', 'pjb', pjBatLabel(PJ.cur.battalion) + ' — ' + PJ.cur.items.length + ' بند'));
+    const row = pjEl('div', 'row');
+    const bi = pjEl('button', '', 'البنود'); bi.type = 'button'; bi.title = 'اختار بنود المشروع'; bi.onclick = pjPick;
+    const be = pjEl('button', '', 'تعديل'); be.type = 'button'; be.title = 'تعديل الاسم والكتيبة'; be.onclick = pjEdit;
+    const bx = pjEl('button', '', '↩ المشروعات'); bx.type = 'button'; bx.title = 'رجوع لقايمة المشروعات'; bx.onclick = () => pjExit(true);
+    row.append(bi, be, bx); box.appendChild(row);
+  }
+  nav.appendChild(box);
+}
+async function pjFetch() {
+  const { data, error } = await sb.from('pa_projects').select('id,name,battalion,items,updated_at').order('updated_at', { ascending: false });
+  if (error) throw error;
+  PJ.list = data || [];
+}
+async function pjList() {
+  if (PJ.cur) { await pjExit(false); }
+  PAcur = null; PAsel = null; try { paInfoRender(); } catch (e) { /* ignore */ }
+  paNav($('paQ').value);
+  const m = $('paMain'); m.textContent = ''; m.scrollTop = 0; m.classList.remove('hmode');
+  const hero = pjEl('div', 'hero2'), hl = pjEl('div');
+  hl.appendChild(pjEl('span', 'chip', 'مشروعات'));
+  hl.appendChild(pjEl('h2', '', 'تحليل سعر لمشروع جديد'));
+  hl.appendChild(pjEl('p', '', 'اعمل مشروع باسمه وكتيبته، واختار البنود اللي تخصه. كل مشروع ليه أرقامه وتعديلاته لوحده، ومن غير ما يأثر على التحليل العام.'));
+  const hb = pjEl('div', 'hb'), nb = pjEl('button', '', '+ مشروع جديد'); nb.type = 'button'; nb.onclick = pjCreate; hb.appendChild(nb);
+  hero.append(hl, hb); m.appendChild(hero);
+  const tools = pjEl('div', 'pjtools');
+  const q = pjEl('input'); q.type = 'search'; q.placeholder = 'بحث باسم المشروع…'; q.value = PJ.q;
+  const bb = pjEl('button', 'pjbtn' + (PJ.bat ? ' on' : ''), 'ك الكتيبة: ' + (PJ.bat ? pjBatLabel(PJ.bat) : 'الكل') + ' ▾'); bb.type = 'button';
+  tools.append(q, bb); m.appendChild(tools);
+  const grid = pjEl('div', 'pjgrid'); m.appendChild(grid);
+  const draw = () => {
+    grid.textContent = '';
+    const nq = PJ.q.trim();
+    const l = PJ.list.filter((p) => (!PJ.bat || (p.battalion || '') === PJ.bat) && (!nq || p.name.includes(nq)));
+    if (!l.length) {
+      const e = pjEl('div', 'pjempty', PJ.list.length ? 'مفيش مشروعات بالفلتر ده.' : 'لسه مفيش مشروعات. دوس «+ مشروع جديد» وابدأ.');
+      grid.style.display = 'block'; grid.appendChild(e); return;
+    }
+    grid.style.display = '';
+    l.forEach((p) => {
+      const c = pjEl('div', 'pjc'); c.onclick = () => pjOpen(p.id);
+      c.appendChild(pjEl('b', '', p.name));
+      const mt = pjEl('div', 'm');
+      mt.append(pjEl('span', '', pjBatLabel(p.battalion)), pjEl('span', '', (p.items || []).length + ' بند'), pjEl('span', '', new Date(p.updated_at).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })));
+      c.appendChild(mt);
+      const a = pjEl('div', 'a');
+      const o = pjEl('button', '', 'فتح'); o.type = 'button';
+      const d = pjEl('button', 'del', 'حذف'); d.type = 'button';
+      d.onclick = async (e) => { e.stopPropagation(); if (!confirm('حذف مشروع «' + p.name + '» نهائياً؟')) return; const { error } = await sb.from('pa_projects').delete().eq('id', p.id); if (error) return alert('تعذّر الحذف'); PJ.list = PJ.list.filter((x) => x.id !== p.id); draw(); };
+      a.append(o, d); c.appendChild(a); grid.appendChild(c);
+    });
+  };
+  q.oninput = () => { PJ.q = q.value; draw(); };
+  bb.onclick = (e) => {
+    e.stopPropagation(); document.querySelectorAll('.pmenu').forEach((x) => x.remove());
+    const bats = [...new Set(PJ.list.map((p) => p.battalion || ''))].sort((a, b) => (parseInt(a) || 9999) - (parseInt(b) || 9999) || a.localeCompare(b, 'ar'));
+    const mn = pjEl('div', 'pmenu'); const r = bb.getBoundingClientRect();
+    mn.style.top = (r.bottom + 6) + 'px'; mn.style.right = Math.max(8, innerWidth - r.right) + 'px'; mn.style.maxHeight = '50vh'; mn.style.overflow = 'auto';
+    const add = (t, v) => { const x = pjEl('button', '', (PJ.bat === v ? '✓ ' : '') + t); x.type = 'button'; x.onclick = () => { PJ.bat = v; mn.remove(); pjList(); }; mn.appendChild(x); };
+    add('كل الكتايب', ''); bats.forEach((b) => add(pjBatLabel(b) + ' (' + PJ.list.filter((p) => (p.battalion || '') === b).length + ')', b));
+    document.body.appendChild(mn);
+    setTimeout(() => document.addEventListener('click', function f(ev) { if (!mn.contains(ev.target)) { mn.remove(); document.removeEventListener('click', f); } }), 0);
+  };
+  grid.appendChild(pjEl('div', 'pjempty', 'جاري التحميل…'));
+  try { await pjFetch(); } catch (e) { grid.textContent = ''; grid.appendChild(pjEl('div', 'pjempty', 'تعذّر تحميل المشروعات.')); return; }
+  draw();
+}
+function pjDlg(title, sub, name, bat, okText) {
+  return new Promise((res) => {
+    const w = pjEl('div', 'pjm'), bx = pjEl('div', 'bx'), hd = pjEl('div', 'hd'), bd = pjEl('div', 'bd'), ft = pjEl('div', 'ft');
+    hd.append(pjEl('b', '', title), pjEl('small', '', sub));
+    const l1 = pjEl('label', 'f', 'اسم المشروع'), i1 = pjEl('input'); i1.type = 'text'; i1.value = name || ''; i1.maxLength = 200;
+    const l2 = pjEl('label', 'f', 'الكتيبة'), i2 = pjEl('input'); i2.type = 'text'; i2.value = bat || ''; i2.placeholder = 'مثلاً 44'; i2.setAttribute('list', 'pjBats');
+    const dl = pjEl('datalist'); dl.id = 'pjBats'; [...new Set(PJ.list.map((p) => p.battalion).filter(Boolean))].forEach((b) => { const o = pjEl('option'); o.value = b; dl.appendChild(o); });
+    const er = pjEl('div', 'err');
+    bd.append(l1, i1, l2, i2, dl, er);
+    const ok = pjEl('button', 'ok', okText); ok.type = 'button'; const no = pjEl('button', 'no', 'إلغاء'); no.type = 'button';
+    ft.append(ok, no); bx.append(hd, bd, ft); w.appendChild(bx); document.body.appendChild(w);
+    const done = (v) => { w.remove(); res(v); };
+    ok.onclick = () => { const n = i1.value.trim(); if (!n) { er.textContent = 'اكتب اسم المشروع'; i1.focus(); return; } done({ name: n, battalion: i2.value.trim().replace(/^ك\s*/, '') || null }); };
+    no.onclick = () => done(null); w.onclick = (e) => { if (e.target === w) done(null); };
+    [i1, i2].forEach((i) => (i.onkeydown = (e) => { if (e.key === 'Enter') ok.click(); if (e.key === 'Escape') done(null); }));
+    setTimeout(() => i1.focus(), 30);
+  });
+}
+async function pjCreate() {
+  const v = await pjDlg('مشروع جديد', 'هيبدأ بأرقام التحليل العام الحالية، وأي تعديل بعد كده بيبقى للمشروع ده بس.', '', PJ.bat, 'إنشاء واختيار البنود');
+  if (!v) return;
+  const base = PJ.stash || { o: PAE.dump(), n: PAnames, p: PAtx, h: PAhid };
+  const { data, error } = await sb.from('pa_projects').insert({ name: v.name, battalion: v.battalion, items: [], ov: base.o, names: base.n, tx: base.p, hid: base.h }).select('id').single();
+  if (error) return alert('تعذّر إنشاء المشروع');
+  await pjOpen(data.id, true);
+}
+async function pjOpen(id, pick) {
+  const { data, error } = await sb.from('pa_projects').select('*').eq('id', id).single();
+  if (error || !data) return alert('تعذّر فتح المشروع');
+  pjFlush();
+  if (!PJ.stash) PJ.stash = { o: PAE.dump(), n: PAnames, p: PAtx, h: PAhid };
+  PAE.resetAll(); PAE.load(data.ov || []);
+  PAnames = data.names || {}; PAtx = data.tx || {}; PAhid = data.hid || {};
+  data.items = data.items || [];
+  PJ.cur = data; PAsel = null;
+  paNav($('paQ').value);
+  const its = paItems();
+  if (its.length) paShow(its[0]); else pjEmpty();
+  if (pick || !its.length) pjPick();
+}
+function pjEmpty() {
+  PAcur = null;
+  const m = $('paMain'); m.textContent = '';
+  const hero = pjEl('div', 'hero2'), hl = pjEl('div');
+  hl.append(pjEl('span', 'chip', pjBatLabel(PJ.cur.battalion)), pjEl('h2', '', PJ.cur.name), pjEl('p', '', 'المشروع لسه مفيهوش بنود. اختار البنود اللي تخص المشروع ده.'));
+  const hb = pjEl('div', 'hb'), b = pjEl('button', '', 'اختار البنود'); b.type = 'button'; b.onclick = pjPick; hb.appendChild(b);
+  hero.append(hl, hb); m.appendChild(hero);
+}
+function pjSaveSoon() { clearTimeout(PJ.saveT); PJ.saveT = setTimeout(pjFlush, 700); }
+function pjFlush() {
+  if (!PJ.saveT || !PJ.cur) { clearTimeout(PJ.saveT); PJ.saveT = null; return; }
+  clearTimeout(PJ.saveT); PJ.saveT = null;
+  const p = PJ.cur, row = { ov: PAE.dump(), names: PAnames, tx: PAtx, hid: PAhid, updated_at: new Date().toISOString() };
+  sb.from('pa_projects').update(row).eq('id', p.id).then(({ error }) => { if (error) console.warn('pa_projects save', error); });
+}
+async function pjExit(toList) {
+  pjFlush();
+  if (PJ.stash) { PAE.resetAll(); PAE.load(PJ.stash.o); PAnames = PJ.stash.n; PAtx = PJ.stash.p; PAhid = PJ.stash.h; }
+  PJ.cur = null; PJ.stash = null; PAsel = null;
+  if (toList) return pjList();
+  paNav($('paQ').value);
+}
+async function pjEdit() {
+  const p = PJ.cur; if (!p) return;
+  const v = await pjDlg('تعديل المشروع', '', p.name, p.battalion, 'حفظ');
+  if (!v) return;
+  const { error } = await sb.from('pa_projects').update({ name: v.name, battalion: v.battalion, updated_at: new Date().toISOString() }).eq('id', p.id);
+  if (error) return alert('تعذّر الحفظ');
+  p.name = v.name; p.battalion = v.battalion; paNav($('paQ').value);
+  if (PAcur == null) pjEmpty();
+}
+function pjPick() {
+  const p = PJ.cur; if (!p) return;
+  const sel = new Set(p.items), all = pjAllItems();
+  const w = pjEl('div', 'pjm'), bx = pjEl('div', 'bx'), hd = pjEl('div', 'hd'), bd = pjEl('div', 'bd'), ft = pjEl('div', 'ft');
+  hd.append(pjEl('b', '', 'بنود مشروع «' + p.name + '»'), pjEl('small', '', 'علّم على البنود اللي تخص المشروع، وهي بس اللي هتظهر في القايمة.'));
+  const q = pjEl('input'); q.type = 'search'; q.placeholder = 'بحث في البنود…';
+  const tl = pjEl('div', 'tl'), sa = pjEl('button', '', 'اختار الظاهر'), sn = pjEl('button', '', 'شيل الظاهر'), cnt = pjEl('span', 'cnt');
+  sa.type = sn.type = 'button'; tl.append(sa, sn, cnt);
+  const list = pjEl('div');
+  hd.append(q, tl); bx.append(hd, bd, ft); bd.appendChild(list);
+  const upd = () => { cnt.textContent = sel.size + ' بند مختار'; };
+  let vis = [];
+  const draw = () => {
+    list.textContent = ''; vis = []; let last = null; const nq = q.value.trim();
+    all.forEach((it) => {
+      if (nq && !(it.t + ' ' + it.g).includes(nq)) return;
+      vis.push(it.k);
+      if (it.g !== last) { list.appendChild(pjEl('h5', '', it.g)); last = it.g; }
+      const lb = pjEl('label', 'it'), cb = pjEl('input'); cb.type = 'checkbox'; cb.checked = sel.has(it.k);
+      cb.onchange = () => { if (cb.checked) sel.add(it.k); else sel.delete(it.k); upd(); };
+      lb.append(cb, pjEl('span', '', it.t)); list.appendChild(lb);
+    });
+    if (!vis.length) list.appendChild(pjEl('div', 'cnt', 'مفيش بنود بالاسم ده'));
+    upd();
+  };
+  q.oninput = draw;
+  sa.onclick = () => { vis.forEach((k) => sel.add(k)); draw(); };
+  sn.onclick = () => { vis.forEach((k) => sel.delete(k)); draw(); };
+  const ok = pjEl('button', 'ok', 'حفظ البنود'), no = pjEl('button', 'no', 'إلغاء'); ok.type = no.type = 'button';
+  ft.append(ok, no); w.appendChild(bx); document.body.appendChild(w);
+  const close = () => w.remove();
+  no.onclick = close; w.onclick = (e) => { if (e.target === w) close(); };
+  ok.onclick = async () => {
+    const items = all.map((it) => it.k).filter((k) => sel.has(k));
+    ok.disabled = true;
+    const { error } = await sb.from('pa_projects').update({ items, updated_at: new Date().toISOString() }).eq('id', p.id);
+    ok.disabled = false;
+    if (error) return alert('تعذّر حفظ البنود');
+    p.items = items; close();
+    paNav($('paQ').value);
+    const its = paItems();
+    if (!its.length) return pjEmpty();
+    if (!its.some((it) => (it.safety ? 's' : it.i) === PAcur)) paShow(its[0]);
+  };
+  draw(); setTimeout(() => q.focus(), 30);
+}
+addEventListener('beforeunload', pjFlush);
 
 sb.auth.getSession().then(({ data }) => show(data.session));
 sb.auth.onAuthStateChange((_ev, session) => setTimeout(() => show(session), 0));
