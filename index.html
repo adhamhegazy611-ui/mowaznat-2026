@@ -197,7 +197,7 @@ body.in footer{color:#7f94b8}
 #pa table.pjform tr.grand td{background:#bbb6a8;font-weight:800;font-size:15px}
 #pa .pjsign{margin-top:22px;font-weight:800;font-size:14px;line-height:1.8}
 #pa .pjpaper .pv{display:none}
-#pa input.pjq{width:100%;border:1px solid #e0b100;background:#fffbe6;border-radius:6px;padding:5px 2px;font:inherit;font-size:12px;text-align:center;direction:ltr}
+#pa input.pjq{width:100%;border:1px solid #e0b100;background:#fffbe6;border-radius:6px;padding:5px 2px;font:inherit;font-size:12.5px;text-align:center;direction:rtl}
 #pa textarea.pjn{width:100%;border:1px dashed #cbd2db;border-radius:6px;padding:4px;font:inherit;font-size:11.5px;resize:vertical;background:#fafbfc}
 #pa .pjitools{display:flex;gap:6px;margin-top:6px;align-items:center}
 #pa select.pjsec{border:1px solid #d7deea;border-radius:7px;font:inherit;font-size:11.5px;padding:2px 4px;background:#f6f8fc;color:#334155;max-width:180px}
@@ -2216,7 +2216,8 @@ function pjAutoSec(si) {
   return PJ_SECS[6];
 }
 const pjD = (x) => String(x == null ? '' : x).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
-const pjAr = (n, d) => (n == null || isNaN(n) ? '' : Number(n).toLocaleString('ar-EG', { minimumFractionDigits: d, maximumFractionDigits: d }));
+const pjAr = (n, d, dmax) => (n == null || isNaN(n) ? '' : pjD(Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: dmax == null ? d : dmax })));
+const pjParse = (v) => { const t = String(v || '').replace(/[٠-٩]/g, (x) => '٠١٢٣٤٥٦٧٨٩'.indexOf(x)).replace(/[٬,\s]/g, '').replace(/٫/g, '.'); return t === '' ? null : +t; };
 function pjBOQ() {
   const p = PJ.cur; if (!p) return; PJ.view = 'boq';
   const X = pjScan(); p.qty = p.qty || {}; const b = p.basics = p.basics || {};
@@ -2261,16 +2262,17 @@ function pjBOQ() {
         const tot = q != null && pr != null ? (q * pr) / 1e6 : null; sub += tot || 0;
         const tr = pjEl('tr', 'ir');
         tr.appendChild(pjEl('td', 'c', pjAr(k, 0)));
-        const dt = pjEl('td', 'd'); dt.appendChild(pjEl('div', 'dx', it.std ? it.desc : (PAnames[si] || it.desc)));
+        const dt = pjEl('td', 'd'); dt.appendChild(pjEl('div', 'dx', pjD(it.std ? it.desc : (PAnames[si] || it.desc))));
         const sel = pjEl('select', 'noexp pjsec'); [...new Set([...PJ_SECS, b.sec[si] || pjAutoSec(si)])].forEach((s) => { const o = pjEl('option', '', s); o.value = s; if (s === (b.sec[si] || pjAutoSec(si))) o.selected = true; sel.appendChild(o); });
         sel.title = 'القسم'; sel.onchange = () => { b.sec[si] = sel.value; paSave(); draw(); };
         const op = pjEl('button', 'noexp pjop', 'فتح التحليل'); op.type = 'button'; op.onclick = () => { const x = paItems().find((y) => (si >= PJ_SAF ? y.ss === si : !y.safety && y.i === si)); if (x) paShow(x); };
         const tools = pjEl('div', 'noexp pjitools'); tools.append(sel, op); dt.appendChild(tools);
         tr.appendChild(dt);
         tr.appendChild(pjEl('td', 'c', pjD(it.unit)));
-        const qt = pjEl('td', 'c'), qi = pjEl('input', 'pjq'); qi.type = 'number'; qi.step = 'any'; qi.value = q == null ? '' : q; qi.placeholder = '٠';
-        qi.onchange = () => { if (qi.value === '') delete p.qty[si]; else p.qty[si] = +qi.value; paSave(); draw(); };
-        qt.appendChild(qi); qt.appendChild(pjEl('span', 'pv', q == null ? '' : pjAr(q, 0))); tr.appendChild(qt);
+        const qt = pjEl('td', 'c'), qi = pjEl('input', 'pjq'); qi.type = 'text'; qi.inputMode = 'decimal'; qi.value = q == null ? '' : pjAr(q, 0, 3); qi.placeholder = '٠';
+        qi.onchange = () => { const v = pjParse(qi.value); if (v == null || isNaN(v)) delete p.qty[si]; else p.qty[si] = v; paSave(); draw(); };
+        qi.onfocus = () => { qi.select(); };
+        qt.appendChild(qi); qt.appendChild(pjEl('span', 'pv', q == null ? '' : pjAr(q, 0, 3))); tr.appendChild(qt);
         tr.appendChild(pjEl('td', 'c', pr == null ? '—' : pjAr(pr, 0)));
         tr.appendChild(pjEl('td', 'c b', tot == null ? '' : pjAr(tot, 2)));
         const nt = pjEl('td', 'c'), ni = pjEl('textarea', 'pjn'); ni.rows = 2; ni.value = b.note[si] || ''; ni.oninput = () => { if (ni.value.trim()) b.note[si] = ni.value; else delete b.note[si]; paSave(); nt.querySelector('.pv').textContent = ni.value; };
