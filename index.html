@@ -131,6 +131,10 @@ body.in footer{color:#7f94b8}
 .card[hidden]{display:none}
 /* ---------- تحليل الأسعار (أدمن) ---------- */
 /* تحليل سعر لمشروع جديد */
+#pa .pjeqs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;font-size:12.5px;color:#dbe4f0;width:100%}
+#pa .pjeqs .chip2{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:2px 4px 2px 10px;color:#fff}
+#pa .pjeqs .chip2 button{border:0;background:none;color:#fca5a5;cursor:pointer;font-weight:800;padding:0 4px}
+
 #pa .pjfbar{display:grid;grid-template-columns:auto repeat(2,minmax(160px,1fr));gap:12px;align-items:end}
 @media (max-width:900px){#pa .pjfbar{grid-template-columns:1fr 1fr}}
 #pa .pjseg{display:inline-flex;border:1px solid #cbd2db;border-radius:10px;overflow:hidden}
@@ -1220,7 +1224,7 @@ function paPrices(m, hl, el) {
   hb.appendChild(rb); hero.appendChild(hb);
   bar.append(q, chips); m.appendChild(bar); render(); tw.appendChild(tb); m.appendChild(tw);
 }
-function paShow(it) { paShow0(it); paInfoMount(); }
+function paShow(it) { paShow0(it); paInfoMount(); try { pjSheetTools(it); } catch (e) { console.warn(e); } }
 
 function paHidN(si) { const x = PAhid[si]; return x ? (x.r || []).length + (x.c || []).length : 0; }
 function paHideApply(si) {
@@ -1482,7 +1486,7 @@ const pjEl = (t, c, x) => { const e = document.createElement(t); if (c) e.classN
 const pjBatLabel = (b) => (b ? (/^\d/.test(b) ? 'ك' + b : b) : 'بدون كتيبة');
 function pjAllItems() {
   const out = [{ g: 'أعمال الأمن والسلامة (مايو 2026)', t: (PJ.stash ? PJ.stash.n.s : PAnames.s) || 'جدول الأسعار', k: -1 }];
-  PA.sheets.forEach((s, i) => out.push({ g: s.grp, t: (PJ.stash ? PJ.stash.n[i] : PAnames[i]) || s.title, k: i }));
+  PA.sheets.forEach((s, i) => { if (s.copyDel) return; out.push({ g: s.grp, t: (s.copyKey != null ? PAnames[i] : (PJ.stash ? PJ.stash.n[i] : PAnames[i])) || s.title, k: i }); });
   return out;
 }
 function pjNavHead(nav) {
@@ -1595,9 +1599,11 @@ async function pjOpen(id, pick) {
   if (error || !data) return alert('تعذّر فتح المشروع');
   pjFlush();
   if (!PJ.stash) PJ.stash = { o: PAE.dump(), n: PAnames, p: PAtx, h: PAhid };
-  PAE.resetAll(); PAE.load(data.ov || []);
+  if (!PA_BASE) PA_BASE = PA.sheets;
+  const copies = (data.extra && data.extra.copies) || [];
+  PA.sheets = PA_BASE.concat(copies.map((c, k) => pjBuildCopy(c, k))); PAE = PAEngine(PA.sheets); PAE.load(data.ov || []); PJX = null;
   PAnames = data.names || {}; PAtx = data.tx || {}; PAhid = data.hid || {};
-  data.items = data.items || []; data.basics = data.basics || {}; data.qty = data.qty || {};
+  data.items = data.items || []; data.basics = data.basics || {}; data.qty = data.qty || {}; data.extra = data.extra || {};
   PJ.cur = data; PAsel = null; pjApplyBasics(); paUndoReset();
   paNav($('paQ').value);
   const its = paItems();
@@ -1621,6 +1627,7 @@ function pjFlush() {
 }
 async function pjExit(toList) {
   pjFlush();
+  if (PA_BASE && PA.sheets !== PA_BASE) { PA.sheets = PA_BASE; PAE = PAEngine(PA.sheets); PJX = null; }
   if (PJ.stash) { PAE.resetAll(); PAE.load(PJ.stash.o); PAnames = PJ.stash.n; PAtx = PJ.stash.p; PAhid = PJ.stash.h; }
   PJ.cur = null; PJ.stash = null; PAsel = null; paUndoReset();
   if (toList) return pjList();
@@ -1682,6 +1689,136 @@ function pjPick() {
   draw(); setTimeout(() => q.focus(), 30);
 }
 addEventListener('beforeunload', pjFlush);
+
+/* ===== نسخ بند + إضافة معدات للنسخة (جوه المشروع) =====
+   النسخة شيت كامل زي الأصلي بأرقامه المستقلة. المعدة المضافة بتتعمل كصف جديد بنفس معادلات صف المعدة اللي قبلها،
+   وبتتضاف لإجمالي تكلفة البند في نفس الجدول. */
+let PA_BASE = null;
+const PJ_ROW0 = 2000;
+function pjRefShift(f, r, nr) { return f.replace(/(\$?)([A-Z]{1,3})(\$?)(\d+)(?![\d(])/g, (m, a, L, b, n) => (+n === r ? a + L + b + nr : m)); }
+function pjRowInfo(sh, r) {
+  // من صف معدة: عمود العدد، اليومية، ومعدل الإنتاج
+  const row = sh.rows.find((x) => x[1].some((c) => c[4] === r)); if (!row) return null;
+  const cells = row[1].filter((c) => c[4] === r), at = (col) => cells.find((c) => c[5] === col);
+  const ref = (s) => { const m = /^\$?([A-Z]{1,3})\$?(\d+)$/.exec(s); if (!m) return null; let n = 0; for (const ch of m[1]) n = n * 26 + ch.charCodeAt(0) - 64; return [+m[2], n]; };
+  let rate = null, cnt = null, prod = null, lab = cells.find((c) => typeof c[0] === 'string' && !c[6]);
+  cells.forEach((c) => {
+    if (!c[6]) return;
+    let m = /^=?\s*(\$?[A-Z]{1,3}\$?\d+)\s*\*\s*(\$?[A-Z]{1,3}\$?\d+)\s*$/.exec(c[6]);
+    if (m && rate == null) { const a = ref(m[1]), b = ref(m[2]); if (a && b && a[0] === r && b[0] === r) { const ca = at(a[1]), cb = at(b[1]); if (ca && cb && typeof ca[0] === 'number' && typeof cb[0] === 'number') { if (ca[0] >= cb[0]) { rate = a[1]; cnt = b[1]; } else { rate = b[1]; cnt = a[1]; } } } }
+    m = /^=?\s*(\$?[A-Z]{1,3}\$?\d+)\s*\/\s*(\$?[A-Z]{1,3}\$?\d+)\s*$/.exec(c[6]);
+    if (m && prod == null) { const b = ref(m[2]); if (b && b[0] === r && at(b[1]) && !at(b[1])[6]) prod = b[1]; }
+  });
+  return { row, cells, lab: lab ? lab[5] : 1, rate, cnt, prod };
+}
+function pjBuildCopy(c, k) {
+  const base = PA_BASE[c.base], sh = JSON.parse(JSON.stringify(base));
+  sh.name = (base.name || base.title) + ' #' + (k + 1); sh.title = c.name; sh.copyOf = c.base; sh.copyKey = c.key; sh.copyDel = !!c.del;
+  (c.eq || []).forEach((e, j) => {
+    const info = pjRowInfo(sh, e.after); if (!info) return;
+    const nr = PJ_ROW0 + j + 1, r = e.after;
+    const nc = info.cells.map((cl) => { const x = cl.slice(); x[4] = nr; if (x[6]) x[6] = pjRefShift(x[6], r, nr); return x; });
+    nc.forEach((x) => { if (x[5] === info.lab) x[0] = e.label; else if (x[5] === info.cnt) x[0] = +e.n; else if (x[5] === info.rate) x[0] = +e.rate; else if (x[5] === info.prod) x[0] = +e.prod; else if (!x[6] && typeof x[0] === 'string' && x[5] !== info.lab) x[0] = ''; });
+    const at = sh.rows.indexOf(info.row);
+    // بعد آخر صف متضاف بعد نفس الصف
+    let pos = at + 1; while (pos < sh.rows.length && sh.rows[pos].pjAdd === r) pos++;
+    const newRow = [info.row[0], nc]; newRow.pjAdd = r; sh.rows.splice(pos, 0, newRow);
+    // الإجمالي: أول صف بعد كده فيه معادلة بتشاور على صف المعدة (مباشرة أو في مدى)
+    const covers = (f, L) => new RegExp('(^|[^A-Z$])\\$?' + L + '\\$?' + r + '(?!\\d)').test(f) || [...f.matchAll(/\$?([A-Z]{1,3})\$?(\d+):\$?([A-Z]{1,3})\$?(\d+)/g)].some((m) => m[1] === L && +m[2] <= r && +m[4] >= r);
+    const colL = (n) => { let s = ''; while (n > 0) { const mm = (n - 1) % 26; s = String.fromCharCode(65 + mm) + s; n = Math.floor((n - 1) / 26); } return s; };
+    for (let i = pos + 1; i < sh.rows.length; i++) {
+      const rw = sh.rows[i]; if (rw.pjAdd != null) continue;
+      let hit = false;
+      rw[1].forEach((cl) => { if (!cl[6]) return; const L = colL(cl[5]); if (covers(cl[6], L) && !cl[6].includes(L + nr)) { cl[6] = '(' + cl[6] + ')+' + L + nr; hit = true; } });
+      if (hit) break;
+    }
+  });
+  return sh;
+}
+function pjRebuild() {
+  if (!PA_BASE) PA_BASE = PA.sheets;
+  const ov = PAE.dump(), copies = (PJ.cur && PJ.cur.extra && PJ.cur.extra.copies) || [];
+  PA.sheets = PA_BASE.concat(copies.map((c, k) => pjBuildCopy(c, k)));
+  PAE = PAEngine(PA.sheets); PAE.load(ov); PJX = null;
+}
+function pjRestoreBase() { if (PA_BASE && PA.sheets !== PA_BASE) { const ov = PAE.dump().slice(0, PA_BASE.length); PA.sheets = PA_BASE; PAE = PAEngine(PA.sheets); PAE.load(ov); PJX = null; } }
+async function pjSaveExtra() {
+  const p = PJ.cur; const { error } = await sb.from('pa_projects').update({ extra: p.extra, items: p.items, ov: PAE.dump(), updated_at: new Date().toISOString() }).eq('id', p.id);
+  if (error) alert('تعذّر الحفظ');
+}
+function pjSheetTools(it) {
+  if (!PJ.cur || !it || it.safety) return;
+  const hb = $('paMain').querySelector('.hero2 .hb'); if (!hb) return;
+  const si = it.i, sh = PA.sheets[si], isCopy = sh.copyKey != null;
+  const mk = (t, f, ttl) => { const x = pjEl('button', '', t); x.type = 'button'; x.title = ttl || ''; x.style.marginInlineStart = '6px'; x.onclick = f; hb.appendChild(x); return x; };
+  mk('⧉ نسخة من البند', () => pjCopyItem(si), 'اعمل نسخة من البند ده في المشروع تعدّل فيها وتزود معدات');
+  if (isCopy) {
+    mk('+ إضافة معدة', () => pjAddEq(si), 'زوّد معدة في النسخة دي');
+    mk('حذف النسخة', () => pjDelCopy(si));
+    const c = PJ.cur.extra.copies.find((x) => x.key === sh.copyKey);
+    if (c && c.eq && c.eq.length) {
+      const box = pjEl('div', 'pjeqs'); box.appendChild(pjEl('span', '', 'المعدات المضافة:'));
+      c.eq.forEach((e, j) => { const ch = pjEl('span', 'chip2', e.label + ' — ' + e.n + ' × ' + e.rate + ' ÷ ' + e.prod + ' '); const x = pjEl('button', '', '✕'); x.type = 'button'; x.title = 'شيل المعدة دي'; x.onclick = async () => { if (!confirm('شيل «' + e.label + '» من النسخة؟')) return; c.eq.splice(j, 1); pjRebuild(); await pjSaveExtra(); paUndoReset(); paShow(it); }; ch.appendChild(x); box.appendChild(ch); });
+      hb.parentNode.appendChild(box);
+    }
+  }
+}
+async function pjCopyItem(si) {
+  const p = PJ.cur; p.extra = p.extra || {}; p.extra.copies = p.extra.copies || [];
+  const base = PA.sheets[si].copyOf != null ? PA.sheets[si].copyOf : si;
+  const nm = prompt('اسم النسخة:', (PAnames[si] || PA.sheets[si].title.trim()) + ' (2)'); if (!nm || !nm.trim()) return;
+  const key = 'c' + Date.now().toString(36);
+  const src = PA.sheets[si].copyKey != null ? p.extra.copies.find((x) => x.key === PA.sheets[si].copyKey) : null;
+  p.extra.copies.push({ key, base, name: nm.trim(), eq: src ? JSON.parse(JSON.stringify(src.eq || [])) : [] });
+  const ov = PAE.dump(); pjRebuild();
+  const ni = PA.sheets.length - 1;
+  // النسخة بتبدأ بنفس الأرقام اللي في البند اللي اتنسخ منه
+  if (ov[si]) { const d = PAE.dump(); d[ni] = JSON.parse(JSON.stringify(ov[si])); PAE.resetAll(); PAE.load(d); }
+  const at = p.items.indexOf(si); p.items.splice(at < 0 ? p.items.length : at + 1, 0, ni);
+  PAnames[ni] = nm.trim();
+  await pjSaveExtra(); paSave(); paUndoReset();
+  paNav($('paQ').value); const x = paItems().find((y) => !y.safety && y.i === ni); if (x) paShow(x);
+}
+async function pjDelCopy(si) {
+  const p = PJ.cur, key = PA.sheets[si].copyKey; if (!confirm('حذف النسخة «' + (PAnames[si] || PA.sheets[si].title) + '»؟')) return;
+  const c = p.extra.copies.find((x) => x.key === key); if (c) c.del = true;   // بتفضل في مكانها عشان أرقام الشيتات ما تتلخبطش
+  p.items = p.items.filter((x) => x !== si);
+  await pjSaveExtra(); paUndoReset(); paNav($('paQ').value);
+  const its = paItems(); if (its.length) paShow(its[0]); else pjEmpty();
+}
+function pjAddEq(si) {
+  const p = PJ.cur, sh = PA.sheets[si], c = p.extra.copies.find((x) => x.key === sh.copyKey); if (!c) return;
+  const X = pjScan();
+  const rowsEq = []; Object.values(X.eq).forEach((e) => e.cells.forEach(([s, r]) => { if (s === si && r < PJ_ROW0) rowsEq.push({ r, name: e.name }); }));
+  rowsEq.sort((a, b) => a.r - b.r);
+  if (!rowsEq.length) return alert('البند ده مفيهوش جدول معدات أقدر أزود فيه.');
+  const known = Object.values(X.eq).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+  const w = pjEl('div', 'pjm'), bx = pjEl('div', 'bx'), hd = pjEl('div', 'hd'), bd = pjEl('div', 'bd'), ft = pjEl('div', 'ft');
+  hd.append(pjEl('b', '', 'إضافة معدة لـ «' + (PAnames[si] || sh.title) + '»'), pjEl('small', '', 'المعدة بتتحسب زي باقي المعدات: (العدد × اليومية) ÷ معدل الإنتاج، وبتدخل في إجمالي تكلفة البند.'));
+  const f = (l, el) => { bd.appendChild(pjEl('label', 'f', l)); bd.appendChild(el); return el; };
+  const nm = f('المعدة', pjEl('input')); nm.type = 'text'; nm.setAttribute('list', 'pjEqL'); nm.placeholder = 'مثلاً جريدر';
+  const dl = pjEl('datalist'); dl.id = 'pjEqL'; known.forEach((e) => { const o = pjEl('option'); o.value = e.name; dl.appendChild(o); }); bd.appendChild(dl);
+  const n = f('العدد', pjEl('input')); n.type = 'text'; n.inputMode = 'decimal'; n.value = '1';
+  const rt = f('اليومية 8 ساعات شامل السولار (ج)', pjEl('input')); rt.type = 'text'; rt.inputMode = 'decimal';
+  const pr = f('معدل الإنتاج (في اليوم)', pjEl('input')); pr.type = 'text'; pr.inputMode = 'decimal';
+  const af = f('تتحط في جدول', pjEl('select')); af.style.cssText = 'width:100%;border:1px solid #cbd2db;border-radius:10px;padding:9px 12px;font:inherit';
+  rowsEq.forEach((x) => { const o = pjEl('option', '', 'بعد «' + x.name + '»'); o.value = x.r; af.appendChild(o); }); af.value = rowsEq[rowsEq.length - 1].r;
+  nm.oninput = () => { const e = known.find((x) => x.name === nm.value.trim()); if (e && !rt.value) rt.value = (p.basics.eq && p.basics.eq[pjEqKey(e.name)]) || e.def; };
+  const er = pjEl('div', 'err'); bd.appendChild(er);
+  const ok = pjEl('button', 'ok', 'إضافة'), no = pjEl('button', 'no', 'إلغاء'); ok.type = no.type = 'button';
+  ft.append(ok, no); bx.append(hd, bd, ft); w.appendChild(bx); document.body.appendChild(w);
+  no.onclick = () => w.remove(); w.onclick = (e) => { if (e.target === w) w.remove(); };
+  const num = (i) => +String(i.value).replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/,/g, '');
+  ok.onclick = async () => {
+    const v = { label: nm.value.trim(), n: num(n), rate: num(rt), prod: num(pr), after: +af.value };
+    if (!v.label) { er.textContent = 'اكتب اسم المعدة'; return; }
+    if (!(v.n > 0) || !(v.rate > 0) || !(v.prod > 0)) { er.textContent = 'العدد واليومية ومعدل الإنتاج لازم يبقوا أرقام أكبر من صفر'; return; }
+    c.eq = c.eq || []; c.eq.push(v); w.remove();
+    pjRebuild(); await pjSaveExtra(); paSave(); paUndoReset();
+    const x = paItems().find((y) => !y.safety && y.i === si); if (x) paShow(x);
+  };
+  setTimeout(() => nm.focus(), 30);
+}
 
 /* ===== تراجع / إعادة (Ctrl+Z / Ctrl+Y) زي الإكسيل ===== */
 const PAU = { prev: null, undo: [], redo: [], t: 0, busy: false };
