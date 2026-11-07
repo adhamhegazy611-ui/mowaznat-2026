@@ -217,6 +217,7 @@ body.in footer{color:#7f94b8}
 #pa table.pjt{width:100%;border-collapse:collapse;font-size:13.5px}
 #pa table.pjt th{background:#eaf0f9;color:#0f2747;font-weight:800;padding:8px 10px;text-align:right;font-size:12.5px}
 #pa table.pjt td{padding:6px 10px;border-bottom:1px solid #eef2f7}
+#pa table.pjt tr.grp th{background:#0f2747;color:#fff;font-size:13px;text-align:right;padding:7px 10px}
 #pa table.pjt td.n{text-align:center;color:#64748b;font-variant-numeric:tabular-nums}
 #pa table.pjt td.m{color:#64748b;font-size:12.5px;white-space:nowrap}
 #pa table.pjt td input.pjin{max-width:160px}
@@ -984,7 +985,11 @@ async function loadPA() {
 function paItems() {
   const out = [{ g: 'أعمال الأمن والسلامة (مايو 2026)', t: PAnames.s || 'جدول الأسعار', safety: true }];
   PA.sheets.forEach((s, i) => out.push({ g: s.grp, t: PAnames[i] || s.title, i }));
-  if (PJ.cur) { const mp = new Map(out.map((it) => [it.safety ? -1 : it.i, it])); return PJ.cur.items.map((k) => mp.get(k)).filter((it) => it && !(it.i != null && PA.sheets[it.i] && PA.sheets[it.i].copyDel)); }
+  if (PJ.cur) {
+    const mp = new Map(out.map((it) => [it.safety ? -1 : it.i, it]));
+    const l = PJ.cur.items.map((k) => mp.get(k)).filter((it) => it && !(it.i != null && PA.sheets[it.i] && PA.sheets[it.i].copyDel));
+    return l.map((it, n) => ({ it, n, o: it.safety ? [98, ''] : pjSecOf(it.i) })).sort((a, c) => a.o[0] - c.o[0] || a.n - c.n).map((x) => (x.it.safety ? x.it : Object.assign({}, x.it, { g: x.o[1] })));
+  }
   return out;
 }
 function paNav(q) {
@@ -2110,6 +2115,13 @@ function pjScan() {
   return PJX;
 }
 const pjInScope = (si) => PJ.cur && PJ.cur.items.includes(si);
+// قسم البند في المشروع: [ترتيبه، «أولاً: اسمه»]
+function pjSecOf(si) {
+  const b = (PJ.cur && PJ.cur.basics) || {}, n = (b.sec && b.sec[si]) || pjAutoSec(si), so = b.secOrder || [];
+  let i = so.indexOf(n); if (i < 0) i = so.length ? 50 + PJ_SECS.indexOf(n) : PJ_SECS.indexOf(n);
+  const pos = so.indexOf(n) >= 0 ? so.indexOf(n) : null;
+  return [i, (pos != null ? PJ_ORD2[pos] + ': ' : '') + n];
+}
 function pjApplyBasics() {
   const X = pjScan(), b = PJ.cur.basics || {};
   Object.entries(X.eq).forEach(([k, e]) => { const v = b.eq && b.eq[k]; e.cells.forEach(([si, r, c, o]) => { if (v != null && v !== '') PAE.set(si, r, c, +v); else if (PAE.has(si, r, c) && PAE.get(si, r, c) === o) PAE.set(si, r, c, undefined); }); });
@@ -2140,7 +2152,7 @@ function pjBasics() {
   });
   g.appendChild(gt);
   // ٢) مسافات النقل للبنود اللي في المشروع
-  const ds = Object.entries(X.dist).filter(([si]) => pjInScope(+si));
+  const ds = paItems().filter((it) => !it.safety && X.dist[it.i]).map((it) => [String(it.i), X.dist[it.i], it.g]);
   const dc = card('مسافات النقل (كم)', ds.length ? 'لكل بند مسافته (مثلاً مسافة المحجر للردم، ومسافة المقلب لناتج الحفر).' : 'مفيش بنود في المشروع فيها خانة «مسافة النقل».');
   if (ds.length) {
     const all = pjEl('div', 'pjall'); const ai = inp('', 'مسافة واحدة لكل البنود', () => {}); const ab = pjEl('button', 'pjbtn', 'طبّق على الكل'); ab.type = 'button';
@@ -2148,7 +2160,9 @@ function pjBasics() {
     const t = pjEl('table', 'pjt'); const hd = pjEl('tr'); ['البند', 'المسافة في الشيت', 'مسافة المشروع'].forEach((x) => hd.appendChild(pjEl('th', '', x))); t.appendChild(hd);
     b.dist = b.dist || {};
     const ins = [];
-    ds.forEach(([si, d]) => {
+    let lastG = null;
+    ds.forEach(([si, d, g]) => {
+      if (g !== lastG) { const gr = pjEl('tr', 'grp'), gh = pjEl('th', '', g); gh.colSpan = 3; gr.appendChild(gh); t.appendChild(gr); lastG = g; }
       const tr = pjEl('tr'); tr.appendChild(pjEl('td', '', PAnames[si] || PA.sheets[si].title.trim())); tr.appendChild(pjEl('td', 'n', pjNum(d.v, 0)));
       const td = pjEl('td'); const i = inp(b.dist[si], String(d.v), (v) => { if (v == null) delete b.dist[si]; else b.dist[si] = v; save(); }); ins.push([si, i]); td.appendChild(i); tr.appendChild(td); t.appendChild(tr);
     });
