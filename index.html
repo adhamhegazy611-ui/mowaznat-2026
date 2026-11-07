@@ -993,8 +993,8 @@ function paItems() {
   PA.sheets.forEach((s, i) => out.push({ g: s.grp, t: PAnames[i] || s.title, i }));
   if (PJ.cur) {
     const mp = new Map(out.map((it) => [it.safety ? -1 : it.i, it]));
-    const l = PJ.cur.items.map((k) => mp.get(k)).filter((it) => it && !(it.i != null && PA.sheets[it.i] && PA.sheets[it.i].copyDel));
-    return l.map((it, n) => ({ it, n, o: it.safety ? [98, ''] : pjSecOf(it.i) })).sort((a, c) => a.o[0] - c.o[0] || a.n - c.n).map((x) => (x.it.safety ? x.it : Object.assign({}, x.it, { g: x.o[1] })));
+    const l = PJ.cur.items.map((k) => (k >= PJ_SAF ? pjSafItem(k) : mp.get(k))).filter((it) => it && !(it.i != null && PA.sheets[it.i] && PA.sheets[it.i].copyDel));
+    return l.map((it, n) => ({ it, n, o: it.ss != null ? pjSecOf(it.ss) : it.safety ? [98, ''] : pjSecOf(it.i) })).sort((a, c) => a.o[0] - c.o[0] || a.n - c.n).map((x) => (x.it.safety && x.it.ss == null ? x.it : Object.assign({}, x.it, { g: x.o[1] })));
   }
   return out;
 }
@@ -1930,10 +1930,10 @@ function pjWizard() {
   };
   ni.onkeydown = (e) => { if (e.key === 'Enter') nb.click(); };
   if (!W.n) { setTimeout(() => ni.focus(), 50); return; }
-  const baseOf = (si) => (PA.sheets[si] && PA.sheets[si].copyOf != null ? PA.sheets[si].copyOf : si);
+  const baseOf = (si) => (si >= PJ_SAF ? PJ_SAF + pjSafIdx(si) : PA.sheets[si] && PA.sheets[si].copyOf != null ? PA.sheets[si].copyOf : si);
   const cnt = new Map(); W.secs.forEach((s) => s.items.forEach((si) => { const b0 = baseOf(si); cnt.set(b0, (cnt.get(b0) || 0) + 1); }));
   const active = W.secs.findIndex((s) => !s.done);
-  const all = pjAllItems().filter((it) => it.k >= 0 && PA.sheets[it.k].copyKey == null);
+  const all = pjAllItems().filter((it) => it.k >= 0 && PA.sheets[it.k].copyKey == null).concat((PA.items || []).map((x, i) => ({ g: 'أعمال الأمن والسلامة (مايو 2026) — ' + x.cat, t: x.t, k: PJ_SAF + i })));
   W.secs.forEach((s, k) => {
     let okb = null;
     const c = pjEl('div', 'pjcard pjws' + (s.done ? ' done' : '') + (k === active ? ' act' : ''));
@@ -1952,13 +1952,13 @@ function pjWizard() {
     if (s.items.length || k === active) {
       const ol = pjEl('ol', 'pjwl');
       s.items.forEach((si, j) => {
-        const li = pjEl('li'); li.appendChild(pjEl('span', '', PAnames[si] || PA.sheets[si].title.trim()));
+        const li = pjEl('li'); li.appendChild(pjEl('span', '', pjItemName(si)));
         if (k === active) {
           const up = pjEl('button', '', '▲'); up.type = 'button'; up.title = 'لفوق'; up.disabled = !j; up.onclick = () => { [s.items[j - 1], s.items[j]] = [s.items[j], s.items[j - 1]]; save(); pjWizard(); };
           const rm = pjEl('button', 'x', '✕'); rm.type = 'button'; rm.title = 'شيل';
           rm.onclick = async () => {
             s.items.splice(j, 1);
-            const ck = PA.sheets[si].copyKey; if (ck != null) { const c0 = p.extra.copies.find((x) => x.key === ck); if (c0) c0.del = true; pjRebuild(); await pjSaveExtra(); }
+            const ck = si < PJ_SAF ? PA.sheets[si].copyKey : null; if (ck != null) { const c0 = p.extra.copies.find((x) => x.key === ck); if (c0) c0.del = true; pjRebuild(); await pjSaveExtra(); }
             save(); pjWizard();
           };
           li.append(up, rm);
@@ -1983,6 +1983,7 @@ function pjWizard() {
           b2.onclick = async () => {
             const allUsed = new Set(); W.secs.forEach((x) => x.items.forEach((y) => allUsed.add(y)));
             if (!allUsed.has(it.k)) { s.items.push(it.k); save(); return pjWizard(); }
+            if (it.k >= PJ_SAF) { let m2 = 1; while (allUsed.has(it.k + 100 * m2)) m2++; s.items.push(it.k + 100 * m2); save(); return pjWizard(); }
             // متضاف قبل كده: نسخة جديدة بنفس أرقامه عشان كل مرة تبقى ليها كميتها
             const ni = pjMakeCopy(it.k, it.t + ' (' + (n0 + 1) + ')');
             s.items.push(ni); await pjSaveExtra(); save(); paUndoReset(); pjWizard();
@@ -2199,7 +2200,13 @@ function pjBasics() {
 /* ===== الموازنة بنفس فورمة الهيئة ===== */
 const PJ_SECS = ['أعمال الجسر الترابي', 'أعمال طبقات الأساس', 'أعمال طبقات الرصف', 'أعمال الأرصفة والبردورات', 'أعمال البرابخ', 'أعمال الأمن والسلامة', 'أعمال عامة'];
 const PJ_ORD = ['أولاً', 'ثانياً', 'ثالثاً', 'رابعاً', 'خامساً', 'سادساً', 'سابعاً', 'ثامناً', 'تاسعاً', 'عاشراً'];
+const PJ_SAF = 10000;
+const pjSafIdx = (k) => (k - PJ_SAF) % 100;
+const pjSafRep = (k) => Math.floor((k - PJ_SAF) / 100);
+function pjSafItem(k) { const x = (PA.items || [])[pjSafIdx(k)]; if (!x) return null; return { safety: true, ss: k, g: '', t: x.t + (pjSafRep(k) ? ' (' + (pjSafRep(k) + 1) + ')' : '') }; }
+function pjItemName(si) { if (si >= PJ_SAF) { const x = pjSafItem(si); return x ? x.t : '—'; } return PAnames[si] || PA.sheets[si].title.trim(); }
 function pjAutoSec(si) {
+  if (si >= PJ_SAF) return PJ_SECS[5];
   const t = pjNorm((PA.sheets[si].title || '') + ' ' + (PA.sheets[si].grp || ''));
   if (/برابخ|بربخ/.test(t)) return PJ_SECS[4];
   if (/رابطه|سطحيه|سوائل|mc|rc|تشريب|لصق|اسفلتي/i.test(t) && !/تكسير|كشط/.test(t)) return PJ_SECS[2];
@@ -2225,8 +2232,9 @@ function pjBOQ() {
   bar.append(segw);
   m.appendChild(bar);
   const paper = pjEl('div', 'pjpaper'); paper.id = 'pjPaper'; m.appendChild(paper);
-  const order = paItems().filter((it) => !it.safety).map((it) => it.i);
+  const order = paItems().filter((it) => !it.safety || it.ss != null).map((it) => (it.ss != null ? it.ss : it.i));
   const priceOf = (si) => {
+    if (si >= PJ_SAF) { const x = PA.items[pjSafIdx(si)]; return x && typeof x.price === 'number' ? Math.ceil(x.price - 1e-9) : null; }
     const it = X.item[si], pp = mode === 'excl' ? it.p2 : it.p1; if (!pp) return null;
     let v = PAE.get(si, pp[0], pp[1]); if (typeof v !== 'number' && pp[2]) v = PAE.get(si, pp[2][0], pp[2][1]);
     return typeof v === 'number' ? Math.ceil(v - 1e-9) : null;   // الفئة بالجنيه الصحيح زي الفورمة
@@ -2249,14 +2257,14 @@ function pjBOQ() {
       let sub = 0;
       g.l.forEach((si) => {
         k++;
-        const it = X.item[si], pr = priceOf(si), q = p.qty[si];
+        const it = si >= PJ_SAF ? { desc: pjItemName(si), std: true, unit: (PA.items[pjSafIdx(si)] || {}).unit || '' } : X.item[si], pr = priceOf(si), q = p.qty[si];
         const tot = q != null && pr != null ? (q * pr) / 1e6 : null; sub += tot || 0;
         const tr = pjEl('tr', 'ir');
         tr.appendChild(pjEl('td', 'c', pjAr(k, 0)));
         const dt = pjEl('td', 'd'); dt.appendChild(pjEl('div', 'dx', it.std ? it.desc : (PAnames[si] || it.desc)));
         const sel = pjEl('select', 'noexp pjsec'); [...new Set([...PJ_SECS, b.sec[si] || pjAutoSec(si)])].forEach((s) => { const o = pjEl('option', '', s); o.value = s; if (s === (b.sec[si] || pjAutoSec(si))) o.selected = true; sel.appendChild(o); });
         sel.title = 'القسم'; sel.onchange = () => { b.sec[si] = sel.value; paSave(); draw(); };
-        const op = pjEl('button', 'noexp pjop', 'فتح التحليل'); op.type = 'button'; op.onclick = () => { const x = paItems().find((y) => !y.safety && y.i === si); if (x) paShow(x); };
+        const op = pjEl('button', 'noexp pjop', 'فتح التحليل'); op.type = 'button'; op.onclick = () => { const x = paItems().find((y) => (si >= PJ_SAF ? y.ss === si : !y.safety && y.i === si)); if (x) paShow(x); };
         const tools = pjEl('div', 'noexp pjitools'); tools.append(sel, op); dt.appendChild(tools);
         tr.appendChild(dt);
         tr.appendChild(pjEl('td', 'c', pjD(it.unit)));
