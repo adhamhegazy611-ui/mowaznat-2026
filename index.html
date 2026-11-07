@@ -131,6 +131,9 @@ body.in footer{color:#7f94b8}
 .card[hidden]{display:none}
 /* ---------- تحليل الأسعار (أدمن) ---------- */
 /* تحليل سعر لمشروع جديد */
+#pa nav .pjh button.pjhome{background:#fff;border:1px solid #d7deea;color:#0f2747;font-weight:800;text-align:center;border-radius:10px;margin-bottom:10px;width:100%}
+#pa nav .pjh button.pjhome:hover{background:#eef3fb}
+
 #pa nav h4.pjsech{background:#fff4dc;border:1px solid #f3d9a4;border-radius:10px;padding:8px 12px;margin:14px 2px 6px;color:#7a4a00;font-size:13.5px;font-weight:800}
 #pa nav h4.pjsech:before{display:none}
 
@@ -1531,6 +1534,8 @@ function pjAllItems() {
   PA.sheets.forEach((s, i) => { if (s.copyDel) return; out.push({ g: s.grp, t: (s.copyKey != null ? PAnames[i] : (PJ.stash ? PJ.stash.n[i] : PAnames[i])) || s.title, k: i }); });
   return out;
 }
+// رجوع للشاشة الرئيسية لتحليل الأسعار (بيقفل المشروع المفتوح)
+async function pjHome() { if (PJ.cur) await pjExit(false); paNav($('paQ').value = ''); paShow(paItems()[1] || paItems()[0]); }
 function pjNavHead(nav) {
   const box = pjEl('div', 'pjh');
   if (!PJ.cur) {
@@ -1538,6 +1543,8 @@ function pjNavHead(nav) {
     b.onclick = () => { pjList(); nav.classList.remove('open'); };
     box.appendChild(b);
   } else {
+    const hb0 = pjEl('button', 'pjhome', '→ رجوع لتحليل الأسعار'); hb0.type = 'button'; hb0.onclick = () => { pjHome(); nav.classList.remove('open'); };
+    box.appendChild(hb0);
     box.appendChild(pjEl('div', 'pjn', '📁 ' + PJ.cur.name));
     box.appendChild(pjEl('div', 'pjb', pjBatLabel(PJ.cur.battalion) + ' — ' + PJ.cur.items.length + ' بند'));
     const row = pjEl('div', 'row');
@@ -1566,7 +1573,8 @@ async function pjList() {
   hl.appendChild(pjEl('span', 'chip', 'مشروعات'));
   hl.appendChild(pjEl('h2', '', 'تحليل سعر لمشروع جديد'));
   hl.appendChild(pjEl('p', '', 'اعمل مشروع باسمه وكتيبته، واختار البنود اللي تخصه. كل مشروع ليه أرقامه وتعديلاته لوحده، ومن غير ما يأثر على التحليل العام.'));
-  const hb = pjEl('div', 'hb'), nb = pjEl('button', '', '+ مشروع جديد'); nb.type = 'button'; nb.onclick = pjCreate; hb.appendChild(nb);
+  const hb = pjEl('div', 'hb'), nb = pjEl('button', '', '+ مشروع جديد'); nb.type = 'button'; nb.onclick = pjCreate;
+  const bk = pjEl('button', '', '→ رجوع لتحليل الأسعار'); bk.type = 'button'; bk.onclick = pjHome; bk.style.marginInlineStart = '6px'; hb.append(bk, nb);
   hero.append(hl, hb); m.appendChild(hero);
   const tools = pjEl('div', 'pjtools');
   const q = pjEl('input'); q.type = 'search'; q.placeholder = 'بحث باسم المشروع…'; q.value = PJ.q;
