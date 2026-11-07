@@ -131,6 +131,34 @@ body.in footer{color:#7f94b8}
 .card[hidden]{display:none}
 /* ---------- تحليل الأسعار (أدمن) ---------- */
 /* تحليل سعر لمشروع جديد */
+#pa .pjwrow{display:flex;gap:8px;align-items:center}
+#pa .pjws{border-inline-start:5px solid #cbd5e1}
+#pa .pjws.act{border-inline-start-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.25),0 10px 28px rgba(15,23,42,.08)}
+#pa .pjws.done{border-inline-start-color:#16a34a}
+#pa .pjwh{display:flex;align-items:center;gap:10px}
+#pa .pjwh .ord{background:#0f2747;color:#fff;border-radius:8px;padding:4px 12px;font-weight:800;font-size:13.5px;white-space:nowrap}
+#pa .pjws.done .pjwh .ord{background:#16a34a}
+#pa .pjwh b{font-size:15.5px;color:#0f2747;flex:1}
+#pa .pjwh input.pjtx{flex:1;font-size:15px;font-weight:700}
+#pa .pjwh .ok{color:#16a34a;font-weight:800;font-size:13px;white-space:nowrap}
+#pa ol.pjwl{margin:10px 0 0;padding-inline-start:28px}
+#pa ol.pjwl li{padding:4px 0;font-size:14px;border-bottom:1px dashed #eef2f7}
+#pa ol.pjwl li span{margin-inline-end:8px}
+#pa ol.pjwl li button{border:1px solid #d7deea;background:#fff;border-radius:6px;font-size:11px;padding:1px 6px;cursor:pointer;margin-inline-start:4px;color:#334155}
+#pa ol.pjwl li button.x{color:#b91c1c}
+#pa ol.pjwl li button:disabled{opacity:.3}
+#pa .pjwp{margin-top:12px;background:#f8fafc;border:1px solid #e3e9f2;border-radius:12px;padding:10px}
+#pa .pjwpl{max-height:330px;overflow:auto;margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
+#pa .pjwpl h5{width:100%;margin:8px 0 2px;font-size:12px;color:#64748b}
+#pa button.pjwi{border:1px solid #d7deea;background:#fff;border-radius:99px;padding:5px 12px;font:inherit;font-size:13px;cursor:pointer;color:#0f2747}
+#pa button.pjwi:hover{border-color:#1e3a66;background:#eef3fb}
+#pa button.pjwi.in{background:#0f2747;color:#fff;border-color:#0f2747}
+#pa button.pjwi.other{opacity:.5}
+#pa button.pjwok{margin-top:12px;font-size:14px;padding:10px 18px}
+#pa button.pjbtn:disabled{opacity:.4;cursor:default}
+#pa .pjwfin{text-align:center}
+#pa .pjwfin button{font-size:15px;padding:11px 26px}
+
 .pjm button.pjeqo{display:block;width:100%;text-align:right;border:1px solid #e3e9f2;background:#fff;border-radius:10px;padding:8px 12px;margin:0 0 6px;cursor:pointer;font:inherit;color:#1e293b}
 .pjm button.pjeqo:hover{background:#f1f5f9;border-color:#1e3a66}
 .pjm button.pjeqo b{display:block;font-size:14px;color:#0f2747}
@@ -956,7 +984,7 @@ async function loadPA() {
 function paItems() {
   const out = [{ g: 'أعمال الأمن والسلامة (مايو 2026)', t: PAnames.s || 'جدول الأسعار', safety: true }];
   PA.sheets.forEach((s, i) => out.push({ g: s.grp, t: PAnames[i] || s.title, i }));
-  if (PJ.cur) return out.filter((it) => PJ.cur.items.includes(it.safety ? -1 : it.i));
+  if (PJ.cur) { const mp = new Map(out.map((it) => [it.safety ? -1 : it.i, it])); return PJ.cur.items.map((k) => mp.get(k)).filter((it) => it && !(it.i != null && PA.sheets[it.i] && PA.sheets[it.i].copyDel)); }
   return out;
 }
 function paNav(q) {
@@ -1505,7 +1533,7 @@ function pjNavHead(nav) {
     box.appendChild(pjEl('div', 'pjn', '📁 ' + PJ.cur.name));
     box.appendChild(pjEl('div', 'pjb', pjBatLabel(PJ.cur.battalion) + ' — ' + PJ.cur.items.length + ' بند'));
     const row = pjEl('div', 'row');
-    const bi = pjEl('button', '', 'البنود'); bi.type = 'button'; bi.title = 'اختار بنود المشروع'; bi.onclick = pjPick;
+    const bi = pjEl('button', '', 'البنود'); bi.type = 'button'; bi.title = 'اختار أقسام وبنود المشروع'; bi.onclick = () => { pjWizard(); nav.classList.remove('open'); };
     const be = pjEl('button', '', 'تعديل'); be.type = 'button'; be.title = 'تعديل الاسم والكتيبة'; be.onclick = pjEdit;
     const bx = pjEl('button', '', '↩ المشروعات'); bx.type = 'button'; bx.title = 'رجوع لقايمة المشروعات'; bx.onclick = () => pjExit(true);
     row.append(bi, be, bx); box.appendChild(row);
@@ -1614,14 +1642,14 @@ async function pjOpen(id, pick) {
   paNav($('paQ').value);
   const its = paItems();
   if (its.length) pjBOQ(); else pjEmpty();
-  if (pick || !its.length) pjPick();
+  if (pick || !its.length) pjWizard();
 }
 function pjEmpty() {
   PAcur = null;
   const m = $('paMain'); m.textContent = '';
   const hero = pjEl('div', 'hero2'), hl = pjEl('div');
   hl.append(pjEl('span', 'chip', pjBatLabel(PJ.cur.battalion)), pjEl('h2', '', PJ.cur.name), pjEl('p', '', 'المشروع لسه مفيهوش بنود. اختار البنود اللي تخص المشروع ده.'));
-  const hb = pjEl('div', 'hb'), b = pjEl('button', '', 'اختار البنود'); b.type = 'button'; b.onclick = pjPick; hb.appendChild(b);
+  const hb = pjEl('div', 'hb'), b = pjEl('button', '', 'اختار البنود'); b.type = 'button'; b.onclick = pjWizard; hb.appendChild(b);
   hero.append(hl, hb); m.appendChild(hero);
 }
 function pjSaveSoon() { clearTimeout(PJ.saveT); PJ.saveT = setTimeout(pjFlush, 700); }
@@ -1782,6 +1810,7 @@ async function pjCopyItem(si) {
   if (ov[si]) { const d = PAE.dump(); d[ni] = JSON.parse(JSON.stringify(ov[si])); PAE.resetAll(); PAE.load(d); }
   const at = p.items.indexOf(si); p.items.splice(at < 0 ? p.items.length : at + 1, 0, ni);
   PAnames[ni] = nm.trim();
+  { const b = p.basics = p.basics || {}; if (b.sec && b.sec[si]) b.sec[ni] = b.sec[si]; if (b.wiz && b.wiz.secs) b.wiz.secs.forEach((sx) => { const j = sx.items.indexOf(si); if (j >= 0) sx.items.splice(j + 1, 0, ni); }); }
   await pjSaveExtra(); paSave(); paUndoReset();
   paNav($('paQ').value); const x = paItems().find((y) => !y.safety && y.i === ni); if (x) paShow(x);
 }
@@ -1843,6 +1872,116 @@ function pjAddEq(si) {
   draw(); setTimeout(() => q.focus(), 30);
 }
 
+/* ===== اختيار البنود خطوة بخطوة: الأقسام الرئيسية (أولاً، ثانياً…) وتحت كل قسم بنوده الفرعية ===== */
+const PJ_ORD2 = ['أولاً', 'ثانياً', 'ثالثاً', 'رابعاً', 'خامساً', 'سادساً', 'سابعاً', 'ثامناً', 'تاسعاً', 'عاشراً', 'حادي عشر', 'ثاني عشر', 'ثالث عشر', 'رابع عشر', 'خامس عشر'];
+function pjWizState() {
+  const p = PJ.cur, b = p.basics = p.basics || {};
+  if (b.wiz && Array.isArray(b.wiz.secs)) return b.wiz;
+  // من الموجود: لو المشروع فيه بنود قبل كده نوزعها على أقسامها
+  const secs = [];
+  if (p.items.length) {
+    const order = b.secOrder || [];
+    p.items.forEach((si) => { if (si < 0) return; const n = (b.sec && b.sec[si]) || pjAutoSec(si); let g = secs.find((x) => x.name === n); if (!g) secs.push(g = { name: n, items: [], done: true }); g.items.push(si); });
+    secs.sort((a, c) => ((order.indexOf(a.name) + 1) || 99) - ((order.indexOf(c.name) + 1) || 99));
+  }
+  return (b.wiz = { n: secs.length || null, secs });
+}
+function pjWizard() {
+  const p = PJ.cur; if (!p) return; PJ.view = 'wiz';
+  const W = pjWizState();
+  const m = pjHero(pjBatLabel(p.battalion) + ' — ' + p.name, 'اختيار البنود', 'حدد الأقسام الرئيسية للموازنة، وتحت كل قسم اختار البنود الفرعية بتاعته بالترتيب.', p.items.length ? [['الموازنة ←', pjBOQ]] : []);
+  const save = () => { paSave(); };
+  // ١) كام قسم رئيسي؟
+  const q1 = pjEl('div', 'pjcard pjwq');
+  q1.appendChild(pjEl('h3', '', 'كام قسم رئيسي في الموازنة؟'));
+  const r1 = pjEl('div', 'pjwrow'), ni = pjEl('input', 'pjin'); ni.type = 'number'; ni.min = 1; ni.max = 15; ni.value = W.n || ''; ni.placeholder = 'مثلاً 8'; ni.style.maxWidth = '120px';
+  const nb = pjEl('button', 'pjbtn on', W.n ? 'تحديث' : 'التالي'); nb.type = 'button';
+  r1.append(ni, nb); q1.appendChild(r1); m.appendChild(q1);
+  nb.onclick = () => {
+    const n = Math.max(1, Math.min(15, parseInt(ni.value, 10) || 0)); if (!n) return ni.focus();
+    if (n < W.secs.length && W.secs.slice(n).some((s) => s.items.length) && !confirm('هيتشال آخر ' + (W.secs.length - n) + ' قسم بالبنود اللي فيهم. تكمّل؟')) return;
+    W.n = n; while (W.secs.length < n) W.secs.push({ name: '', items: [], done: false }); W.secs.length = n; save(); pjWizard();
+  };
+  ni.onkeydown = (e) => { if (e.key === 'Enter') nb.click(); };
+  if (!W.n) { setTimeout(() => ni.focus(), 50); return; }
+  const used = new Map(); W.secs.forEach((s, k) => s.items.forEach((si) => used.set(si, k)));
+  const active = W.secs.findIndex((s) => !s.done);
+  const all = pjAllItems().filter((it) => it.k >= 0);
+  W.secs.forEach((s, k) => {
+    let okb = null;
+    const c = pjEl('div', 'pjcard pjws' + (s.done ? ' done' : '') + (k === active ? ' act' : ''));
+    const h = pjEl('div', 'pjwh');
+    h.appendChild(pjEl('span', 'ord', PJ_ORD2[k] || String(k + 1)));
+    if (k === active) {
+      const nm = pjEl('input', 'pjtx'); nm.type = 'text'; nm.placeholder = 'اسم القسم (مثلاً التسويات)'; nm.value = s.name; nm.oninput = () => { s.name = nm.value; save(); if (okb) okb.disabled = !(s.name.trim() && s.items.length); };
+      h.appendChild(nm); setTimeout(() => { if (!s.name) nm.focus(); }, 50);
+    } else {
+      h.appendChild(pjEl('b', '', s.name || '—'));
+      if (s.done) h.appendChild(pjEl('span', 'ok', '✓ ' + s.items.length + ' بند'));
+      if (s.done || k < active || active < 0) { const e = pjEl('button', 'pjbtn', 'تعديل'); e.type = 'button'; e.onclick = () => { W.secs.forEach((x, j) => { if (j !== k && x.name && x.items.length) x.done = true; }); s.done = false; save(); pjWizard(); }; h.appendChild(e); }
+    }
+    c.appendChild(h);
+    // البنود الفرعية المختارة
+    if (s.items.length || k === active) {
+      const ol = pjEl('ol', 'pjwl');
+      s.items.forEach((si, j) => {
+        const li = pjEl('li'); li.appendChild(pjEl('span', '', PAnames[si] || PA.sheets[si].title.trim()));
+        if (k === active) {
+          const up = pjEl('button', '', '▲'); up.type = 'button'; up.title = 'لفوق'; up.disabled = !j; up.onclick = () => { [s.items[j - 1], s.items[j]] = [s.items[j], s.items[j - 1]]; save(); pjWizard(); };
+          const rm = pjEl('button', 'x', '✕'); rm.type = 'button'; rm.title = 'شيل'; rm.onclick = () => { s.items.splice(j, 1); save(); pjWizard(); };
+          li.append(up, rm);
+        }
+        ol.appendChild(li);
+      });
+      if (!s.items.length) ol.appendChild(pjEl('div', 'pjnote', 'لسه مفيش بنود فرعية. اختار من القايمة تحت.'));
+      c.appendChild(ol);
+    }
+    if (k === active) {
+      const pick = pjEl('div', 'pjwp');
+      const qs = pjEl('input', 'pjtx'); qs.type = 'search'; qs.placeholder = 'ابحث عن بند فرعي…';
+      const lst = pjEl('div', 'pjwpl');
+      pick.append(qs, lst); c.appendChild(pick);
+      const draw = () => {
+        lst.textContent = ''; const nq = pjNorm(qs.value); let last = null;
+        all.forEach((it) => {
+          if (nq && !pjNorm(it.t + ' ' + it.g).includes(nq)) return;
+          if (it.g !== last) { lst.appendChild(pjEl('h5', '', it.g)); last = it.g; }
+          const u = used.get(it.k), b2 = pjEl('button', 'pjwi' + (u === k ? ' in' : u != null ? ' other' : ''), (u === k ? '✓ ' : '+ ') + it.t); b2.type = 'button';
+          if (u != null && u !== k) b2.title = 'موجود في ' + (PJ_ORD2[u] || '') + ' — اضغط تنقله هنا';
+          b2.onclick = () => {
+            if (u === k) s.items = s.items.filter((x) => x !== it.k);
+            else { if (u != null) W.secs[u].items = W.secs[u].items.filter((x) => x !== it.k); s.items.push(it.k); }
+            save(); pjWizard();
+          };
+          lst.appendChild(b2);
+        });
+      };
+      qs.oninput = draw; draw();
+      okb = pjEl('button', 'pjbtn on pjwok', '✓ تمام، خلصت ' + (PJ_ORD2[k] || '')); okb.type = 'button';
+      okb.disabled = !(s.name.trim() && s.items.length);
+      okb.onclick = () => { s.name = s.name.trim(); s.done = true; save(); pjWizard(); };
+      c.appendChild(okb);
+    }
+    m.appendChild(c);
+  });
+  if (active < 0) {
+    const fin = pjEl('div', 'pjcard pjwfin');
+    fin.appendChild(pjEl('h3', '', '✓ كل الأقسام خلصت'));
+    const fb = pjEl('button', 'pjbtn on', 'حفظ وفتح الموازنة'); fb.type = 'button';
+    fb.onclick = async () => {
+      const b = p.basics; b.sec = b.sec || {};
+      const items = []; W.secs.forEach((s) => s.items.forEach((si) => { items.push(si); b.sec[si] = s.name; }));
+      b.secOrder = W.secs.map((s) => s.name);
+      fb.disabled = true;
+      const { error } = await sb.from('pa_projects').update({ items, basics: b, updated_at: new Date().toISOString() }).eq('id', p.id);
+      fb.disabled = false; if (error) return alert('تعذّر الحفظ');
+      p.items = items; paSave(); paNav($('paQ').value); pjBOQ();
+    };
+    fin.appendChild(fb); m.appendChild(fin);
+    fin.scrollIntoView({ block: 'nearest' });
+  }
+}
+
 /* ===== تراجع / إعادة (Ctrl+Z / Ctrl+Y) زي الإكسيل ===== */
 const PAU = { prev: null, undo: [], redo: [], t: 0, busy: false };
 function paSnap() {
@@ -1867,7 +2006,7 @@ function paRestore(snap) {
   PAU.prev = snap; PAU.busy = true; try { paSave(); if (PJ.cur) { PJ.saveT = PJ.saveT || 1; pjFlush(); } } finally { PAU.busy = false; }
   paNav($('paQ').value);
   const it = PAcur != null ? paItems().find((x) => (x.safety ? 's' : x.i) === PAcur) : null;
-  if (it) paShow(it); else if (PJ.cur && PJ.view === 'basics') pjBasics(); else if (PJ.cur) pjBOQ();
+  if (it) paShow(it); else if (PJ.cur && PJ.view === 'basics') pjBasics(); else if (PJ.cur && PJ.view === 'wiz') pjWizard(); else if (PJ.cur) pjBOQ();
   paUndoBtns();
 }
 function paUndo() { if (!PAU.undo.length) return; PAU.redo.push(PAU.prev); paRestore(PAU.undo.pop()); }
@@ -2056,7 +2195,7 @@ function pjBOQ() {
     const t = pjEl('table', 'pjform'); t.id = 'pjBoqT';
     const cg = pjEl('colgroup'); [4, 40, 7, 11, 9, 11, 18].forEach((w) => { const c = pjEl('col'); c.style.width = w + '%'; cg.appendChild(c); }); t.appendChild(cg);
     const secs = []; order.forEach((si) => { const s = b.sec[si] || pjAutoSec(si); let g = secs.find((x) => x.n === s); if (!g) secs.push(g = { n: s, l: [] }); g.l.push(si); });
-    secs.sort((a, c) => (PJ_SECS.indexOf(a.n) + 1 || 99) - (PJ_SECS.indexOf(c.n) + 1 || 99));
+    const so = b.secOrder || []; secs.sort((a, c) => (so.length ? ((so.indexOf(a.n) + 1) || 99) - ((so.indexOf(c.n) + 1) || 99) : 0) || (PJ_SECS.indexOf(a.n) + 1 || 99) - (PJ_SECS.indexOf(c.n) + 1 || 99));
     let k = 0, grand = 0;
     secs.forEach((g, gi) => {
       const h1 = pjEl('tr', 'yh'), h2 = pjEl('tr');
