@@ -2401,8 +2401,18 @@ table.pjform tr.ptot td.e{background:#fff}
 function pjBoqHtml() {
   const p = PJ.cur, pp = $('pjPaper'); if (!pp) return '';
   const c = pp.cloneNode(true); c.querySelectorAll('.noexp,input,textarea,select').forEach((x) => x.remove());
-  return '<html dir="rtl"><head><meta charset="utf-8"><title>موازنة ' + p.name.replace(/</g, '&lt;') + '</title><style>@page{size:A4 portrait;margin:10mm}' + PJ_FORM_CSS + '</style></head><body>' + c.outerHTML + '</body></html>';
+  // الطباعة دايماً A3 بعرض الورقة كله، والجدول بيكمل على صفحات من غير ما صف يتقطع
+  const xl = '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>موازنة</x:Name><x:WorksheetOptions><x:DisplayRightToLeft/><x:FitToPage/><x:Print><x:ValidPrinterInfo/><x:PaperSizeIndex>8</x:PaperSizeIndex><x:FitWidth>1</x:FitWidth><x:FitHeight>0</x:FitHeight></x:Print></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
+  return '<html dir="rtl" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><title>موازنة ' + p.name.replace(/</g, '&lt;') + '</title>' + xl + '<style>' + PJ_FORM_CSS + PJ_A3_CSS + '</style></head><body>' + c.outerHTML + '</body></html>';
 }
+const PJ_A3_CSS = `@page{size:A3 portrait;margin:12mm 10mm}
+@media print{html,body{width:auto}.pjpaper{max-width:none;padding:0;margin:0}
+table.pjform{width:100%!important}
+table.pjform th,table.pjform td{font-size:14.5px;padding:6px 8px}
+table.pjform td.d{font-size:13.5px}
+table.pjform tr{break-inside:avoid;page-break-inside:avoid}
+table.pjform tr.yh,table.pjform tr.yh+tr,table.pjform tr.part{break-after:avoid;page-break-after:avoid}
+.pjtitle{font-size:22px}}`;
 function pjExport() { const h = pjBoqHtml(); if (!h) return; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + h], { type: 'application/vnd.ms-excel' })); a.download = 'موازنة ' + PJ.cur.name + '.xls'; a.click(); }
 function pjPrint() { const h = pjBoqHtml(); if (!h) return; const w = window.open('', '_blank'); if (!w) return alert('اسمح بفتح النوافذ المنبثقة عشان الطباعة'); w.document.write(h); w.document.close(); w.focus(); setTimeout(() => w.print(), 400); }
 
