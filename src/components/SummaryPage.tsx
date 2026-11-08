@@ -67,11 +67,6 @@ export default function SummaryPage({ projects, reviewers, onPick, onQuick }: Pr
         </div>
       </div>
 
-      <div className="section-title"><h2>تفاصيل الكتايب</h2></div>
-      <div className="panel">
-        <GroupTable rows={byBattalion} first="ك" onPick={(v) => onPick({ key: 'battalion', values: [v || BLANK] })} />
-      </div>
-
       <div className="kpis">
         <Card k="عدد المشروعات" v={t.count} onClick={() => onQuick(null)} />
         <Card k="المقايسات المتوقفة" v={t.stopped} onClick={() => onQuick('stopped')} />
@@ -79,6 +74,11 @@ export default function SummaryPage({ projects, reviewers, onPick, onQuick }: Pr
         <Card k="الموازنة موجودة" v={t.budgetFound} of={t.count} onClick={() => onQuick('budget')} />
         <Card k="شامل (مليون)" v={fmtNum(t.incl, 1)} onClick={() => onQuick('incl')} />
         <Card k="غير شامل (مليون)" v={fmtNum(t.excl, 1)} onClick={() => onQuick('excl')} />
+      </div>
+
+      <div className="section-title"><h2>تفاصيل الكتايب</h2></div>
+      <div className="panel">
+        <GroupTable rows={byBattalion} first="ك" onPick={(v) => onPick({ key: 'battalion', values: [v || BLANK] })} />
       </div>
 
       <div className="section-title"><h2>تقدّم المراحل</h2><span>نسبة المشروعات اللي المرحلة دي فيها ✓</span></div>
