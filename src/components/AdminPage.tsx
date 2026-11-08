@@ -3,6 +3,7 @@ import { api, DEMO } from '../lib/api'
 import type { Profile, Project, Reviewer, Role } from '../lib/types'
 import { batTokens } from '../lib/util'
 import ImportStopped from './ImportStopped'
+import DriveSync from './DriveSync'
 
 const ROLE_AR: Record<Role, string> = { admin: 'مدير (كل الصلاحيات)', editor: 'محرر (إضافة وتعديل)', viewer: 'مشاهد (عرض فقط)' }
 
@@ -44,6 +45,7 @@ export default function AdminPage({ reviewers, projects, reloadReviewers, reload
       <div className="page-head">
         <h1>الإدارة</h1>
       </div>
+      <DriveSync toast={toast} reload={reloadProjects} />
       <ImportStopped projects={projects} toast={toast} reload={reloadProjects} />
       <div className="two">
         <div className="card">

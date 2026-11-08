@@ -60,7 +60,14 @@ export interface Api {
   /** ربط أسماء المشاريع في شيت المقايسات المتوقفة بمشاريع الموقع (null = تجاهل) */
   listAliases(): Promise<Map<string, number | null>>
   saveAliases(rows: { alias: string; project_id: number | null }[]): Promise<void>
+
+  /** التحديث من شيت «موقف المشاريع» على Google Drive (بيحصل لوحده كل يوم، وده للتحديث الفوري) */
+  lastSync(): Promise<SyncEntry | null>
+  driveSync(): Promise<SyncEntry>
 }
+
+export interface SyncEntry { at: string; ok: boolean; summary: string }
+const SYNC_API = 'https://mo2ysaaat.vercel.app/api/sync?site=mz'
 
 // ------------------------------------------------------------------
 // Supabase
@@ -194,6 +201,18 @@ function supabaseApi(sb: SupabaseClient): Api {
     },
     async saveAliases(rows) {
       if (rows.length) must(await sb.from('mz_aliases').upsert(rows, { onConflict: 'alias' }))
+    },
+    async lastSync() {
+      const rows = must(await sb.from('sync_log').select('at, ok, summary').eq('site', 'mz').order('at', { ascending: false }).limit(1)) as SyncEntry[]
+      return rows[0] ?? null
+    },
+    async driveSync() {
+      const { data } = await sb.auth.getSession()
+      const r = await fetch(SYNC_API, { method: 'POST', headers: { Authorization: 'Bearer ' + (data.session?.access_token ?? '') } })
+      const j = await r.json().catch(() => ({}))
+      const x = j.mz ?? {}
+      if (!r.ok || !x.ok) throw new Error(x.error || j.error || 'HTTP ' + r.status)
+      return { at: new Date().toISOString(), ok: true, summary: x.summary as string }
     },
   }
 }
@@ -361,6 +380,8 @@ function demoApi(): Api {
       db.aliases = { ...(db.aliases ?? {}), ...Object.fromEntries(rows.map((r) => [r.alias, r.project_id])) }
       save()
     },
+    async lastSync() { return null },
+    async driveSync() { return { at: new Date().toISOString(), ok: true, summary: 'تجربة' } },
   }
 }
 
