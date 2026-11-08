@@ -186,6 +186,9 @@ body.in footer{color:#7f94b8}
 
 #pa .pjfbar{display:flex;flex-wrap:wrap;gap:16px;gap:12px;align-items:end}
 @media (max-width:900px){#pa .pjfbar{grid-template-columns:1fr 1fr}}
+#pa .pjeqt tr.eqh td{border-top:2px solid #cbd5e1}
+#pa .pjeqt td.pjeqi{font-size:12.5px;color:#334155}
+#pa .pjeqt td .m{font-size:11.5px;color:#64748b;font-weight:600}
 #pa .pjkinds{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
 #pa .pjkind{border:2px dashed #94a3b8;background:#fff;border-radius:12px;padding:10px 18px;font:inherit;font-weight:800;font-size:14px;cursor:pointer;color:#334155}
 #pa .pjkind.on{border-style:solid;border-color:#0f2747;background:#0f2747;color:#fff}
@@ -2120,6 +2123,8 @@ document.addEventListener('keydown', (e) => {
 let PJX = null;
 const pjNorm = (t) => String(t || '').replace(/[ًٌٍَُِّْـ]/g, '').replace(/[إأآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s+/g, ' ').trim();
 const pjEqKey = (t) => pjNorm(t).replace(/^ال/, '').replace(/\s*\(.*?\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+const pjColL = (n) => { let t = ''; while (n > 0) { const q = (n - 1) % 26; t = String.fromCharCode(65 + q) + t; n = (n - q - 1) / 26; } return t; };
+const PJ_PRODSET = new Set();
 function pjScan() {
   if (PJX) return PJX;
   const eq = {}, dist = {}, tr = [], f1 = [], f2 = [], item = {};
@@ -2149,6 +2154,14 @@ function pjScan() {
         const k = pjEqKey(lab[0]); if (!k) return;
         const e = eq[k] || (eq[k] = { name: String(lab[0]).replace(/\s+/g, ' ').trim(), cells: [], vals: {} });
         e.cells.push([si, r, rate[5], rate[0]]); e.vals[rate[0]] = (e.vals[rate[0]] || 0) + 1;
+        // معدل الإنتاج: خانة المعدل اللي التكلفة اليومية بتتقسم عليها في نفس الصف (D/E)
+        const cl = pjColL(c[5]);
+        for (const d of cs) {
+          const m2 = d[6] && new RegExp('^=?\\s*\\$?' + cl + '\\$?' + r + '\\s*/\\s*(\\$?[A-Z]{1,3}\\$?\\d+)\\s*$').exec(d[6]); if (!m2) continue;
+          const pr = ref(m2[1]); if (!pr || pr[0] !== r) continue;
+          const pc = raw(r, pr[1]); if (pc && !pc[6] && typeof pc[0] === 'number' && pc[0] > 0) (e.prods || (e.prods = [])).push([si, r, pr[1], pc[0]]);
+          break;
+        }
       });
       if (lab && lab[5] <= 2 && /^مسافه النقل/.test(t) && nums.length) { const nr2 = (regC != null && nums.find((c) => c[5] === regC)) || nums[0]; dist[si] = { r, c: nr2[5], v: nr2[0] }; }
       if (lab && /^تكلفه النقل$/.test(t)) nums.forEach((c) => { if (Math.abs(c[0] - 1.65) < 1e-9) tr.push([si, r, c[5]]); });
@@ -2198,6 +2211,7 @@ function pjApplyBasics() {
   const X = pjScan(), b = PJ.cur.basics || {};
   Object.entries(X.eq).forEach(([k, e]) => { const v = b.eq && b.eq[k]; e.cells.forEach(([si, r, c, o]) => { if (v != null && v !== '') PAE.set(si, r, c, +v); else if (PAE.has(si, r, c) && PAE.get(si, r, c) === o) PAE.set(si, r, c, undefined); }); });
   Object.entries(X.dist).forEach(([si, d]) => { const v = b.dist && b.dist[si]; if (v != null && v !== '') PAE.set(+si, d.r, d.c, +v); });
+  Object.values(X.eq).forEach((e) => (e.prods || []).forEach(([si, r, c]) => { const k = si + ':' + r + ':' + c, v = b.prod && b.prod[k]; if (v != null && v !== '') { PAE.set(si, r, c, +v); PJ_PRODSET.add(k); } else if (PJ_PRODSET.has(k)) { PAE.set(si, r, c, undefined); PJ_PRODSET.delete(k); } }));
   [[X.tr, 'tr'], [X.f1, 'f1'], [X.f2, 'f2']].forEach(([cells, key]) => { const v = b[key]; if (v != null && v !== '') cells.forEach(([si, r, c]) => PAE.set(si, r, c, +v)); });
 }
 function pjNum(v, d) { if (v == null || v === '' || isNaN(v)) return '—'; return Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }); }
@@ -2243,15 +2257,27 @@ function pjBasics() {
   }
   // ٣) يوميات المعدات المستخدمة في بنود المشروع
   const es = Object.entries(X.eq).filter(([, e]) => e.cells.some(([si]) => pjInScope(si))).sort((a, b2) => a[1].name.localeCompare(b2[1].name, 'ar'));
-  const ec = card('معدلات المعدات — اليومية 8 ساعات شامل السولار (ج)', es.length ? 'الرقم اللي تكتبه بيتغير في كل البنود اللي بتستخدم المعدة دي.' : 'مفيش معدات في البنود المختارة.');
+  const ec = card('معدلات المعدات — اليومية 8 ساعات شامل السولار (ج) ومعدل الإنتاج في اليوم', es.length ? 'اليومية بتتغير في كل البنود اللي بتستخدم المعدة. معدل الإنتاج بيختلف من بند للتاني، فكل بند ليه خانته. اللي تسيبه فاضي بياخد رقم الشيت.' : 'مفيش معدات في البنود المختارة.');
   if (es.length) {
-    b.eq = b.eq || {};
-    const t = pjEl('table', 'pjt'); const hd = pjEl('tr'); ['المعدة', 'اليومية في الشيت', 'يومية المشروع', 'بتدخل في'].forEach((x) => hd.appendChild(pjEl('th', '', x))); t.appendChild(hd);
+    b.eq = b.eq || {}; b.prod = b.prod || {};
+    const t = pjEl('table', 'pjt pjeqt'); const hd = pjEl('tr'); ['المعدة', 'اليومية في الشيت', 'يومية المشروع', 'البند', 'المعدل في الشيت', 'معدل المشروع'].forEach((x) => hd.appendChild(pjEl('th', '', x))); t.appendChild(hd);
     es.forEach(([k, e]) => {
+      const pr = (e.prods || []).filter(([si]) => pjInScope(si));
       const n = new Set(e.cells.filter(([si]) => pjInScope(si)).map(([si]) => si)).size;
-      const tr = pjEl('tr'); tr.appendChild(pjEl('td', '', e.name)); tr.appendChild(pjEl('td', 'n', pjNum(e.def, 0)));
-      const td = pjEl('td'); td.appendChild(inp(b.eq[k], String(e.def), (v) => { if (v == null) delete b.eq[k]; else b.eq[k] = v; save(); })); tr.appendChild(td);
-      tr.appendChild(pjEl('td', 'm', n + ' بند')); t.appendChild(tr);
+      const rs = Math.max(1, pr.length);
+      const tr = pjEl('tr', 'eqh');
+      const c1 = pjEl('td', '', e.name); c1.appendChild(pjEl('div', 'm', n + ' بند')); c1.rowSpan = rs; tr.appendChild(c1);
+      const c2 = pjEl('td', 'n', pjNum(e.def, 0)); c2.rowSpan = rs; tr.appendChild(c2);
+      const td = pjEl('td'); td.rowSpan = rs; td.appendChild(inp(b.eq[k], String(e.def), (v) => { if (v == null) delete b.eq[k]; else b.eq[k] = v; save(); })); tr.appendChild(td);
+      const prodCells = (row, x) => {
+        if (!x) { const e0 = pjEl('td', 'm', '—'); e0.colSpan = 3; row.appendChild(e0); return; }
+        const [si, r, c, v0] = x, key = si + ':' + r + ':' + c;
+        row.appendChild(pjEl('td', 'pjeqi', pjItemName(si)));
+        row.appendChild(pjEl('td', 'n', pjNum(v0, v0 % 1 ? 2 : 0)));
+        const tdp = pjEl('td'); tdp.appendChild(inp(b.prod[key], String(v0), (v) => { if (v == null) delete b.prod[key]; else b.prod[key] = v; save(); })); row.appendChild(tdp);
+      };
+      prodCells(tr, pr[0]); t.appendChild(tr);
+      pr.slice(1).forEach((x) => { const r2 = pjEl('tr'); prodCells(r2, x); t.appendChild(r2); });
     });
     ec.appendChild(t);
   }
