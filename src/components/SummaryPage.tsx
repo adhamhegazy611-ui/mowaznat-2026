@@ -12,8 +12,6 @@ interface Props {
 const STAGES = [
   ['st_drawings', 'لوحات'],
   ['st_budget', 'موازنة'],
-  ['st_self', 'ذاتي'],
-  ['st_contracts', 'عقود'],
 ] as const
 
 export default function SummaryPage({ projects, reviewers, onPick, onQuick }: Props) {
@@ -69,6 +67,11 @@ export default function SummaryPage({ projects, reviewers, onPick, onQuick }: Pr
         </div>
       </div>
 
+      <div className="section-title"><h2>تفاصيل الكتايب</h2></div>
+      <div className="panel">
+        <GroupTable rows={byBattalion} first="ك" onPick={(v) => onPick({ key: 'battalion', values: [v || BLANK] })} />
+      </div>
+
       <div className="kpis">
         <Card k="عدد المشروعات" v={t.count} onClick={() => onQuick(null)} />
         <Card k="المقايسات المتوقفة" v={t.stopped} onClick={() => onQuick('stopped')} />
@@ -117,10 +120,6 @@ export default function SummaryPage({ projects, reviewers, onPick, onQuick }: Pr
         <GroupTable rows={byReviewer} first="المراجع" onPick={(v) => onPick({ key: 'reviewer', values: [v || BLANK] })} />
       </div>
 
-      <div className="section-title"><h2>تفاصيل الكتايب</h2></div>
-      <div className="panel">
-        <GroupTable rows={byBattalion} first="ك" onPick={(v) => onPick({ key: 'battalion', values: [v || BLANK] })} />
-      </div>
     </>
   )
 }

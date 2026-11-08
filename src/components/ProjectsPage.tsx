@@ -199,8 +199,6 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
         <Kpi k="مقايسات تم تسليمها" v={kpi.delivered} q="delivered" quick={quick} setQuick={setQuick} />
         <Kpi k="لوحات ✓" v={kpi.marks.st_drawings} of={kpi.count} q="st_drawings" quick={quick} setQuick={setQuick} />
         <Kpi k="موازنة ✓" v={kpi.marks.st_budget} of={kpi.count} q="st_budget" quick={quick} setQuick={setQuick} />
-        <Kpi k="ذاتي ✓" v={kpi.marks.st_self} of={kpi.count} q="st_self" quick={quick} setQuick={setQuick} />
-        <Kpi k="عقود ✓" v={kpi.marks.st_contracts} of={kpi.count} q="st_contracts" quick={quick} setQuick={setQuick} />
         <Kpi k="الموازنة موجودة" v={kpi.budgetFound} of={kpi.count} q="budget" quick={quick} setQuick={setQuick} />
         <Kpi k="شامل (مليون)" v={fmtNum(kpi.incl, 1)} q="incl" quick={quick} setQuick={setQuick} />
       </div>

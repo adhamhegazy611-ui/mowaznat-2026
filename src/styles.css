@@ -340,7 +340,7 @@ label.zero { display: flex; gap: 8px; align-items: center; margin-top: 12px; fon
 .section-title { display: flex; align-items: baseline; gap: 10px; margin: 22px 0 10px; }
 .section-title h2 { margin: 0; font-size: 17px; font-weight: 800; color: var(--ink); }
 .section-title span { color: var(--ink-3); font-size: 12.5px; }
-.stages { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.stages { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 .stage-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow);
   cursor: pointer; text-align: right; font: inherit; color: inherit; display: flex; flex-direction: column; gap: 8px; transition: border-color .12s, transform .12s; }
 .stage-card:hover { border-color: var(--brand-3); transform: translateY(-1px); }
