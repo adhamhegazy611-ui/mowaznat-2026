@@ -2184,12 +2184,14 @@ function pjScan() {
         }
       }
     });
+    if (sh.pj && sh.pj.desc) desc = sh.pj.desc;   // بنود مضافة ليها سعرها النهائي في خانة محددة (زي المطب)
     const std = !!desc;
     if (!desc) desc = sh.title.replace(/\(\d+\)\s*$/, '').replace(/\s+/g, ' ').trim();
     const d = std ? pjNorm(desc) : alltxt;
     const unit = /^بالمتر المكعب/.test(d) ? 'م3' : /^بالمتر (المسطح|المربع)/.test(d) ? 'م2' : /^بالمتر الطول/.test(d) ? 'م.ط' : /^بالطن/.test(d) ? 'طن' : /^بالعدد/.test(d) ? 'عدد' : /^باليوم|^يوميه/.test(d) || /^يومية/.test(sh.title.trim()) ? 'يوم' : /^باللتر/.test(d) ? 'لتر' : '';
     let u2 = unit0 || unit;
     if (!u2 && !std) u2 = /المتر الطول/.test(d) ? 'م.ط' : /المتر (المسطح|المربع)|\/م2/.test(d) ? 'م2' : /المتر المكعب|\/م3/.test(d) ? 'م3' : '';
+    if (sh.pj) { if (sh.pj.unit) u2 = sh.pj.unit; if (sh.pj.p1) price1 = sh.pj.p1; if (sh.pj.p2) price2 = sh.pj.p2; }
     item[si] = { desc, std, unit: u2, p1: price1, p2: price2 };
   });
   Object.values(eq).forEach((e) => { e.def = +Object.entries(e.vals).sort((a, b) => b[1] - a[1])[0][0]; });
