@@ -61,11 +61,11 @@ module.exports = async (req, res) => {
             result.groups.unshift(...sg.groups);
             result.warnings = result.warnings.filter((w) => !/Civil 3D/.test(w));
             if (!result.groups.some((g) => g.kind !== 'surface')) { const e = sg.groups[0].ext; result.bbox = [0, 0, e[2], e[3]]; sg.groups.forEach((g) => { g.geom[0].x0 -= e[0]; g.geom[0].y0 -= e[1]; }); }
-            if (sg.other) result.warnings.push(`فيه ${sg.other} سطح تاني (أرض طبيعية / تصميم) اتشافوا بس مش داخلين في الحسبة — الحسبة من سطح الفرق`);
           }
         }
       } catch (e) { result.warnings.push('تعذّر قراءة سطوح Civil 3D'); }
     }
+    result.warnings = result.warnings.filter((w) => !/Civil 3D/.test(w));
     return res.status(200).json(result);
   } catch (e) {
     return res.status(500).json({ error: 'خطأ أثناء الحصر', detail: String(e && e.message || e).slice(0, 300) });

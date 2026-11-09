@@ -2643,6 +2643,7 @@ function qtFillParts(x) {
   const digs = QT.items.filter((y) => y.id !== x.id && y.mode === 'area' && QT_DIG.test(y.item) && !/ردم/.test(y.item));
   return { base, k, digs, total: base + digs.reduce((s, y) => s + +y.qty * k, 0) };
 }
+const qtWarnOk = (w) => !/Civil 3D|سطح تاني|سطوح/.test(w);
 const QT_BG = /ASPHALT|MARKING|TITL|TEXT|DIM|FRAME|BORDER|DEFPOINTS/i;
 function qtAuto(item, groups, mem) {
   const keys = new Set(groups.map(qtKey));
@@ -2885,7 +2886,7 @@ function qtDetailCard(x, d, no) {
   const f = pjEl('div', 'qformula');
   f.textContent = qtFormula(x, d);
   side.appendChild(f);
-  (d.warnings || []).forEach((w) => side.appendChild(pjEl('div', 'qwarn', '⚠️ ' + w)));
+  (d.warnings || []).filter(qtWarnOk).forEach((w) => side.appendChild(pjEl('div', 'qwarn', '⚠️ ' + w)));
   wrap.appendChild(side); c.appendChild(wrap);
   return c;
 }
@@ -3079,7 +3080,7 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
       list.appendChild(row);
     });
     side.appendChild(list);
-    (R.warnings || []).forEach((w) => side.appendChild(pjEl('div', 'qwarn', '⚠️ ' + w)));
+    (R.warnings || []).filter(qtWarnOk).forEach((w) => side.appendChild(pjEl('div', 'qwarn', '⚠️ ' + w)));
     side.appendChild(tot); calc();
   };
   const calc = () => {
