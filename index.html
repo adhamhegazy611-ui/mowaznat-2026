@@ -324,6 +324,60 @@ body.in footer{color:#7f94b8}
 #qt .spin{border-top-color:var(--ac)}
 #qt .qf input,#qt .qf select{border-color:var(--bd)}
 #qt .qf input:focus,#qt .qinvq:focus{outline:2px solid rgba(233,165,20,.35);border-color:var(--ac)}
+/* ===== حصر الكميات: غامق على خلفية الطرق (زي الموازنات والمقايسات) ===== */
+#qt{--txt:#e6edf7;--mut:#93a6c2;--bd:rgba(148,173,212,.16);--bg2:rgba(255,255,255,.05);--card:rgba(15,32,58,.82);--card2:rgba(10,24,45,.7);
+  background:radial-gradient(1100px 700px at 80% -10%,#1f4275 0%,transparent 60%),radial-gradient(900px 600px at 0% 110%,#17345e 0%,transparent 55%),linear-gradient(160deg,#0d2140 0%,#0a1a33 60%,#081428 100%);color:var(--txt)}
+#qt .qscene{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+#qt .qscene svg{position:absolute;inset:-10%;width:120%;height:120%;opacity:.5}
+#qt .qscene:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 35%,rgba(5,12,26,.55) 100%)}
+#qt > .vbar,#qt > .qmain{position:relative;z-index:1}
+#qt .vbar{background:rgba(8,20,40,.85);backdrop-filter:blur(8px)}
+#qt .qhero{background:linear-gradient(120deg,rgba(11,31,58,.92),rgba(19,53,95,.88));border:1px solid var(--bd);backdrop-filter:blur(6px);box-shadow:0 16px 40px rgba(0,0,0,.35)}
+#qt .qcard,#qt .qproj,#qt .qtile{background:var(--card);border:1px solid var(--bd);backdrop-filter:blur(10px);box-shadow:0 14px 34px rgba(0,0,0,.32);color:var(--txt)}
+#qt .qtile:hover,#qt .qproj:hover{box-shadow:0 18px 40px rgba(0,0,0,.45);border-color:rgba(148,173,212,.3)}
+#qt .qcard h3,#qt .qproj b,#qt .qtile .tn,#qt .qdh h3,#qt details.qinv summary,#qt ul.qinvtx b{color:#fff}
+#qt .qproj span{color:#c3d0e2}#qt .qproj small{color:var(--mut)}
+#qt .qtile .tq b{color:#fff}
+#qt .qtile .tf{border-top-color:var(--bd)}
+#qt .qtile .tn i{background:color-mix(in srgb,var(--mc) 22%,transparent);color:color-mix(in srgb,var(--mc) 55%,#fff)}
+#qt .qtile.m-area{--mc:#14b8c4}#qt .qtile.m-length,#qt .qtile.m-paint{--mc:#3b82f6}#qt .qtile.m-count{--mc:#a78bfa}#qt .qtile.m-fill,#qt .qtile.m-cut{--mc:#f59e0b}#qt .qtile.m-volume,#qt .qtile.m-section{--mc:#818cf8}
+#qt .qtile .tn .cnt{background:var(--bg2);color:var(--mut);border-color:var(--bd)}
+#qt .qlink{color:#bcd0ee}#qt .qlink:hover{background:var(--bg2)}#qt .qlink.red{color:#fca5a5}
+#qt .qadd{background:rgba(10,24,45,.45);border-color:rgba(148,173,212,.35);color:#cfe0f5}
+#qt .qadd span{background:var(--ac);color:#1b1405}
+#qt .qadd:hover{background:rgba(233,165,20,.08);border-color:var(--ac);color:var(--ac2)}
+#qt .qtabs{background:var(--card);border-color:var(--bd);backdrop-filter:blur(8px)}
+#qt .qtabs button{color:var(--mut)}#qt .qtabs button.on{background:var(--ac);color:#1b1405}
+#qt .qbtn{background:var(--bg2);border-color:var(--bd);color:var(--txt)}
+#qt .qbtn:hover{background:rgba(255,255,255,.1);border-color:rgba(148,173,212,.3)}
+#qt .qbtn.on{background:var(--ac);border-color:var(--ac);color:#1b1405}#qt .qbtn.on:hover{background:var(--ac2)}
+#qt .qcard .qbtn.danger{color:#fca5a5!important;border-color:rgba(252,165,165,.3)}
+#qt .qdh .qq{background:var(--ac);color:#1b1405}
+#qt .qsub,#qt .qempty{color:var(--mut)}
+#qt .qg,#qt details.qinv{background:var(--card2);border-color:var(--bd)}
+#qt .qgh span,#qt .qg li.muted{color:var(--mut)}
+#qt .qg li.plus{color:#6ee7a8}#qt .qg li.minus{color:#fca5a5}#qt .qg li.net{color:#fff}
+#qt .qformula{background:rgba(233,165,20,.08);border-color:var(--bd);border-inline-start-color:var(--ac);color:#fff}
+#qt .qchips span{background:var(--bg2);border-color:var(--bd);color:var(--txt)}
+#qt .qinvh{color:var(--ac2)}
+#qt .qinvw{border-color:var(--bd)}
+#qt .qinvt th{background:#0e2342;color:#dbe6f5;border-bottom-color:var(--bd)}
+#qt .qinvt td{border-top-color:rgba(148,173,212,.1)}
+#qt .qinvq,#qt .qf input,#qt .qf select{background:rgba(5,14,28,.55);border-color:var(--bd);color:#fff}
+#qt .qf{color:#c3d0e2}
+#qt ul.qinvtx li{border-bottom-color:rgba(148,173,212,.1)}
+#qt .qhint{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.3);color:#cfe0ff}
+#qt .qwarn{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);color:#fcd9a0}
+#qt .qmodes button{background:var(--bg2);border-color:var(--bd);color:var(--mut)}
+#qt .qmodes button.on{background:var(--ac);border-color:var(--ac);color:#1b1405}
+#qt .qgi{background:var(--card2);border-color:var(--bd);color:var(--txt)}
+#qt .qgi .ly,#qt .qgi .v small{color:var(--mut)}
+#qt .qgi.on{background:rgba(233,165,20,.1);border-color:var(--ac)}
+#qt .qtotal{background:rgba(5,14,28,.75);border:1px solid var(--bd)}
+#qt .qgrp{background:rgba(10,24,45,.5);border-color:var(--bd)}
+#qt .qgrph{background:rgba(5,14,28,.7)}
+#qt .qsvg{background:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px) 0 0/24px 24px,linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px) 0 0/24px 24px,#071224;border-color:var(--bd)}
+#qt table.qt th{background:#0e2342;color:#dbe6f5;border-color:var(--bd)}#qt table.qt td{border-color:rgba(148,173,212,.1)}
 
 .card[hidden]{display:none}
 /* ---------- تحليل الأسعار (أدمن) ---------- */
@@ -818,7 +872,7 @@ body:not(.in) footer{color:#6f84a6}
 </div>
 
 
-<div id="qt" class="hidden">
+<div id="qt" class="hidden"><div class="qscene" aria-hidden="true"><svg viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice"><g fill="none" stroke-linecap="round"><use href="#rd" stroke="rgba(255,255,255,.07)" stroke-width="58"/><use href="#rd" stroke="rgba(18,38,70,.9)" stroke-width="50"/><use href="#rd" stroke="rgba(255,255,255,.22)" stroke-width="1.6" stroke-dasharray="16 14"/><path d="M-50 400 H1250 M600 -50 V850" stroke="rgba(245,197,66,.55)" stroke-width="2" stroke-dasharray="26 18"/></g></svg></div>
   <div class="vbar"><button type="button" id="qtBack">→ البوابة</button><button type="button" id="qtBack2" hidden>→ رجوع</button><b id="qtTitle">حصر الكميات</b></div>
   <div class="qmain" id="qtMain"></div>
 </div>
@@ -2753,7 +2807,7 @@ function qtClip() {
   return `inset(${Math.max(0, r.top)}px ${Math.max(0, W - r.right)}px ${Math.max(0, H - r.bottom)}px ${Math.max(0, r.left)}px round 14px)`;
 }
 function openQT() {
-  if (!IS_ADMIN) return;
+  if (!IS_QT) return;
   const q = $('qt'); q.classList.remove('hidden'); document.body.classList.add('viewing');
   q.animate([{ clipPath: qtClip() }, { clipPath: 'inset(0px 0px 0px 0px round 0px)' }], { duration: 600, easing: 'cubic-bezier(.2,.85,.25,1)' });
   history.pushState({ qt: 1 }, '');
