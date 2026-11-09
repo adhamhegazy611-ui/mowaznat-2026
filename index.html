@@ -144,6 +144,7 @@ body.in footer{color:#7f94b8}
 #qt .qhero .qbtn{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.3)}
 #qt .qhero .qbtn.on{background:#fff;color:#0f2747;border-color:#fff}
 #qt .qbtn.danger{color:#fecaca!important}
+#qt .qcard .qbtn.danger{color:#c62828!important;border-color:#fecaca}
 #qt .qbtn:disabled{opacity:.45;cursor:default}
 #qt .qgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
 #qt .qproj{text-align:start;background:#fff;border:1px solid #e3e8f0;border-radius:14px;padding:14px 16px;cursor:pointer;font:inherit;display:flex;flex-direction:column;gap:4px;box-shadow:0 1px 3px rgba(15,23,42,.05)}
@@ -254,6 +255,13 @@ body.in footer{color:#7f94b8}
 .qfxd .qformula{margin-top:12px;background:#fff8e1;border:1px dashed #f5b301;border-radius:10px;padding:10px 12px;font-weight:800;color:#0f2747}
 .qfxd .qlink{background:none;border:0;cursor:pointer;font:inherit;color:#c62828;font-weight:800}
 .qfxd .qbtn.sm{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;cursor:pointer;font-weight:700}
+#qt .qtile .tf button{white-space:nowrap}
+#qt .qtile .tf > span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#qt .qtile .tn .cnt{margin-inline-start:auto;font-style:normal;font-size:11.5px;font-weight:800;background:rgba(245,179,1,.18);color:#b07d00;border-radius:20px;padding:2px 8px}
+#qt .qgrp{border:2px solid rgba(245,179,1,.5);border-radius:18px;padding:14px;margin-bottom:16px;background:rgba(255,255,255,.04)}
+#qt .qgrph{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;color:#fff}
+#qt .qgrph h3{margin:0;font-size:20px}#qt .qgrph .qq{background:#f5b301;color:#111;border-radius:10px;padding:3px 10px;font-weight:900}
+#qt .qgrp > .qformula{margin-bottom:12px}
 #qt .qtile.fx{border-color:rgba(245,179,1,.55)}
 #qt ul.qfx{margin:8px 0;padding-inline-start:20px;line-height:1.9}
 #qt .qtotal{background:#1f2833;border-top:4px solid var(--line)}
@@ -2617,9 +2625,20 @@ const QT_RULES = [
 const QT_XK = /^[AB]\|/; // مفاتيح إضافية في sel: B|حجم ردم السطح، A|معامل ردم الإحلال
 const QT_DIG = /حفر|إحلال|احلال/;
 // بند الردم من السطح بيضيف لوحده ردم الإحلال = مسطح الحفر × المعامل
+// البند الواحد ممكن يتحسب من كذا لوحة: كل لوحة صف، والبند = مجموع لوحه (بنفس الاسم والوحدة)
+const qtGKey = (x) => x.item.trim() + '|' + x.unit;
+function qtGroups() {
+  const m = new Map();
+  QT.items.forEach((x) => { const k = x.mode === 'formula' ? 'ƒ' + x.id : qtGKey(x); if (!m.has(k)) m.set(k, { key: k, item: x.item, unit: x.unit, mode: x.mode, rows: [] }); m.get(k).rows.push(x); });
+  return [...m.values()].map((g) => ({ ...g, qty: g.rows.reduce((s, x) => s + +x.qty, 0) }));
+}
+const qtGroupOf = (x) => qtGroups().find((g) => g.rows.includes(x));
+const qtBase = (x) => { const b = (x.sel || []).find((k) => /^B\|/.test(k)); return b ? +b.slice(2) : +x.qty; };
 function qtFillParts(x) {
   const b = (x.sel || []).find((k) => /^B\|/.test(k)), a = (x.sel || []).find((k) => /^A\|/.test(k));
   if (x.mode !== 'fill' || !a) return null;
+  // ردم الإحلال بيتضاف مرة واحدة بس على أول لوحة في البند
+  if (QT.items.find((y) => y.mode === 'fill' && qtGKey(y) === qtGKey(x)) !== x) return null;
   const k = +a.slice(2), base = b ? +b.slice(2) : +x.qty;
   const digs = QT.items.filter((y) => y.id !== x.id && y.mode === 'area' && QT_DIG.test(y.item) && !/ردم/.test(y.item));
   return { base, k, digs, total: base + digs.reduce((s, y) => s + +y.qty * k, 0) };
@@ -2759,14 +2778,13 @@ function qtProject() {
   hl.append(pjEl('span', 'chip', p.battalion ? 'ك ' + p.battalion : 'مشروع'), pjEl('h2', '', p.name));
   hero.appendChild(hl);
   const hb = pjEl('div', 'hb');
-  const add = pjEl('button', 'qbtn on', '+ إضافة لوحة'); add.type = 'button'; add.onclick = qtAdd;
-  const fx = pjEl('button', 'qbtn', 'ƒ بند محسوب'); fx.type = 'button'; fx.onclick = () => qtFxDlg(); fx.disabled = !QT.items.some((x) => x.mode !== 'formula');
+  const add = pjEl('button', 'qbtn on', '+ إضافة لوحة'); add.type = 'button'; add.onclick = () => qtAdd();
   const ex = pjEl('button', 'qbtn', 'تصدير Excel'); ex.type = 'button'; ex.onclick = qtExport; ex.disabled = !QT.items.length;
   const ed = pjEl('button', 'qbtn', 'تعديل الاسم'); ed.type = 'button';
   ed.onclick = async () => { const v = await qtDlg('تعديل المشروع', p.name, p.battalion); if (!v) return; await sb.from('qt_projects').update({ ...v, updated_at: new Date().toISOString() }).eq('id', p.id); Object.assign(p, v); qtProject(); };
   const del = pjEl('button', 'qbtn danger', 'حذف المشروع'); del.type = 'button';
   del.onclick = async () => { if (!confirm('حذف المشروع «' + p.name + '» بكل لوحه؟')) return; const paths = QT.items.map((x) => x.file_path).filter(Boolean); if (paths.length) await sb.storage.from('qt').remove(paths); await sb.from('qt_projects').delete().eq('id', p.id); qtHome(); };
-  hb.append(add, fx, ex, ed, del); hero.appendChild(hb); m.appendChild(hero);
+  hb.append(add, ex, ed, del); hero.appendChild(hb); m.appendChild(hero);
   if (!QT.items.length) { qtSummary(m); m.appendChild(pjEl('div', 'qempty', 'ارفع أول لوحة: اكتب البند واختار ملف DWG، والكمية هتطلع لوحدها.')); return; }
   const tabs = pjEl('div', 'qtabs');
   [['sum', 'الكميات'], ['det', 'التفاصيل والحسابات']].forEach(([k, t]) => { const b = pjEl('button', QT.tab === k ? 'on' : '', t); b.type = 'button'; b.onclick = () => { QT.tab = k; qtProject(); }; tabs.appendChild(b); });
@@ -2776,28 +2794,35 @@ function qtProject() {
 const QT_ICON = { area: '▦', volume: '⬛', section: '◩', length: '━', paint: '┅', count: '#', fill: '▲', cut: '▼', formula: 'ƒ' };
 function qtSummary(m) {
   const g = pjEl('div', 'qtiles');
-  QT.items.forEach((x) => {
+  qtGroups().forEach((G, gi) => {
+    const x = G.rows[0], many = G.rows.length > 1;
     const t = pjEl('div', 'qtile');
     const tn = pjEl('div', 'tn'); tn.append(pjEl('i', '', QT_ICON[x.mode] || '•'), pjEl('span', '', x.item));
-    const tq = pjEl('div', 'tq'); tq.append(pjEl('b', '', qtN(x.qty, x.mode === 'count' ? 0 : 2)), pjEl('span', '', x.unit));
+    if (many) tn.appendChild(pjEl('em', 'cnt', G.rows.length + ' لوح'));
+    const tq = pjEl('div', 'tq'); tq.append(pjEl('b', '', qtN(G.qty, x.mode === 'count' ? 0 : 2)), pjEl('span', '', x.unit));
     const tf = pjEl('div', 'tf');
     const dt = pjEl('button', 'qlink', 'التفاصيل ←'); dt.type = 'button'; dt.onclick = () => qtShowItem(x.id);
     const dl = pjEl('button', 'qlink red', 'حذف'); dl.type = 'button';
     dl.onclick = async () => {
-      const users = QT.items.filter((y) => y.mode === 'formula' && qtFxTerms(y).some((t) => t.id === x.id));
-      if (!confirm('حذف بند «' + x.item + '»؟' + (users.length ? '\nالبند ده داخل في حسبة: ' + users.map((y) => y.item).join('، ') : ''))) return;
-      if (x.file_path) await sb.storage.from('qt').remove([x.file_path]); await sb.from('qt_items').delete().eq('id', x.id); QT.items = QT.items.filter((y) => y.id !== x.id); await qtRecalc(); qtProject();
+      const users = QT.items.filter((y) => y.mode === 'formula' && qtFxTerms(y).some((tt) => { const fg = qtFxGroup(tt); return fg && fg.key === G.key; }));
+      if (!confirm('حذف بند «' + x.item + '»' + (many ? ' بكل لوحه (' + G.rows.length + ')' : '') + '؟' + (users.length ? '\nالبند ده داخل في حسبة: ' + users.map((y) => y.item).join('، ') : ''))) return;
+      const paths = G.rows.map((y) => y.file_path).filter(Boolean); if (paths.length) await sb.storage.from('qt').remove(paths);
+      const ids = G.rows.map((y) => y.id); await sb.from('qt_items').delete().in('id', ids); QT.items = QT.items.filter((y) => !ids.includes(y.id)); await qtRecalc(); qtProject();
     };
-    if (x.mode === 'formula') { dt.textContent = 'الحسبة ←'; t.classList.add('fx'); }
-    const fp = qtFillParts(x);
-    tf.append(pjEl('span', '', x.mode === 'formula' ? qtFxText(x, true) : fp && fp.k ? (fp.digs.length ? 'سطح + إحلال الحفر × ' + qtN(fp.k, 3) : 'سطح — الإحلال يتضاف مع لوحة الحفر') : (x.file_name || '').replace(/^\d+-/, '')), pjEl('span', 'sp'), dt, dl);
+    const fp = x.mode === 'fill' ? G.rows.map(qtFillParts).find(Boolean) : null;
+    let foot;
+    if (x.mode === 'formula') { dt.textContent = 'الحسبة ←'; t.classList.add('fx'); foot = qtFxText(x, true); }
+    else if (many) foot = fp && fp.k && fp.digs.length ? 'سطوح + إحلال × ' + qtN(fp.k, 3) : 'مجموع ' + G.rows.length + ' لوح';
+    else foot = fp && fp.k ? (fp.digs.length ? 'سطح + إحلال × ' + qtN(fp.k, 3) : 'سطح — الإحلال يتضاف مع لوحة الحفر') : (x.file_name || '').replace(/^\d+-/, '');
+    tf.append(pjEl('span', '', foot), pjEl('span', 'sp'));
+    if (x.mode !== 'formula') { const pl = pjEl('button', 'qlink', '+ لوحة'); pl.type = 'button'; pl.title = 'ضيف لوحة تانية لنفس البند'; pl.onclick = () => qtAdd(x.item); tf.appendChild(pl); }
+    tf.append(dt, dl);
     t.append(tn, tq, tf);
-    if (QT.flash === x.id) { t.classList.add('flash'); QT.flash = null; }
+    if (G.rows.some((y) => y.id === QT.flash)) { t.classList.add('flash'); QT.flash = null; }
     g.appendChild(t);
   });
-  const ad = pjEl('button', 'qadd'); ad.type = 'button'; ad.append(pjEl('span', '', '+'), document.createTextNode('إضافة لوحة')); ad.onclick = qtAdd;
+  const ad = pjEl('button', 'qadd'); ad.type = 'button'; ad.append(pjEl('span', '', '+'), document.createTextNode('إضافة لوحة')); ad.onclick = () => qtAdd();
   g.appendChild(ad);
-  if (QT.items.some((x) => x.mode !== 'formula')) { const af = pjEl('button', 'qadd'); af.type = 'button'; af.append(pjEl('span', '', 'ƒ'), document.createTextNode('بند محسوب من بنود تانية')); af.onclick = () => qtFxDlg(); g.appendChild(af); }
   m.appendChild(g);
 }
 async function qtDetails(m) {
@@ -2805,24 +2830,34 @@ async function qtDetails(m) {
   const { data } = await sb.from('qt_items').select('id,detail').eq('project_id', QT.cur.id);
   const det = {}; (data || []).forEach((x) => { det[x.id] = x.detail; });
   box.textContent = '';
-  QT.items.forEach((x) => box.appendChild(qtDetailCard(x, det[x.id])));
+  qtGroups().forEach((G) => {
+    if (G.rows.length < 2) { box.appendChild(qtDetailCard(G.rows[0], det[G.rows[0].id])); return; }
+    const sec = pjEl('div', 'qgrp');
+    const h = pjEl('div', 'qgrph'); h.append(pjEl('h3', '', G.item), pjEl('span', 'qq', qtN(G.qty) + ' ' + G.unit));
+    const pl = pjEl('button', 'qbtn sm', '+ لوحة للبند ده'); pl.type = 'button'; pl.onclick = () => qtAdd(G.item); h.appendChild(pl);
+    const f = pjEl('div', 'qformula'); f.textContent = 'الإجمالي = ' + G.rows.map((y) => qtN(y.qty)).join(' + ') + ' = ' + qtN(G.qty) + ' ' + G.unit + '  (' + G.rows.length + ' لوح)';
+    sec.append(h, f);
+    G.rows.forEach((y, i) => sec.appendChild(qtDetailCard(y, det[y.id], i + 1)));
+    box.appendChild(sec);
+  });
 }
 async function qtShowItem(id) {
   QT.tab = 'det'; qtProject();
   setTimeout(() => { const el = document.getElementById('qti-' + id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 600);
 }
-function qtDetailCard(x, d) {
+function qtDetailCard(x, d, no) {
   const c = pjEl('div', 'qcard'); c.id = 'qti-' + x.id;
   if (x.mode === 'formula') {
     const h = pjEl('div', 'qdh'); h.append(pjEl('h3', '', 'ƒ ' + x.item), pjEl('span', 'qq', qtN(x.qty) + ' ' + x.unit));
     const eb = pjEl('button', 'qbtn sm', '✎ تعديل الحسبة'); eb.type = 'button'; eb.onclick = () => qtFxDlg(x); h.appendChild(eb);
     c.append(h, pjEl('div', 'qsub', 'بند محسوب من بنود تانية في المشروع — بيتحدث لوحده لو أي بند منهم اتغير'));
     const ul = pjEl('ul', 'qfx');
-    qtFxTerms(x).forEach((t) => { const y = QT.items.find((z) => z.id === t.id); const li = pjEl('li'); li.textContent = y ? y.item + ': ' + qtN(y.qty) + ' ' + y.unit + ' × ' + qtN(t.k, 4) + ' = ' + qtN(y.qty * t.k) + ' ' + y.unit : '⚠️ بند «' + (t.name || '؟') + '» اتمسح — مش داخل في الحسبة'; ul.appendChild(li); });
+    qtFxTerms(x).forEach((t) => { const y = qtFxGroup(t); const li = pjEl('li'); li.textContent = y ? y.item + ': ' + qtN(y.qty) + ' ' + y.unit + ' × ' + qtN(t.k, 4) + ' = ' + qtN(y.qty * t.k) + ' ' + y.unit : '⚠️ بند «' + (t.name || '؟') + '» اتمسح — مش داخل في الحسبة'; ul.appendChild(li); });
     const f = pjEl('div', 'qformula'); f.textContent = qtFxText(x);
     c.append(ul, f); return c;
   }
-  const h = pjEl('div', 'qdh'); h.append(pjEl('h3', '', x.item), pjEl('span', 'qq', qtN(x.qty) + ' ' + x.unit));
+  const h = pjEl('div', 'qdh'); h.append(pjEl('h3', '', no ? 'لوحة ' + no + ': ' + (x.file_name || '').replace(/^\d+-/, '') : x.item), pjEl('span', 'qq', qtN(x.qty) + ' ' + x.unit));
+  if (no) { const db = pjEl('button', 'qbtn sm danger', 'حذف اللوحة'); db.type = 'button'; db.onclick = async () => { if (!confirm('حذف اللوحة دي من بند «' + x.item + '»؟')) return; if (x.file_path) await sb.storage.from('qt').remove([x.file_path]); await sb.from('qt_items').delete().eq('id', x.id); QT.items = QT.items.filter((y) => y.id !== x.id); await qtRecalc(); QT.tab = 'det'; qtProject(); }; h.appendChild(db); }
   if (d && d.groups) { const eb = pjEl('button', 'qbtn sm', '✎ تعديل الحسبة'); eb.type = 'button'; eb.onclick = () => { const box = pjEl('div'); c.replaceWith(box); qtPick(box, x.item, x.file_name, x.file_path, { groups: d.groups, bbox: d.bbox, warnings: d.warnings }, x); }; h.appendChild(eb); }
   c.appendChild(h);
   c.appendChild(pjEl('div', 'qsub', (x.file_name || '') + ' — ' + new Date(x.created_at).toLocaleString('ar-EG')));
@@ -2888,7 +2923,7 @@ function qtGroupDetail(g, mode, th) {
 function qtFormula(x, d) {
   const gs = (d.groups || []).filter((g) => (x.sel || []).includes(qtKey(g)));
   const fp = qtFillParts(x);
-  if (fp) return 'الكمية = ردم السطح ' + qtN(fp.base) + (fp.digs.length ? ' + ردم الإحلال (' + fp.digs.map((y) => qtN(y.qty)).join(' + ') + ' م² × ' + qtN(fp.k, 3) + ')' : '') + ' = ' + qtN(x.qty) + ' م³';
+  if (fp) return 'الكمية = ردم السطح ' + qtN(fp.base) + (fp.digs.length ? ' + ردم الإحلال ' + (fp.digs.length > 1 ? '(' + fp.digs.map((y) => qtN(y.qty)).join(' + ') + ')' : qtN(fp.digs[0].qty)) + ' م² × ' + qtN(fp.k, 3) + ' م' : '') + ' = ' + qtN(x.qty) + ' م³';
   if (x.mode === 'fill' || x.mode === 'cut') return 'الكمية = ' + (x.mode === 'fill' ? 'حجم الردم' : 'حجم الحفر') + ' من سطح الفرق' + (gs.length > 1 ? ' (' + gs.map((g) => qtN(g[x.mode])).join(' + ') + ')' : '') + ' = ' + qtN(x.qty) + ' م³';
   const base = gs.map((g) => qtN(x.mode === 'count' ? g.n : x.mode === 'length' ? g.length : x.mode === 'paint' ? g.paint : g.area));
   if (x.mode === 'section') { const h = gs.filter((g) => g.kind === 'hatch'), l = gs.filter((g) => g.kind === 'line'); return 'الكمية = مساحة القطاع ' + qtN(h.reduce((s, g) => s + g.area, 0), 4) + ' م² × الطول ' + qtN(l.reduce((s, g) => s + g.length, 0)) + ' م = ' + qtN(x.qty) + ' م³'; }
@@ -2903,6 +2938,11 @@ function qtSvg(groups, sel, bbox) {
   let X0 = 0, Y0 = 0, X1 = bbox ? bbox[2] : 1, Y1 = bbox ? bbox[3] : 1;
   const sfs = groups.filter((g) => g.kind === 'surface' && g.ext), sfOn = sfs.filter((g) => sel.has(qtKey(g)));
   if (sfOn.length) { X0 = Math.min(...sfOn.map((g) => g.ext[0])); Y0 = Math.min(...sfOn.map((g) => g.ext[1])); X1 = Math.max(...sfOn.map((g) => g.ext[2])); Y1 = Math.max(...sfOn.map((g) => g.ext[3])); }
+  else { // الرسمة تتركز على الحاجة المحسوبة (عشان لو في عناصر بعيدة في اللوحة)
+    let a0 = Infinity, b0 = Infinity, a1 = -Infinity, b1 = -Infinity; const ex = (v) => { if (v[0] < a0) a0 = v[0]; if (v[0] > a1) a1 = v[0]; if (v[1] < b0) b0 = v[1]; if (v[1] > b1) b1 = v[1]; };
+    groups.filter((g) => sel.has(qtKey(g))).forEach((g) => (g.geom || []).forEach((e) => { if (e.t === 'h') e.polys.forEach((q) => q.forEach(ex)); else if (e.t === 'l') e.pts.forEach(ex); else if (e.at) ex(e.at); }));
+    if (a1 > a0 || b1 > b0) { const m = Math.max(a1 - a0, b1 - b0) * 0.04; X0 = a0 - m; Y0 = b0 - m; X1 = a1 + m; Y1 = b1 + m; }
+  }
   const W = X1 - X0 || 1, H = Y1 - Y0 || 1, pad = Math.max(W, H) * 0.03;
   const s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', `${X0 - pad} ${-pad} ${W + 2 * pad} ${H + 2 * pad}`); s.setAttribute('class', 'qsvg');
   const g0 = document.createElementNS(NS, 'g'); g0.setAttribute('transform', `translate(0 ${Y1}) scale(1 -1)`); s.appendChild(g0);
@@ -2942,8 +2982,9 @@ function qtSvg(groups, sel, bbox) {
 }
 
 /* ---------- إضافة لوحة ---------- */
-async function qtAdd() {
-  const p = QT.cur; const m = qtMain(p.name + ' — لوحة جديدة', qtProject);
+async function qtAdd(pre) {
+  pre = typeof pre === 'string' ? pre : '';
+  const p = QT.cur; const m = qtMain(p.name + (pre ? ' — لوحة جديدة لبند ' + pre : ' — لوحة جديدة'), qtProject);
   const c = pjEl('div', 'qcard');
   c.appendChild(pjEl('h3', '', 'لوحة جديدة'));
   const row = pjEl('div', 'qrow');
@@ -2957,7 +2998,8 @@ async function qtAdd() {
   const st = pjEl('div', 'qstat'); c.appendChild(st);
   m.appendChild(c);
   const res = pjEl('div'); m.appendChild(res);
-  setTimeout(() => it.focus(), 50);
+  if (pre) { it.value = pre; const n = QT.items.filter((x) => x.item === pre && x.mode !== 'formula').length; if (n) c.appendChild(pjEl('div', 'qhint', 'البند ده فيه ' + n + ' لوحة — اللوحة الجديدة هتتجمع عليهم.')); }
+  setTimeout(() => (pre ? fi.click() : it.focus()), 50);
   const go = async () => {
     const f = fi.files[0]; if (!f) return;
     if (!it.value.trim()) { st.textContent = 'اكتب اسم البند الأول'; it.focus(); return; }
@@ -3055,14 +3097,16 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
 }
 /* ---------- بنود محسوبة: بند = Σ (بند × معامل) ---------- */
 function qtFxTerms(x) { return (x.sel || []).map((v) => { const [id, k, ...nm] = String(v).split('|'); return { id, k: +k, name: nm.join('|') }; }).filter((t) => t.id && isFinite(t.k)); }
-function qtFxCalc(x) { return qtFxTerms(x).reduce((s, t) => { const y = QT.items.find((z) => z.id === t.id && z.mode !== 'formula'); return s + (y ? +y.qty * t.k : 0); }, 0); }
+// حد البند المحسوب = مجموع كل لوح البند ده (بالاسم)، حتى لو اللوحة المرجعية اتمسحت
+function qtFxGroup(t) { const y = QT.items.find((z) => z.id === t.id && z.mode !== 'formula'); const gs = qtGroups().filter((g) => g.mode !== 'formula'); return y ? gs.find((g) => g.rows.includes(y)) : gs.find((g) => g.item === t.name) || null; }
+function qtFxCalc(x) { return qtFxTerms(x).reduce((s, t) => { const g = qtFxGroup(t); return s + (g ? g.qty * t.k : 0); }, 0); }
 function qtFxText(x, short) {
-  const ts = qtFxTerms(x).map((t) => { const y = QT.items.find((z) => z.id === t.id); const nm = y ? y.item : (t.name || '؟'); return short ? nm + (t.k !== 1 ? ' × ' + qtN(t.k, 4) : '') : (y ? qtN(y.qty) : '0') + (t.k !== 1 ? ' × ' + qtN(t.k, 4) : ''); });
+  const ts = qtFxTerms(x).map((t) => { const y = qtFxGroup(t); const nm = y ? y.item : (t.name || '؟'); return short ? nm + (t.k !== 1 ? ' × ' + qtN(t.k, 4) : '') : (y ? qtN(y.qty) : '0') + (t.k !== 1 ? ' × ' + qtN(t.k, 4) : ''); });
   return short ? '= ' + ts.join(' + ') : x.item + ' = ' + ts.join(' + ') + ' = ' + qtN(x.qty) + ' ' + x.unit;
 }
 async function qtRecalc() {
   for (const x of QT.items.filter((y) => y.mode === 'fill')) {
-    const f = qtFillParts(x); if (!f) continue; const q = +f.total.toFixed(3);
+    const f = qtFillParts(x); if (!f && !(x.sel || []).some((k) => /^B\|/.test(k))) continue; const q = +(f ? f.total : qtBase(x)).toFixed(3);
     if (Math.abs(q - +x.qty) > 1e-6) { x.qty = q; await sb.from('qt_items').update({ qty: q }).eq('id', x.id); }
   }
   for (const x of QT.items.filter((y) => y.mode === 'formula')) {
@@ -3071,8 +3115,9 @@ async function qtRecalc() {
   }
 }
 function qtFxDlg(existing) {
-  const base = QT.items.filter((x) => x.mode !== 'formula'); if (!base.length) return;
-  let terms = existing ? qtFxTerms(existing).filter((t) => base.some((y) => y.id === t.id)) : [];
+  const GS = qtGroups().filter((g) => g.mode !== 'formula'); if (!GS.length) return;
+  const base = GS.map((g) => ({ ...g.rows[0], qty: g.qty }));
+  let terms = existing ? qtFxTerms(existing).map((t) => { const g = qtFxGroup(t); return g ? { id: g.rows[0].id, k: t.k } : null; }).filter(Boolean) : [];
   if (!terms.length) terms = [{ id: base[0].id, k: 1 }];
   const w = pjEl('div', 'pjm'), bx = pjEl('div', 'bx qfxd'), hd = pjEl('div', 'hd'), bd = pjEl('div', 'bd'), ft = pjEl('div', 'ft');
   hd.append(pjEl('b', '', existing ? 'تعديل بند محسوب' : 'بند محسوب من بنود تانية'));
@@ -3123,7 +3168,7 @@ function qtExport() {
   const p = QT.cur;
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
   let h = '<table border="1" dir="rtl"><tr><th colspan="4">حصر كميات — ' + esc(p.name) + '</th></tr><tr><th>م</th><th>البند</th><th>الكمية</th><th>الوحدة</th></tr>';
-  QT.items.forEach((x, i) => { h += '<tr><td>' + (i + 1) + '</td><td>' + esc(x.item) + '</td><td>' + (+(+x.qty).toFixed(2)) + '</td><td>' + esc(x.unit) + '</td></tr>'; });
+  qtGroups().forEach((x, i) => { h += '<tr><td>' + (i + 1) + '</td><td>' + esc(x.item) + '</td><td>' + (+(+x.qty).toFixed(2)) + '</td><td>' + esc(x.unit) + '</td></tr>'; });
   h += '</table>';
   const b = new Blob(['\ufeff<html><head><meta charset="utf-8"></head><body>' + h + '</body></html>'], { type: 'application/vnd.ms-excel' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'حصر كميات - ' + p.name + '.xls'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
