@@ -367,6 +367,13 @@ body.in footer{color:#7f94b8}
 #qt .qf{color:#c3d0e2}
 #qt ul.qinvtx li{border-bottom-color:rgba(148,173,212,.1)}
 #qt .qhint{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.3);color:#cfe0ff}
+#qt .qlink{background:none;border:0;color:#93c5fd;font:inherit;font-size:13px;cursor:pointer;padding:4px 0;margin:2px 0 6px;text-decoration:underline}
+#qt .qone{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:10px;margin-bottom:8px;background:rgba(255,255,255,.03)}
+#qt .qone i{width:12px;height:12px;border-radius:3px;flex:none}
+#qt .qone .ly{color:#94a3b8;font-size:12px}
+#qt .qone .v{margin-inline-start:auto;font-weight:700}
+#qt details.qhow{margin-top:10px;font-size:13px;color:#cbd5e1}
+#qt details.qhow summary{cursor:pointer;color:#93c5fd;margin-bottom:8px}
 #qt .qwarn{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);color:#fcd9a0}
 #qt .qmodes button{background:var(--bg2);border-color:var(--bd);color:var(--mut)}
 #qt .qmodes button.on{background:var(--ac);border-color:var(--ac);color:#1b1405}
@@ -3101,7 +3108,10 @@ function qtAuto0(item, groups, mem) {
   if (QT_EW.test(item)) {
     const em = qtEwMode(item), sfs = groups.filter((g) => g.kind === 'surface').sort((a, b) => b.area - a.area);
     if (mem && mem.mode === em && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: em, sel: mem.sel.slice(), how: 'mem' };
-    return sfs.length ? { mode: em, sel: [qtKey(sfs[0])] } : null;
+    if (sfs.length) return { mode: em, sel: [qtKey(sfs[0])] };
+    const hh = groups.filter((g) => g.kind === 'hatch' && g.area > 0).sort((a, b) => b.area - a.area);
+    if (mem && mem.mode === 'area' && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: 'area', sel: mem.sel.slice(), how: 'mem' };
+    return hh.length ? { mode: 'area', sel: [qtKey(hh[0])] } : null;
   }
   if (mem && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: mem.mode, sel: mem.sel.slice(), th: mem.thickness ? +mem.thickness : null, how: 'mem', only: mem.mode === 'count' ? ((QT_RULES.find(([re]) => re.test(item)) || [])[2] || null) : null };
   const rule = QT_RULES.find(([re]) => re.test(item)) || [null, null];
@@ -3485,7 +3495,14 @@ function qtDetailCard(x, d, no) {
   const selS = new Set(x.sel || []), mine = (d.groups || []).filter((g) => selS.has(qtKey(g)));
   wrap.appendChild(qtSvg(mine.length ? mine : d.groups || [], selS, d.bbox, null, x.mode));
   const side = pjEl('div');
-  (d.groups || []).filter((g) => (x.sel || []).includes(qtKey(g))).forEach((g) => side.appendChild(qtGroupDetail(g, x.mode, x.thickness)));
+  const how = pjEl('details', 'qhow'); how.appendChild(pjEl('summary', '', 'إزاي اتحسبت؟'));
+  mine.forEach((g) => {
+    const r = pjEl('div', 'qone'), sw = pjEl('i'); sw.style.background = g.kind === 'surface' ? '#3d8bfd' : g.hex;
+    const v = x.mode === 'cut' ? g.cut : x.mode === 'fill' ? g.fill : x.mode === 'length' ? g.length : x.mode === 'paint' ? g.paint : x.mode === 'count' ? null : g.area;
+    const u = x.mode === 'cut' || x.mode === 'fill' ? 'م³' : x.mode === 'length' || x.mode === 'paint' ? 'م.ط' : 'م²';
+    r.append(sw, pjEl('b', '', qtKind(g)), pjEl('span', 'ly', g.layer), pjEl('span', 'v', v == null ? '' : qtN(v) + ' ' + u));
+    side.appendChild(r); how.appendChild(qtGroupDetail(g, x.mode, x.thickness));
+  });
   const fp = qtFillParts(x);
   if (fp) {
     const b = pjEl('div', 'qg'), hd = pjEl('div', 'qgh'), sw = pjEl('i'); sw.style.background = '#8d6e63';
@@ -3503,9 +3520,10 @@ function qtDetailCard(x, d, no) {
     b.append(hd, ul, kb); side.appendChild(b);
   }
   const f = pjEl('div', 'qformula');
-  f.textContent = qtFormula(x, d);
+  f.textContent = x.item + ' = ' + qtN(x.qty) + ' ' + x.unit;
   side.appendChild(f);
-  (d.warnings || []).filter(qtWarnOk).forEach((w) => side.appendChild(pjEl('div', 'qwarn', '⚠️ ' + w)));
+  const fx = pjEl('div', 'qsub'); fx.textContent = qtFormula(x, d); how.appendChild(fx);
+  side.appendChild(how);
   wrap.appendChild(side); c.appendChild(wrap);
   return c;
 }
@@ -3740,7 +3758,6 @@ async function qtAdd(pre) {
     const au = qtAuto(item, j.groups, mem), q = au && qtQty(j.groups, au);
     if (au && q != null && q > 0) { st.innerHTML = '<span class="spin"></span> بيحفظ…'; const row = await qtSave(item, f.name, path, j, au, q); if (row) { QT.flash = row.id; QT.tab = 'sum'; qtProject(); return; } }
     st.textContent = '';
-    if (QT_EW.test(item) && !j.groups.some((g) => g.kind === 'surface')) st.textContent = '⚠️ «' + item + '» بيتحسب من سطح الفرق (Volume Surface) زي Volume Dashboard في Civil 3D، واللوحة دي مفيهاش سطح فرق. ادخل اللوحة اللي فيها الـ Volume Surface.';
     qtPick(res, item, f.name, path, j, null, au || (mem ? { mode: mem.mode, sel: [], th: mem.thickness } : null), true);
   };
   fi.onchange = go; goB.onclick = go; it.oninput = sync;
@@ -3772,13 +3789,29 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
   const wrap = pjEl('div', 'qdet'), svgBox = pjEl('div', 'qsvgbox'), side = pjEl('div');
   wrap.append(svgBox, side); c.appendChild(wrap); box.appendChild(c);
   const tot = pjEl('div', 'qtotal');
+  let showAll = false, modesOpen = false;
+  // العناصر اللي تنفع لنوع الكمية بس (هاتش للمساحة، خطوط للطول، ...)
+  const fits = (g) => {
+    if (sel.has(qtKey(g))) return true;
+    if (g.hid || g.blk) return false;
+    if (mode === 'area' || mode === 'volume') return g.kind === 'hatch' && g.area > 0;
+    if (mode === 'fill' || mode === 'cut') return g.kind === 'surface';
+    if (mode === 'length' || mode === 'paint') return g.kind === 'line' && g.length > 0;
+    if (mode === 'section') return g.kind === 'hatch' || g.kind === 'line';
+    if (mode === 'count') return g.kind === 'block' || g.kind === 'line';
+    return true;
+  };
   const draw = () => {
-    svgBox.textContent = ''; svgBox.appendChild(qtSvg(groups, sel, R.bbox, R.inv));
+    let shown = showAll ? groups : groups.filter(fits);
+    if (!shown.length) shown = groups;
+    svgBox.textContent = ''; svgBox.appendChild(qtSvg(shown, sel, R.bbox, null, mode));
     side.textContent = '';
-    side.appendChild(pjEl('div', 'qhint', isNew ? 'مقدرتش أحدد «' + item + '» لوحدي في اللوحة دي. علّم على الحاجة اللي تتحسب، وهفتكرها للبند ده بعد كده.' : 'علّم على الحاجة اللي تتحسب واختار نوع الكمية.'));
+    side.appendChild(pjEl('div', 'qhint', 'علّم على ' + ((mode === 'area' || mode === 'volume') ? 'الهاتش' : 'الحاجة') + ' بتاع «' + item + '»'));
+    const mt = pjEl('button', 'qlink', 'طريقة الحساب: ' + QT_MODES[mode][0] + (modesOpen ? ' ▴' : ' ▾')); mt.type = 'button';
+    mt.onclick = () => { modesOpen = !modesOpen; draw(); }; side.appendChild(mt);
     const ml = pjEl('div', 'qmodes');
-    Object.entries(QT_MODES).forEach(([k, [t]]) => { const b = pjEl('button', mode === k ? 'on' : '', t); b.type = 'button'; b.onclick = () => { mode = k; if (k !== 'count') only = null; draw(); }; ml.appendChild(b); });
-    side.appendChild(ml);
+    Object.entries(QT_MODES).forEach(([k, [t]]) => { const b = pjEl('button', mode === k ? 'on' : '', t); b.type = 'button'; b.onclick = () => { mode = k; modesOpen = false; if (k !== 'count') only = null; draw(); }; ml.appendChild(b); });
+    if (modesOpen) side.appendChild(ml);
     if (mode === 'volume') {
       const l = pjEl('label', 'qf inl'); l.appendChild(pjEl('span', '', 'السُمك / العمق (م)'));
       const i = pjEl('input'); i.type = 'number'; i.step = '0.01'; i.min = '0'; i.value = th || ''; i.placeholder = 'مثلاً 0.40';
@@ -3786,21 +3819,19 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
       setTimeout(() => { if (!th) i.focus(); }, 30);
     }
     const list = pjEl('div', 'qglist');
-    groups.forEach((g) => {
+    shown.forEach((g) => {
       const k = qtKey(g), row = pjEl('label', 'qgi' + (sel.has(k) ? ' on' : ''));
       const cb = pjEl('input'); cb.type = 'checkbox'; cb.checked = sel.has(k);
       cb.onchange = () => { if (cb.checked) sel.add(k); else sel.delete(k); draw(); };
       const sw = pjEl('i'); sw.style.background = g.hex;
       const v = pjEl('span', 'v', g.kind === 'surface' ? 'ردم ' + qtN(g.fill) + ' · حفر ' + qtN(g.cut) + ' م³' : g.kind === 'hatch' ? qtN(g.area) + ' م²' : g.kind === 'line' ? qtN(g.length) + ' م.ط' : g.n + ' عدد');
-      if (g.kind === 'line') v.appendChild(pjEl('small', '', g.n + ' خط' + (g.area ? ' · مقفول ' + qtN(g.area) + ' م²' : '') + (g.paint < g.length - 0.01 ? ' · مدهون ' + qtN(g.paint) : '')));
       row.append(cb, sw, pjEl('b', '', qtKind(g)), pjEl('span', 'ly', g.layer + qtTag(g)), v);
       if (g.hid) row.classList.add('hid');
       list.appendChild(row);
     });
     side.appendChild(list);
-    (R.warnings || []).filter(qtWarnOk).forEach((w) => side.appendChild(pjEl('div', 'qwarn', '⚠️ ' + w)));
+    if (shown.length < groups.length || showAll) { const ab = pjEl('button', 'qlink', showAll ? 'إخفاء باقي عناصر اللوحة' : 'عرض باقي عناصر اللوحة (' + (groups.length - shown.length) + ')'); ab.type = 'button'; ab.onclick = () => { showAll = !showAll; draw(); }; side.appendChild(ab); }
     side.appendChild(tot);
-    if (R.inv) side.appendChild(qtInventory(R.inv, groups));
     calc();
   };
   const calc = () => {
