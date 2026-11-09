@@ -2614,9 +2614,20 @@ const QT_RULES = [
   [/بردور|حرف|سور|سياج|كانستين/, 'length'],
   [/كشط|تشريب|MC|RC|لاصق|رابط|سطحي|أسفلت|اسفلت|انترلوك|إنترلوك|بلاط|رصف|حفر|ردم|إحلال|احلال|أساس|اساس|تسوية|زراعة/i, 'area'],
 ];
+const QT_XK = /^[AB]\|/; // مفاتيح إضافية في sel: B|حجم ردم السطح، A|معامل ردم الإحلال
+const QT_DIG = /حفر|إحلال|احلال/;
+// بند الردم من السطح بيضيف لوحده ردم الإحلال = مسطح الحفر × المعامل
+function qtFillParts(x) {
+  const b = (x.sel || []).find((k) => /^B\|/.test(k)), a = (x.sel || []).find((k) => /^A\|/.test(k));
+  if (x.mode !== 'fill' || !a) return null;
+  const k = +a.slice(2), base = b ? +b.slice(2) : +x.qty;
+  const digs = QT.items.filter((y) => y.id !== x.id && y.mode === 'area' && QT_DIG.test(y.item) && !/ردم/.test(y.item));
+  return { base, k, digs, total: base + digs.reduce((s, y) => s + +y.qty * k, 0) };
+}
 const QT_BG = /ASPHALT|MARKING|TITL|TEXT|DIM|FRAME|BORDER|DEFPOINTS/i;
 function qtAuto(item, groups, mem) {
   const keys = new Set(groups.map(qtKey));
+  if (mem && mem.sel) mem = { ...mem, sel: mem.sel.filter((k) => !QT_XK.test(k)) };
   if (mem && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: mem.mode, sel: mem.sel.slice(), th: mem.thickness ? +mem.thickness : null, how: 'mem', only: mem.mode === 'count' ? ((QT_RULES.find(([re]) => re.test(item)) || [])[2] || null) : null };
   const sf = groups.filter((g) => g.kind === 'surface').sort((a, b) => b.area - a.area);
   if (sf.length && /ردم|حفر|ترابي|تراب/.test(item)) return { mode: /حفر/.test(item) && !/ردم/.test(item) ? 'cut' : 'fill', sel: [qtKey(sf[0])] };
@@ -2778,7 +2789,8 @@ function qtSummary(m) {
       if (x.file_path) await sb.storage.from('qt').remove([x.file_path]); await sb.from('qt_items').delete().eq('id', x.id); QT.items = QT.items.filter((y) => y.id !== x.id); await qtRecalc(); qtProject();
     };
     if (x.mode === 'formula') { dt.textContent = 'الحسبة ←'; t.classList.add('fx'); }
-    tf.append(pjEl('span', '', x.mode === 'formula' ? qtFxText(x, true) : (x.file_name || '').replace(/^\d+-/, '')), pjEl('span', 'sp'), dt, dl);
+    const fp = qtFillParts(x);
+    tf.append(pjEl('span', '', x.mode === 'formula' ? qtFxText(x, true) : fp && fp.k ? (fp.digs.length ? 'سطح + إحلال الحفر × ' + qtN(fp.k, 3) : 'سطح — الإحلال يتضاف مع لوحة الحفر') : (x.file_name || '').replace(/^\d+-/, '')), pjEl('span', 'sp'), dt, dl);
     t.append(tn, tq, tf);
     if (QT.flash === x.id) { t.classList.add('flash'); QT.flash = null; }
     g.appendChild(t);
@@ -2819,6 +2831,22 @@ function qtDetailCard(x, d) {
   wrap.appendChild(qtSvg(d.groups || [], new Set(x.sel || []), d.bbox));
   const side = pjEl('div');
   (d.groups || []).filter((g) => (x.sel || []).includes(qtKey(g))).forEach((g) => side.appendChild(qtGroupDetail(g, x.mode, x.thickness)));
+  const fp = qtFillParts(x);
+  if (fp) {
+    const b = pjEl('div', 'qg'), hd = pjEl('div', 'qgh'), sw = pjEl('i'); sw.style.background = '#8d6e63';
+    hd.append(sw, pjEl('b', '', 'ردم الإحلال'), pjEl('span', '', 'من بنود الحفر في المشروع'));
+    const ul = pjEl('ul');
+    if (fp.digs.length) fp.digs.forEach((y) => { const li = pjEl('li'); li.textContent = y.item + ': ' + qtN(y.qty) + ' م² × ' + qtN(fp.k, 3) + ' م = ' + qtN(y.qty * fp.k) + ' م³'; ul.appendChild(li); });
+    else { const li = pjEl('li', 'muted'); li.textContent = 'لسه مفيش لوحة حفر في المشروع — أول ما ترفعها، ردم الإحلال هيتضاف هنا لوحده.'; ul.appendChild(li); }
+    const kb = pjEl('button', 'qbtn sm', fp.k ? 'سُمك الإحلال ' + qtN(fp.k, 3) + ' م ✎' : 'الإحلال مقفول — تفعيل'); kb.type = 'button';
+    kb.onclick = async () => {
+      const v = prompt('سُمك ردم الإحلال (م) — اكتب 0 لو مش عايز تضيف إحلال للبند ده', String(fp.k || 0.5)); if (v == null) return;
+      const k = parseFloat(v); if (!isFinite(k) || k < 0) return;
+      const sel = (x.sel || []).filter((s) => !/^A\|/.test(s)).concat('A|' + k);
+      await sb.from('qt_items').update({ sel }).eq('id', x.id); x.sel = sel; await qtRecalc(); QT.tab = 'det'; qtProject();
+    };
+    b.append(hd, ul, kb); side.appendChild(b);
+  }
   const f = pjEl('div', 'qformula');
   f.textContent = qtFormula(x, d);
   side.appendChild(f);
@@ -2859,6 +2887,8 @@ function qtGroupDetail(g, mode, th) {
 }
 function qtFormula(x, d) {
   const gs = (d.groups || []).filter((g) => (x.sel || []).includes(qtKey(g)));
+  const fp = qtFillParts(x);
+  if (fp) return 'الكمية = ردم السطح ' + qtN(fp.base) + (fp.digs.length ? ' + ردم الإحلال (' + fp.digs.map((y) => qtN(y.qty)).join(' + ') + ' م² × ' + qtN(fp.k, 3) + ')' : '') + ' = ' + qtN(x.qty) + ' م³';
   if (x.mode === 'fill' || x.mode === 'cut') return 'الكمية = ' + (x.mode === 'fill' ? 'حجم الردم' : 'حجم الحفر') + ' من سطح الفرق' + (gs.length > 1 ? ' (' + gs.map((g) => qtN(g[x.mode])).join(' + ') + ')' : '') + ' = ' + qtN(x.qty) + ' م³';
   const base = gs.map((g) => qtN(x.mode === 'count' ? g.n : x.mode === 'length' ? g.length : x.mode === 'paint' ? g.paint : g.area));
   if (x.mode === 'section') { const h = gs.filter((g) => g.kind === 'hatch'), l = gs.filter((g) => g.kind === 'line'); return 'الكمية = مساحة القطاع ' + qtN(h.reduce((s, g) => s + g.area, 0), 4) + ' م² × الطول ' + qtN(l.reduce((s, g) => s + g.length, 0)) + ' م = ' + qtN(x.qty) + ' م³'; }
@@ -2958,9 +2988,11 @@ async function qtAdd() {
   it.onkeydown = (e) => { if (e.key === 'Enter' && fi.files[0]) go(); };
 }
 async function qtSave(item, fname, path, R, a, q, existing) {
-  const groups = R.groups || [], sel = new Set(a.sel);
+  const groups = R.groups || [], sel = new Set(a.sel.filter((k) => !QT_XK.test(k)));
   const keep = groups.map((g) => sel.has(qtKey(g)) ? g : { ...g, items: g.kind === 'line' ? g.items.map((it) => ({ closed: it.closed, len: it.len })) : g.items, geom: (g.geom || []).map((e) => e.t === 'l' ? { ...e, pts: e.pts.filter((_, i, ar) => i % 3 === 0 || i === ar.length - 1) } : e) });
-  const row = { item, unit: QT_MODES[a.mode][1], mode: a.mode, thickness: a.mode === 'volume' ? a.th : null, qty: +q.toFixed(3), sel: [...sel], detail: { groups: keep, bbox: R.bbox, warnings: R.warnings || [], only: a.only || null } };
+  let extra = [];
+  if (a.mode === 'fill') { const old = existing && (existing.sel || []).find((k) => /^A\|/.test(k)); extra = ['B|' + (+q.toFixed(3)), old || 'A|0.5']; }
+  const row = { item, unit: QT_MODES[a.mode][1], mode: a.mode, thickness: a.mode === 'volume' ? a.th : null, qty: +q.toFixed(3), sel: [...sel, ...extra], detail: { groups: keep, bbox: R.bbox, warnings: R.warnings || [], only: a.only || null } };
   const cols = 'id,item,unit,mode,thickness,qty,file_name,file_path,sel,note,sort,created_at';
   let res;
   if (existing) res = await sb.from('qt_items').update(row).eq('id', existing.id).select(cols).single();
@@ -3029,6 +3061,10 @@ function qtFxText(x, short) {
   return short ? '= ' + ts.join(' + ') : x.item + ' = ' + ts.join(' + ') + ' = ' + qtN(x.qty) + ' ' + x.unit;
 }
 async function qtRecalc() {
+  for (const x of QT.items.filter((y) => y.mode === 'fill')) {
+    const f = qtFillParts(x); if (!f) continue; const q = +f.total.toFixed(3);
+    if (Math.abs(q - +x.qty) > 1e-6) { x.qty = q; await sb.from('qt_items').update({ qty: q }).eq('id', x.id); }
+  }
   for (const x of QT.items.filter((y) => y.mode === 'formula')) {
     const q = +qtFxCalc(x).toFixed(3);
     if (Math.abs(q - +x.qty) > 1e-6) { x.qty = q; await sb.from('qt_items').update({ qty: q }).eq('id', x.id); }
