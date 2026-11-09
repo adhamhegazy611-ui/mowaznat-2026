@@ -4,14 +4,15 @@ const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');
 const { analyze } = require('./_lib/qt');
+const { surfaceGroups } = require('./_lib/surf');
 
 const URL_ = 'https://qadrtqtydtgzachfzpqw.supabase.co';
 const ANON = 'sb_publishable_YWBHuhE3Eb3Qs9VkOP1jEA_335B_9SB';
 
-function bin() {
-  const src = path.join(process.cwd(), 'api', '_bin', 'dwg2dxf');
+function bin(name = 'dwg2dxf') {
+  const src = path.join(process.cwd(), 'api', '_bin', name);
   try { fs.accessSync(src, fs.constants.X_OK); return src; } catch (e) { /* ممكن الملف يتنسخ من غير صلاحية تشغيل */ }
-  const dst = path.join(os.tmpdir(), 'dwg2dxf');
+  const dst = path.join(os.tmpdir(), name);
   if (!fs.existsSync(dst)) { fs.copyFileSync(src, dst); fs.chmodSync(dst, 0o755); }
   return dst;
 }
@@ -37,7 +38,7 @@ module.exports = async (req, res) => {
   const buf = Buffer.from(await r.arrayBuffer());
 
   const id = Math.random().toString(36).slice(2);
-  const tmpIn = path.join(os.tmpdir(), id + '.dwg'), tmpOut = path.join(os.tmpdir(), id + '.dxf');
+  const tmpIn = path.join(os.tmpdir(), id + '.dwg'), tmpOut = path.join(os.tmpdir(), id + '.dxf'), tmpJ = path.join(os.tmpdir(), id + '.json');
   try {
     let dxf;
     if (/\.dxf$/i.test(p) || buf.subarray(0, 64).toString('latin1').includes('SECTION')) dxf = buf.toString('utf8');
@@ -50,10 +51,25 @@ module.exports = async (req, res) => {
       dxf = fs.readFileSync(tmpOut, 'utf8');
     }
     const result = analyze(dxf);
+    // سطوح Civil 3D: بتتقرا من بيانات الـ DWG الخام (dwg2dxf بيسيبها كعناصر Proxy)
+    if (fs.existsSync(tmpIn) && result.warnings.some((w) => /Civil 3D/.test(w))) {
+      try {
+        spawnSync(bin('dwgread'), ['-O', 'JSON', '-o', tmpJ, tmpIn], { timeout: 40000, encoding: 'utf8', maxBuffer: 1 << 24 });
+        if (fs.existsSync(tmpJ)) {
+          const sg = surfaceGroups(fs.readFileSync(tmpJ, 'latin1'), result.groups.length ? result.origin : null);
+          if (sg.groups.length) {
+            result.groups.unshift(...sg.groups);
+            result.warnings = result.warnings.filter((w) => !/Civil 3D/.test(w));
+            if (!result.groups.some((g) => g.kind !== 'surface')) { const e = sg.groups[0].ext; result.bbox = [0, 0, e[2], e[3]]; sg.groups.forEach((g) => { g.geom[0].x0 -= e[0]; g.geom[0].y0 -= e[1]; }); }
+            if (sg.other) result.warnings.push(`فيه ${sg.other} سطح تاني (أرض طبيعية / تصميم) اتشافوا بس مش داخلين في الحسبة — الحسبة من سطح الفرق`);
+          }
+        }
+      } catch (e) { result.warnings.push('تعذّر قراءة سطوح Civil 3D'); }
+    }
     return res.status(200).json(result);
   } catch (e) {
     return res.status(500).json({ error: 'خطأ أثناء الحصر', detail: String(e && e.message || e).slice(0, 300) });
   } finally {
-    for (const f of [tmpIn, tmpOut]) { try { fs.unlinkSync(f); } catch (e) { /* */ } }
+    for (const f of [tmpIn, tmpOut, tmpJ]) { try { fs.unlinkSync(f); } catch (e) { /* */ } }
   }
 };

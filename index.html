@@ -247,6 +247,15 @@ body.in footer{color:#7f94b8}
 #qt .qadd{display:grid;place-items:center;gap:6px;min-height:150px;border:2px dashed #4a5869;border-radius:16px;color:#cfd8e3;background:rgba(255,255,255,.03);cursor:pointer;font:inherit;font-weight:800}
 #qt .qadd:hover{border-color:var(--line);color:var(--line)}
 #qt .qadd span{font-size:30px;line-height:1}
+.qfxd{width:min(620px,94vw)!important}
+.qfxd .qfxl{display:grid;gap:8px;margin:4px 0 8px}
+.qfxd .qfxr{display:grid;grid-template-columns:1fr auto 90px auto;gap:8px;align-items:center}
+.qfxd .qfxr select,.qfxd .qfxr input{width:100%;font:inherit;padding:8px;border:1px solid #cbd5e1;border-radius:8px;min-width:0}
+.qfxd .qformula{margin-top:12px;background:#fff8e1;border:1px dashed #f5b301;border-radius:10px;padding:10px 12px;font-weight:800;color:#0f2747}
+.qfxd .qlink{background:none;border:0;cursor:pointer;font:inherit;color:#c62828;font-weight:800}
+.qfxd .qbtn.sm{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;cursor:pointer;font-weight:700}
+#qt .qtile.fx{border-color:rgba(245,179,1,.55)}
+#qt ul.qfx{margin:8px 0;padding-inline-start:20px;line-height:1.9}
 #qt .qtotal{background:#1f2833;border-top:4px solid var(--line)}
 #qt .qtotal .qbtn.on{background:var(--line);border-color:var(--line);color:#1b1b1b}
 #qt .qmodes button.on{background:#1f2833;border-color:#1f2833;color:var(--line)}
@@ -2595,7 +2604,7 @@ sb.auth.onAuthStateChange((_ev, session) => setTimeout(() => show(session), 0));
    والمستخدم بيختار اللي يتحسب، والاختيار بيتفتكر للبند ده بعد كده. */
 const QT = { list: [], cur: null, items: [], tab: 'sum' };
 const QT_ITEMS = ['كشط أسفلت', 'حفر', 'ردم', 'إحلال', 'أساس', 'طبقة تشريب MC', 'طبقة لاصقة RC', 'أسفلت رابط', 'أسفلت سطحي', 'طبانات', 'بردورة', 'انترلوك', 'تخطيط', 'عدايات'];
-const QT_MODES = { area: ['مساحة', 'م²'], volume: ['حجم (مساحة × سُمك)', 'م³'], section: ['حجم (قطاع × طول)', 'م³'], length: ['طول', 'م.ط'], paint: ['طول مدهون (خط متقطع)', 'م.ط'], count: ['عدد', 'عدد'] };
+const QT_MODES = { area: ['مساحة', 'م²'], volume: ['حجم (مساحة × سُمك)', 'م³'], section: ['حجم (قطاع × طول)', 'م³'], length: ['طول', 'م.ط'], paint: ['طول مدهون (خط متقطع)', 'م.ط'], count: ['عدد', 'عدد'], fill: ['ردم من سطح الفرق', 'م³'], cut: ['حفر من سطح الفرق', 'م³'] };
 // كل بند بيتحسب إزاي: البند بيحدد نوع الكمية، واللوحة بتحدد الحاجة اللي تتحسب
 const QT_RULES = [
   [/طبان/, 'section'],
@@ -2609,6 +2618,8 @@ const QT_BG = /ASPHALT|MARKING|TITL|TEXT|DIM|FRAME|BORDER|DEFPOINTS/i;
 function qtAuto(item, groups, mem) {
   const keys = new Set(groups.map(qtKey));
   if (mem && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: mem.mode, sel: mem.sel.slice(), th: mem.thickness ? +mem.thickness : null, how: 'mem', only: mem.mode === 'count' ? ((QT_RULES.find(([re]) => re.test(item)) || [])[2] || null) : null };
+  const sf = groups.filter((g) => g.kind === 'surface').sort((a, b) => b.area - a.area);
+  if (sf.length && /ردم|حفر|ترابي|تراب/.test(item)) return { mode: /حفر/.test(item) && !/ردم/.test(item) ? 'cut' : 'fill', sel: [qtKey(sf[0])] };
   const rule = QT_RULES.find(([re]) => re.test(item)) || [null, null];
   const [, rmode, hint] = rule;
   const hs = groups.filter((g) => g.kind === 'hatch' && g.area > 0).sort((a, b) => b.area - a.area);
@@ -2639,12 +2650,13 @@ function qtQty(groups, a) {
   if (a.mode === 'section') { const h = gs.filter((g) => g.kind === 'hatch'), l = gs.filter((g) => g.kind === 'line'); if (!h.length || !l.length) return null; return h.reduce((s, g) => s + g.area, 0) * l.reduce((s, g) => s + g.length, 0); }
   if (a.mode === 'length') return sum((g) => g.length);
   if (a.mode === 'paint') return sum((g) => g.paint);
+  if (a.mode === 'fill' || a.mode === 'cut') { const ss = gs.filter((g) => g.kind === 'surface'); return ss.length ? ss.reduce((s, g) => s + g[a.mode], 0) : null; }
   if (a.only) return sum((g) => g.items.length ? g.items.filter((it) => (a.only === 'closed' ? it.closed : !it.closed)).length : g.n);
   return sum((g) => g.n);
 }
 const qtN = (v, d = 2) => (v == null || !isFinite(v) ? '—' : (Math.round(Number(v) * 10 ** d + 1e-7) / 10 ** d).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: d }));
 const qtKey = (g) => g.kind + '|' + g.layer + '|' + (g.pat || g.block || '') + '|' + (g.kind === 'block' ? '' : g.color);
-const qtKind = (g) => g.kind === 'hatch' ? 'هاتش ' + (/SOLID/i.test(g.pat) ? 'مصمت' : g.pat) : g.kind === 'line' ? 'خطوط' + (g.lt && g.lt.some((x) => x !== 'CONTINUOUS') ? ' متقطعة' : '') : 'بلوك «' + g.block + '»';
+const qtKind = (g) => g.kind === 'surface' ? 'سطح فرق Civil 3D' : g.kind === 'hatch' ? 'هاتش ' + (/SOLID/i.test(g.pat) ? 'مصمت' : g.pat) : g.kind === 'line' ? 'خطوط' + (g.lt && g.lt.some((x) => x !== 'CONTINUOUS') ? ' متقطعة' : '') : 'بلوك «' + g.block + '»';
 function qtClip() {
   const c = $('qtCard'), r = c.getBoundingClientRect(), W = innerWidth, H = innerHeight;
   if (!r.width) return 'inset(45% 35% 45% 35% round 14px)';
@@ -2727,6 +2739,7 @@ async function qtOpen(id) {
   ]);
   if (!p || error) { m.textContent = ''; m.appendChild(pjEl('div', 'qempty', 'تعذّر تحميل المشروع.')); return; }
   QT.cur = p; QT.items = its || [];
+  await qtRecalc();
   qtProject();
 }
 function qtProject() {
@@ -2736,19 +2749,20 @@ function qtProject() {
   hero.appendChild(hl);
   const hb = pjEl('div', 'hb');
   const add = pjEl('button', 'qbtn on', '+ إضافة لوحة'); add.type = 'button'; add.onclick = qtAdd;
+  const fx = pjEl('button', 'qbtn', 'ƒ بند محسوب'); fx.type = 'button'; fx.onclick = () => qtFxDlg(); fx.disabled = !QT.items.some((x) => x.mode !== 'formula');
   const ex = pjEl('button', 'qbtn', 'تصدير Excel'); ex.type = 'button'; ex.onclick = qtExport; ex.disabled = !QT.items.length;
   const ed = pjEl('button', 'qbtn', 'تعديل الاسم'); ed.type = 'button';
   ed.onclick = async () => { const v = await qtDlg('تعديل المشروع', p.name, p.battalion); if (!v) return; await sb.from('qt_projects').update({ ...v, updated_at: new Date().toISOString() }).eq('id', p.id); Object.assign(p, v); qtProject(); };
   const del = pjEl('button', 'qbtn danger', 'حذف المشروع'); del.type = 'button';
   del.onclick = async () => { if (!confirm('حذف المشروع «' + p.name + '» بكل لوحه؟')) return; const paths = QT.items.map((x) => x.file_path).filter(Boolean); if (paths.length) await sb.storage.from('qt').remove(paths); await sb.from('qt_projects').delete().eq('id', p.id); qtHome(); };
-  hb.append(add, ex, ed, del); hero.appendChild(hb); m.appendChild(hero);
+  hb.append(add, fx, ex, ed, del); hero.appendChild(hb); m.appendChild(hero);
   if (!QT.items.length) { qtSummary(m); m.appendChild(pjEl('div', 'qempty', 'ارفع أول لوحة: اكتب البند واختار ملف DWG، والكمية هتطلع لوحدها.')); return; }
   const tabs = pjEl('div', 'qtabs');
   [['sum', 'الكميات'], ['det', 'التفاصيل والحسابات']].forEach(([k, t]) => { const b = pjEl('button', QT.tab === k ? 'on' : '', t); b.type = 'button'; b.onclick = () => { QT.tab = k; qtProject(); }; tabs.appendChild(b); });
   m.appendChild(tabs);
   if (QT.tab === 'sum') qtSummary(m); else qtDetails(m);
 }
-const QT_ICON = { area: '▦', volume: '⬛', section: '◩', length: '━', paint: '┅', count: '#' };
+const QT_ICON = { area: '▦', volume: '⬛', section: '◩', length: '━', paint: '┅', count: '#', fill: '▲', cut: '▼', formula: 'ƒ' };
 function qtSummary(m) {
   const g = pjEl('div', 'qtiles');
   QT.items.forEach((x) => {
@@ -2758,14 +2772,20 @@ function qtSummary(m) {
     const tf = pjEl('div', 'tf');
     const dt = pjEl('button', 'qlink', 'التفاصيل ←'); dt.type = 'button'; dt.onclick = () => qtShowItem(x.id);
     const dl = pjEl('button', 'qlink red', 'حذف'); dl.type = 'button';
-    dl.onclick = async () => { if (!confirm('حذف بند «' + x.item + '»؟')) return; if (x.file_path) await sb.storage.from('qt').remove([x.file_path]); await sb.from('qt_items').delete().eq('id', x.id); QT.items = QT.items.filter((y) => y.id !== x.id); qtProject(); };
-    tf.append(pjEl('span', '', (x.file_name || '').replace(/^\d+-/, '')), pjEl('span', 'sp'), dt, dl);
+    dl.onclick = async () => {
+      const users = QT.items.filter((y) => y.mode === 'formula' && qtFxTerms(y).some((t) => t.id === x.id));
+      if (!confirm('حذف بند «' + x.item + '»؟' + (users.length ? '\nالبند ده داخل في حسبة: ' + users.map((y) => y.item).join('، ') : ''))) return;
+      if (x.file_path) await sb.storage.from('qt').remove([x.file_path]); await sb.from('qt_items').delete().eq('id', x.id); QT.items = QT.items.filter((y) => y.id !== x.id); await qtRecalc(); qtProject();
+    };
+    if (x.mode === 'formula') { dt.textContent = 'الحسبة ←'; t.classList.add('fx'); }
+    tf.append(pjEl('span', '', x.mode === 'formula' ? qtFxText(x, true) : (x.file_name || '').replace(/^\d+-/, '')), pjEl('span', 'sp'), dt, dl);
     t.append(tn, tq, tf);
     if (QT.flash === x.id) { t.classList.add('flash'); QT.flash = null; }
     g.appendChild(t);
   });
   const ad = pjEl('button', 'qadd'); ad.type = 'button'; ad.append(pjEl('span', '', '+'), document.createTextNode('إضافة لوحة')); ad.onclick = qtAdd;
   g.appendChild(ad);
+  if (QT.items.some((x) => x.mode !== 'formula')) { const af = pjEl('button', 'qadd'); af.type = 'button'; af.append(pjEl('span', '', 'ƒ'), document.createTextNode('بند محسوب من بنود تانية')); af.onclick = () => qtFxDlg(); g.appendChild(af); }
   m.appendChild(g);
 }
 async function qtDetails(m) {
@@ -2781,6 +2801,15 @@ async function qtShowItem(id) {
 }
 function qtDetailCard(x, d) {
   const c = pjEl('div', 'qcard'); c.id = 'qti-' + x.id;
+  if (x.mode === 'formula') {
+    const h = pjEl('div', 'qdh'); h.append(pjEl('h3', '', 'ƒ ' + x.item), pjEl('span', 'qq', qtN(x.qty) + ' ' + x.unit));
+    const eb = pjEl('button', 'qbtn sm', '✎ تعديل الحسبة'); eb.type = 'button'; eb.onclick = () => qtFxDlg(x); h.appendChild(eb);
+    c.append(h, pjEl('div', 'qsub', 'بند محسوب من بنود تانية في المشروع — بيتحدث لوحده لو أي بند منهم اتغير'));
+    const ul = pjEl('ul', 'qfx');
+    qtFxTerms(x).forEach((t) => { const y = QT.items.find((z) => z.id === t.id); const li = pjEl('li'); li.textContent = y ? y.item + ': ' + qtN(y.qty) + ' ' + y.unit + ' × ' + qtN(t.k, 4) + ' = ' + qtN(y.qty * t.k) + ' ' + y.unit : '⚠️ بند «' + (t.name || '؟') + '» اتمسح — مش داخل في الحسبة'; ul.appendChild(li); });
+    const f = pjEl('div', 'qformula'); f.textContent = qtFxText(x);
+    c.append(ul, f); return c;
+  }
   const h = pjEl('div', 'qdh'); h.append(pjEl('h3', '', x.item), pjEl('span', 'qq', qtN(x.qty) + ' ' + x.unit));
   if (d && d.groups) { const eb = pjEl('button', 'qbtn sm', '✎ تعديل الحسبة'); eb.type = 'button'; eb.onclick = () => { const box = pjEl('div'); c.replaceWith(box); qtPick(box, x.item, x.file_name, x.file_path, { groups: d.groups, bbox: d.bbox, warnings: d.warnings }, x); }; h.appendChild(eb); }
   c.appendChild(h);
@@ -2802,6 +2831,16 @@ function qtGroupDetail(g, mode, th) {
   const hd = pjEl('div', 'qgh'); const sw = pjEl('i'); sw.style.background = g.hex; hd.append(sw, pjEl('b', '', qtKind(g)), pjEl('span', '', 'طبقة «' + g.layer + '»'));
   b.appendChild(hd);
   const ul = pjEl('ul');
+  const li = (t, c) => { const e = pjEl('li', c || ''); e.textContent = t; ul.appendChild(e); };
+  if (g.kind === 'surface') {
+    li('عدد النقط ' + qtN(g.n, 0) + ' نقطة، اتعمل منها ' + qtN(g.tris, 0) + ' مثلث (شبكة TIN)');
+    li('المساحة المغطاة ' + qtN(g.area) + ' م² — الفرق بين المنسوبين من ' + qtN(g.zmin, 3) + ' لحد +' + qtN(g.zmax, 3) + ' م');
+    li((mode === 'cut' ? '' : '◀ ') + 'الردم (الفرق موجب) = ' + qtN(g.fill) + ' م³');
+    li((mode === 'cut' ? '◀ ' : '') + 'الحفر (الفرق سالب) = ' + qtN(g.cut) + ' م³');
+    li('الصافي = ' + qtN(g.fill - g.cut) + ' م³ ' + (g.fill >= g.cut ? 'ردم' : 'حفر'));
+    li('الطريقة: كل مثلث حجمه = مساحته × متوسط الفرق في رؤوسه، والمثلث اللي فيه موجب وسالب بيتقسم عند خط الصفر. المثلثات اللي ضلعها أطول من ' + g.maxEdge + ' م بتتشال (برا حدود السطح).', 'muted');
+    b.appendChild(ul); return b;
+  }
   if (g.kind === 'hatch') {
     g.items.forEach((it, i) => {
       const li = pjEl('li'); const pos = it.parts.filter((p) => !p.hole), neg = it.parts.filter((p) => p.hole);
@@ -2820,6 +2859,7 @@ function qtGroupDetail(g, mode, th) {
 }
 function qtFormula(x, d) {
   const gs = (d.groups || []).filter((g) => (x.sel || []).includes(qtKey(g)));
+  if (x.mode === 'fill' || x.mode === 'cut') return 'الكمية = ' + (x.mode === 'fill' ? 'حجم الردم' : 'حجم الحفر') + ' من سطح الفرق' + (gs.length > 1 ? ' (' + gs.map((g) => qtN(g[x.mode])).join(' + ') + ')' : '') + ' = ' + qtN(x.qty) + ' م³';
   const base = gs.map((g) => qtN(x.mode === 'count' ? g.n : x.mode === 'length' ? g.length : x.mode === 'paint' ? g.paint : g.area));
   if (x.mode === 'section') { const h = gs.filter((g) => g.kind === 'hatch'), l = gs.filter((g) => g.kind === 'line'); return 'الكمية = مساحة القطاع ' + qtN(h.reduce((s, g) => s + g.area, 0), 4) + ' م² × الطول ' + qtN(l.reduce((s, g) => s + g.length, 0)) + ' م = ' + qtN(x.qty) + ' م³'; }
   if (x.mode === 'count' && gs.length) { return 'الكمية = عدد ' + qtN(x.qty, 0) + ' (من طبقة «' + gs.map((g) => g.layer).join('، ') + '»)'; }
@@ -2829,14 +2869,29 @@ function qtFormula(x, d) {
   return s + ' = ' + qtN(x.qty) + ' ' + x.unit;
 }
 function qtSvg(groups, sel, bbox) {
-  const NS = 'http://www.w3.org/2000/svg', W = bbox ? bbox[2] : 1, H = bbox ? bbox[3] : 1, pad = Math.max(W, H) * 0.03;
-  const s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', `${-pad} ${-pad} ${W + 2 * pad} ${H + 2 * pad}`); s.setAttribute('class', 'qsvg');
-  const g0 = document.createElementNS(NS, 'g'); g0.setAttribute('transform', `translate(0 ${H}) scale(1 -1)`); s.appendChild(g0);
+  const NS = 'http://www.w3.org/2000/svg';
+  let X0 = 0, Y0 = 0, X1 = bbox ? bbox[2] : 1, Y1 = bbox ? bbox[3] : 1;
+  const sfs = groups.filter((g) => g.kind === 'surface' && g.ext), sfOn = sfs.filter((g) => sel.has(qtKey(g)));
+  if (sfOn.length) { X0 = Math.min(...sfOn.map((g) => g.ext[0])); Y0 = Math.min(...sfOn.map((g) => g.ext[1])); X1 = Math.max(...sfOn.map((g) => g.ext[2])); Y1 = Math.max(...sfOn.map((g) => g.ext[3])); }
+  const W = X1 - X0 || 1, H = Y1 - Y0 || 1, pad = Math.max(W, H) * 0.03;
+  const s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', `${X0 - pad} ${-pad} ${W + 2 * pad} ${H + 2 * pad}`); s.setAttribute('class', 'qsvg');
+  const g0 = document.createElementNS(NS, 'g'); g0.setAttribute('transform', `translate(0 ${Y1}) scale(1 -1)`); s.appendChild(g0);
   const order = groups.slice().sort((a, b) => (sel.has(qtKey(a)) ? 1 : 0) - (sel.has(qtKey(b)) ? 1 : 0));
   order.forEach((g) => {
     const on = sel.has(qtKey(g));
     (g.geom || []).forEach((e) => {
-      if (e.t === 'h') {
+      if (e.t === 'g') { // شبكة سطح الفرق: أصفر/برتقاني ردم، أزرق حفر
+        const zs = e.z.filter((v) => v != null), mx = Math.max(1, ...zs.map(Math.abs));
+        const path = {};
+        e.z.forEach((v, k) => {
+          if (v == null) return;
+          const lv = Math.min(4, Math.ceil(Math.abs(v) / mx * 4.0001)), key = (v >= 0 ? 'f' : 'c') + lv;
+          const x = e.x0 + (k % e.nx) * e.cs, y = e.y0 + Math.floor(k / e.nx) * e.cs;
+          path[key] = (path[key] || '') + 'M' + x.toFixed(2) + ' ' + y.toFixed(2) + 'h' + e.cs + 'v' + e.cs + 'h' + (-e.cs) + 'Z';
+        });
+        const F = ['#fff3c4', '#ffd75e', '#f5b301', '#e07b00'], C = ['#cfe6ff', '#8cc4ff', '#3d8bfd', '#1f5fd1'];
+        Object.entries(path).forEach(([k, d]) => { const p = document.createElementNS(NS, 'path'); p.setAttribute('d', d); p.setAttribute('fill', (k[0] === 'f' ? F : C)[+k[1] - 1]); p.setAttribute('fill-opacity', on ? '.9' : '.35'); g0.appendChild(p); });
+      } else if (e.t === 'h') {
         const p = document.createElementNS(NS, 'path');
         p.setAttribute('d', e.polys.map((q) => 'M' + q.map((v) => v[0] + ' ' + v[1]).join('L') + 'Z').join(''));
         p.setAttribute('fill-rule', 'evenodd'); p.setAttribute('fill', on ? '#f5b301' : '#3a4757'); p.setAttribute('fill-opacity', on ? '.6' : '.5');
@@ -2913,6 +2968,7 @@ async function qtSave(item, fname, path, R, a, q, existing) {
   if (res.error) { alert('تعذّر الحفظ'); return null; }
   await sb.from('qt_projects').update({ updated_at: new Date().toISOString() }).eq('id', QT.cur.id);
   if (existing) QT.items = QT.items.map((y) => (y.id === existing.id ? res.data : y)); else QT.items.push(res.data);
+  await qtRecalc();
   return res.data;
 }
 // اختيار الحاجة اللي تتحسب يدوي (لو السيستم ماعرفش، أو من «تعديل الحسبة» في التفاصيل)
@@ -2943,7 +2999,7 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
       const cb = pjEl('input'); cb.type = 'checkbox'; cb.checked = sel.has(k);
       cb.onchange = () => { if (cb.checked) sel.add(k); else sel.delete(k); draw(); };
       const sw = pjEl('i'); sw.style.background = g.hex;
-      const v = pjEl('span', 'v', g.kind === 'hatch' ? qtN(g.area) + ' م²' : g.kind === 'line' ? qtN(g.length) + ' م.ط' : g.n + ' عدد');
+      const v = pjEl('span', 'v', g.kind === 'surface' ? 'ردم ' + qtN(g.fill) + ' · حفر ' + qtN(g.cut) + ' م³' : g.kind === 'hatch' ? qtN(g.area) + ' م²' : g.kind === 'line' ? qtN(g.length) + ' م.ط' : g.n + ' عدد');
       if (g.kind === 'line') v.appendChild(pjEl('small', '', g.n + ' خط' + (g.area ? ' · مقفول ' + qtN(g.area) + ' م²' : '') + (g.paint < g.length - 0.01 ? ' · مدهون ' + qtN(g.paint) : '')));
       row.append(cb, sw, pjEl('b', '', qtKind(g)), pjEl('span', 'ly', g.layer), v);
       list.appendChild(row);
@@ -2964,6 +3020,68 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
     const act = pjEl('div', 'qact'); act.append(sv, cancel); tot.appendChild(act);
   };
   draw();
+}
+/* ---------- بنود محسوبة: بند = Σ (بند × معامل) ---------- */
+function qtFxTerms(x) { return (x.sel || []).map((v) => { const [id, k, ...nm] = String(v).split('|'); return { id, k: +k, name: nm.join('|') }; }).filter((t) => t.id && isFinite(t.k)); }
+function qtFxCalc(x) { return qtFxTerms(x).reduce((s, t) => { const y = QT.items.find((z) => z.id === t.id && z.mode !== 'formula'); return s + (y ? +y.qty * t.k : 0); }, 0); }
+function qtFxText(x, short) {
+  const ts = qtFxTerms(x).map((t) => { const y = QT.items.find((z) => z.id === t.id); const nm = y ? y.item : (t.name || '؟'); return short ? nm + (t.k !== 1 ? ' × ' + qtN(t.k, 4) : '') : (y ? qtN(y.qty) : '0') + (t.k !== 1 ? ' × ' + qtN(t.k, 4) : ''); });
+  return short ? '= ' + ts.join(' + ') : x.item + ' = ' + ts.join(' + ') + ' = ' + qtN(x.qty) + ' ' + x.unit;
+}
+async function qtRecalc() {
+  for (const x of QT.items.filter((y) => y.mode === 'formula')) {
+    const q = +qtFxCalc(x).toFixed(3);
+    if (Math.abs(q - +x.qty) > 1e-6) { x.qty = q; await sb.from('qt_items').update({ qty: q }).eq('id', x.id); }
+  }
+}
+function qtFxDlg(existing) {
+  const base = QT.items.filter((x) => x.mode !== 'formula'); if (!base.length) return;
+  let terms = existing ? qtFxTerms(existing).filter((t) => base.some((y) => y.id === t.id)) : [];
+  if (!terms.length) terms = [{ id: base[0].id, k: 1 }];
+  const w = pjEl('div', 'pjm'), bx = pjEl('div', 'bx qfxd'), hd = pjEl('div', 'hd'), bd = pjEl('div', 'bd'), ft = pjEl('div', 'ft');
+  hd.append(pjEl('b', '', existing ? 'تعديل بند محسوب' : 'بند محسوب من بنود تانية'));
+  const l1 = pjEl('label', 'f', 'اسم البند'), i1 = pjEl('input'); i1.type = 'text'; i1.value = existing ? existing.item : ''; i1.placeholder = 'مثلاً ردم أتربة'; i1.maxLength = 200;
+  const l2 = pjEl('label', 'f', 'الوحدة'), i2 = pjEl('input'); i2.type = 'text'; i2.value = existing ? existing.unit : ''; i2.maxLength = 20;
+  const lt = pjEl('label', 'f', 'البنود الداخلة في الحسبة (البند × المعامل)'), list = pjEl('div', 'qfxl'), more = pjEl('button', 'qbtn sm', '+ بند'); more.type = 'button';
+  const pv = pjEl('div', 'qformula'), er = pjEl('div', 'err');
+  bd.append(l1, i1, lt, list, more, l2, i2, pv, er);
+  let unitTouched = !!existing; i2.oninput = () => { unitTouched = true; prev(); };
+  const prev = () => {
+    const tmp = { item: i1.value.trim() || 'البند', unit: i2.value.trim(), sel: terms.map((t) => t.id + '|' + t.k) };
+    if (!unitTouched) { const y = base.find((z) => z.id === terms[0].id); i2.value = y ? y.unit : ''; tmp.unit = i2.value; }
+    tmp.qty = qtFxCalc(tmp); pv.textContent = qtFxText(tmp);
+    const us = new Set(terms.map((t) => (base.find((z) => z.id === t.id) || {}).unit)); er.textContent = us.size > 1 ? 'ملحوظة: البنود وحداتها مختلفة (' + [...us].join(' / ') + ') — اتأكد إن المعامل بيحوّلها صح' : '';
+  };
+  const draw = () => {
+    list.textContent = '';
+    terms.forEach((t, i) => {
+      const r = pjEl('div', 'qfxr'), se = pjEl('select');
+      base.forEach((y) => { const o = pjEl('option', '', y.item + ' — ' + qtN(y.qty) + ' ' + y.unit); o.value = y.id; o.selected = y.id === t.id; se.appendChild(o); });
+      se.onchange = () => { t.id = se.value; prev(); };
+      const k = pjEl('input'); k.type = 'number'; k.step = 'any'; k.value = t.k; k.title = 'المعامل'; k.oninput = () => { t.k = parseFloat(k.value); if (!isFinite(t.k)) t.k = 0; prev(); };
+      const x = pjEl('button', 'qlink red', '✕'); x.type = 'button'; x.disabled = terms.length < 2; x.onclick = () => { terms.splice(i, 1); draw(); };
+      r.append(se, pjEl('span', '', '×'), k, x); list.appendChild(r);
+    });
+    prev();
+  };
+  more.onclick = () => { const used = new Set(terms.map((t) => t.id)); const y = base.find((z) => !used.has(z.id)) || base[0]; terms.push({ id: y.id, k: 1 }); draw(); };
+  const ok = pjEl('button', 'ok', 'حفظ'); ok.type = 'button'; const no = pjEl('button', 'no', 'إلغاء'); no.type = 'button';
+  ft.append(ok, no); bx.append(hd, bd, ft); w.appendChild(bx); document.body.appendChild(w);
+  const done = () => w.remove();
+  no.onclick = done; w.onclick = (e) => { if (e.target === w) done(); };
+  ok.onclick = async () => {
+    const name = i1.value.trim(); if (!name) { er.textContent = 'اكتب اسم البند'; i1.focus(); return; }
+    const sel = terms.map((t) => t.id + '|' + t.k + '|' + ((base.find((z) => z.id === t.id) || {}).item || ''));
+    const row = { item: name, unit: i2.value.trim() || '—', mode: 'formula', thickness: null, sel, qty: +qtFxCalc({ sel }).toFixed(3), detail: { formula: true } };
+    const cols = 'id,item,unit,mode,thickness,qty,file_name,file_path,sel,note,sort,created_at';
+    ok.disabled = true;
+    const res = existing ? await sb.from('qt_items').update(row).eq('id', existing.id).select(cols).single() : await sb.from('qt_items').insert({ ...row, project_id: QT.cur.id, sort: QT.items.length }).select(cols).single();
+    if (res.error) { ok.disabled = false; er.textContent = 'تعذّر الحفظ'; return; }
+    await sb.from('qt_projects').update({ updated_at: new Date().toISOString() }).eq('id', QT.cur.id);
+    if (existing) QT.items = QT.items.map((y) => (y.id === existing.id ? res.data : y)); else QT.items.push(res.data);
+    done(); QT.flash = res.data.id; qtProject();
+  };
+  draw(); setTimeout(() => (existing ? null : i1.focus()), 30);
 }
 function qtExport() {
   const p = QT.cur;
