@@ -1,5 +1,8 @@
 {
   "rewrites": [
     { "source": "/api/signup", "destination": "https://mo2ysaaat.vercel.app/api/signup" }
-  ]
+  ],
+  "functions": {
+    "api/qt.js": { "includeFiles": "api/_bin/**", "maxDuration": 60, "memory": 1769 }
+  }
 }

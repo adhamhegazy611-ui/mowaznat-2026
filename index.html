@@ -128,6 +128,84 @@ body.in footer{color:#7f94b8}
 @media (max-width:900px){main{padding-top:24px}.hero{text-align:right}.hero h1{font-size:26px}}
 .c1{--c:#b8860b;--soft:#fdf6e3}.c2{--c:#1f5135;--soft:#e8f1eb}.c3{--c:#1e3a66;--soft:#eaf0f8}
 .c4{--c:#9a3412;--soft:#fdeee6}
+.c5{--c:#0f766e;--soft:#e6f4f2}
+#qt{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;background:#f4f6f9;color:var(--ink)}
+#qt .vbar{flex:none;height:46px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--navy);color:#fff;box-shadow:inset 0 -3px 0 #0f766e}
+#qt .vbar button{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:9px;padding:5px 12px;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
+#qt .vbar b{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#qt .qmain{flex:1;overflow:auto;padding:18px max(16px,calc((100vw - 1180px)/2))}
+#qt .qhero{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;background:linear-gradient(135deg,#0f2747,#134e4a);color:#fff;border-radius:18px;padding:20px 22px;margin-bottom:16px}
+#qt .qhero h2{margin:4px 0 6px;font-size:22px}
+#qt .qhero p{margin:0;max-width:640px;color:#cfe3e0;font-size:13.5px;line-height:1.7}
+#qt .qhero .chip{display:inline-block;background:rgba(255,255,255,.14);border-radius:99px;padding:3px 10px;font-size:12px;font-weight:700}
+#qt .qhero .hb{display:flex;gap:6px;flex-wrap:wrap}
+#qt .qbtn{border:1px solid #d7deea;background:#fff;color:#0f2747;border-radius:10px;padding:8px 14px;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
+#qt .qbtn.on{background:#0f766e;color:#fff;border-color:#0f766e}
+#qt .qhero .qbtn{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.3)}
+#qt .qhero .qbtn.on{background:#fff;color:#0f2747;border-color:#fff}
+#qt .qbtn.danger{color:#fecaca!important}
+#qt .qbtn:disabled{opacity:.45;cursor:default}
+#qt .qgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+#qt .qproj{text-align:start;background:#fff;border:1px solid #e3e8f0;border-radius:14px;padding:14px 16px;cursor:pointer;font:inherit;display:flex;flex-direction:column;gap:4px;box-shadow:0 1px 3px rgba(15,23,42,.05)}
+#qt .qproj:hover{border-color:#0f766e;box-shadow:0 6px 18px rgba(15,118,110,.12)}
+#qt .qproj b{font-size:15px;color:#0f2747}
+#qt .qproj span{font-size:13px;color:#475569}
+#qt .qproj small{font-size:11.5px;color:#94a3b8}
+#qt .qempty{padding:30px;text-align:center;color:#64748b}
+#qt .qcard{background:#fff;border-radius:16px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,23,42,.06),0 10px 28px rgba(15,23,42,.08)}
+#qt .qcard h3{margin:0 0 10px;font-size:16px;color:#0f2747}
+#qt .qtabs{display:flex;gap:6px;margin-bottom:12px}
+#qt .qtabs button{border:1px solid #d7deea;background:#fff;border-radius:99px;padding:7px 18px;font:inherit;font-weight:800;font-size:13.5px;cursor:pointer;color:#334155}
+#qt .qtabs button.on{background:#0f2747;color:#fff;border-color:#0f2747}
+#qt table.qt{width:100%;border-collapse:collapse;font-size:13.5px}
+#qt table.qt th{background:#f1f5f9;color:#334155;font-weight:800;padding:8px 10px;text-align:start;border-bottom:1px solid #e2e8f0}
+#qt table.qt td{padding:8px 10px;border-bottom:1px solid #eef2f7}
+#qt table.qt td.c{text-align:center}
+#qt table.qt td.n{font-variant-numeric:tabular-nums;font-weight:700}
+#qt table.qt th.c{text-align:center}
+#qt table.qt td.big{font-size:15px;color:#0f766e}
+#qt table.qt td.fn{color:#64748b;font-size:12.5px;word-break:break-all}
+#qt table.qt td.acts{white-space:nowrap;text-align:end}
+#qt .qlink{border:0;background:none;color:#0f766e;font:inherit;font-weight:800;cursor:pointer;padding:2px 6px}
+#qt .qlink.red{color:#b91c1c}
+#qt .qrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){#qt .qrow{grid-template-columns:1fr}}
+#qt .qf{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:700;color:#334155}
+#qt .qf input{border:1px solid #cbd5e1;border-radius:10px;padding:9px 12px;font:inherit;font-size:14px;background:#fff}
+#qt .qf.inl{margin:8px 0}
+#qt .qstat{margin-top:10px;font-weight:700;color:#0f2747;min-height:20px}
+#qt .spin{display:inline-block;width:14px;height:14px;border:2px solid #cbd5e1;border-top-color:#0f766e;border-radius:50%;animation:qspin .8s linear infinite;vertical-align:-2px;margin-inline-end:6px}
+@keyframes qspin{to{transform:rotate(360deg)}}
+#qt .qdet{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:900px){#qt .qdet{grid-template-columns:1fr}}
+#qt .qsvg{width:100%;height:auto;max-height:62vh;background:#fbfcfe;border:1px solid #e6ebf2;border-radius:12px}
+#qt .qhint{background:#f0fdfa;border:1px solid #ccfbf1;color:#115e59;border-radius:10px;padding:8px 12px;font-size:13px;margin-bottom:10px}
+#qt .qmodes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+#qt .qmodes button{border:1px solid #d7deea;background:#fff;border-radius:99px;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:800;cursor:pointer;color:#334155}
+#qt .qmodes button.on{background:#0f766e;color:#fff;border-color:#0f766e}
+#qt .qglist{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+#qt .qgi{display:grid;grid-template-columns:auto auto auto 1fr auto;align-items:center;gap:8px;border:1px solid #e3e8f0;border-radius:10px;padding:8px 10px;cursor:pointer;font-size:13px}
+#qt .qgi.on{border-color:#0f766e;background:#f0fdfa}
+#qt .qgi i,#qt .qgh i{width:14px;height:14px;border-radius:4px;display:inline-block}
+#qt .qgi .ly{color:#64748b;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;unicode-bidi:isolate;text-align:end}
+#qt .qgi .v{font-weight:800;font-variant-numeric:tabular-nums;text-align:end}
+#qt .qgi .v small{display:block;font-weight:600;color:#64748b;font-size:11.5px}
+#qt .qwarn{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:7px 10px;font-size:12.5px;margin:6px 0}
+#qt .qtotal{display:flex;align-items:center;flex-wrap:wrap;gap:8px;background:#0f2747;color:#fff;border-radius:12px;padding:12px 14px;margin-top:10px;font-weight:700}
+#qt .qtotal b{font-size:22px}
+#qt .qtotal .qact{margin-inline-start:auto;display:flex;gap:6px}
+#qt .qtotal .qbtn:not(.on){background:transparent;color:#fff;border-color:rgba(255,255,255,.35)}
+#qt .qtotal .qbtn.on{background:#14b8a6;border-color:#14b8a6}
+#qt .qdh{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+#qt .qdh .qq{font-size:18px;font-weight:800;color:#0f766e}
+#qt .qsub{font-size:12px;color:#94a3b8;margin:-6px 0 10px}
+#qt .qg{border:1px solid #e3e8f0;border-radius:10px;padding:8px 12px;margin-bottom:8px}
+#qt .qgh{display:flex;align-items:center;gap:8px;font-size:13px}
+#qt .qgh span{color:#64748b;font-size:12px}
+#qt .qg ul{margin:6px 0 0;padding-inline-start:18px;font-size:13px;line-height:1.8}
+#qt .qg li.muted{color:#64748b;font-size:12px}
+#qt .qformula{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:10px 12px;font-weight:800;color:#0f2747;font-size:13.5px}
+
 .card[hidden]{display:none}
 /* ---------- تحليل الأسعار (أدمن) ---------- */
 /* تحليل سعر لمشروع جديد */
@@ -605,6 +683,11 @@ body:not(.in) footer{color:#6f84a6}
       <h2>تحليل أسعار</h2>
       <div class="go"><span>فتح ←</span><small>للأدمن فقط</small></div>
     </a>
+    <a class="card c5" id="qtCard" href="#" hidden>
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V8l4-3 4 3v13"/><path d="M13 21V12h6v9"/><path d="M8 11h2M8 14h2M8 17h2M15.5 15h1M15.5 18h1"/></svg></div>
+      <h2>حصر الكميات</h2>
+      <div class="go"><span>فتح ←</span><small>للأدمن فقط</small></div>
+    </a>
   </div>
 </main>
 <footer>مكتب التصميمات</footer>
@@ -613,6 +696,12 @@ body:not(.in) footer{color:#6f84a6}
   <div class="vbar"><button type="button" id="paBack">→ البوابة</button><button type="button" class="menu" id="paMenu">☰ البنود</button><b>تحليل أسعار</b><span class="paur"><button type="button" id="paUndo" title="تراجع (Ctrl+Z)" disabled>↶ تراجع</button><button type="button" id="paRedo" title="إعادة (Ctrl+Y)" disabled>↷</button></span><input id="paQ" type="search" placeholder="بحث في البنود…" autocomplete="off"></div>
   <div class="vload gone" id="paLoad" style="top:46px;--ac:#9a3412;--ac2:#c2501f"><div class="lic" id="paLic"></div><b>تحليل أسعار</b><div class="road"></div></div>
   <div class="pbody"><nav id="paNav"></nav><div class="pmain" id="paMain"><div class="msg">جاري التحميل…</div></div></div>
+</div>
+
+
+<div id="qt" class="hidden">
+  <div class="vbar"><button type="button" id="qtBack">→ البوابة</button><button type="button" id="qtBack2" hidden>→ رجوع</button><b id="qtTitle">حصر الكميات</b></div>
+  <div class="qmain" id="qtMain"></div>
 </div>
 
 <!-- النظام بيفتح هنا جوه البوابة نفسها -->
@@ -659,7 +748,7 @@ function show(session) {
   $('who').classList.toggle('hidden', !inn);
   if (!inn && typeof closeApp === 'function' && $('view')) closeApp();
   if (inn) { $('uName').textContent = (session.user.email || '').split('@')[0]; loadAdmin(session.user.id); }
-  else { $('reqBtn').classList.add('hidden'); $('paCard').hidden = true; closePA(); }
+  else { $('reqBtn').classList.add('hidden'); $('paCard').hidden = true; $('qtCard').hidden = true; closePA(); closeQT(); }
 }
 
 /* ===== طلبات إنشاء الحسابات (للمسؤول بس) ===== */
@@ -672,6 +761,7 @@ async function loadAdmin(uid) {
   } catch (e) { IS_ADMIN = false; }
   $('reqBtn').classList.toggle('hidden', !IS_ADMIN);
   $('paCard').hidden = !IS_ADMIN;
+  $('qtCard').hidden = !IS_ADMIN;
   if (IS_ADMIN) refreshReqs();
 }
 async function getReqs() {
@@ -2447,6 +2537,363 @@ function pjPrint() { const h = pjBoqHtml(); if (!h) return; const w = window.ope
 
 sb.auth.getSession().then(({ data }) => show(data.session));
 sb.auth.onAuthStateChange((_ev, session) => setTimeout(() => show(session), 0));
+
+/* ===== حصر الكميات =====
+   مشروع ← لوح DWG ← كل لوحة بند (كشط، حفر، ...). السيرفر بيقرا اللوحة ويرجّع المجموعات (هاتش/خطوط/بلوكات)
+   والمستخدم بيختار اللي يتحسب، والاختيار بيتفتكر للبند ده بعد كده. */
+const QT = { list: [], cur: null, items: [], tab: 'sum' };
+const QT_ITEMS = ['كشط أسفلت', 'حفر', 'ردم', 'إحلال', 'أساس', 'طبقة تشريب MC', 'طبقة لاصقة RC', 'أسفلت رابط', 'أسفلت سطحي', 'طبانات', 'بردورة', 'انترلوك', 'تخطيط', 'عدايات'];
+const QT_MODES = { area: ['مساحة', 'م²'], volume: ['حجم', 'م³'], length: ['طول', 'م.ط'], paint: ['طول مدهون (خط متقطع)', 'م.ط'], count: ['عدد', 'عدد'] };
+const qtN = (v, d = 2) => (v == null || !isFinite(v) ? '—' : (Math.round(Number(v) * 10 ** d + 1e-7) / 10 ** d).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: d }));
+const qtKey = (g) => g.kind + '|' + g.layer + '|' + (g.pat || g.block || '') + '|' + (g.kind === 'block' ? '' : g.color);
+const qtKind = (g) => g.kind === 'hatch' ? 'هاتش ' + (/SOLID/i.test(g.pat) ? 'مصمت' : g.pat) : g.kind === 'line' ? 'خطوط' + (g.lt && g.lt.some((x) => x !== 'CONTINUOUS') ? ' متقطعة' : '') : 'بلوك «' + g.block + '»';
+function qtClip() {
+  const c = $('qtCard'), r = c.getBoundingClientRect(), W = innerWidth, H = innerHeight;
+  if (!r.width) return 'inset(45% 35% 45% 35% round 14px)';
+  return `inset(${Math.max(0, r.top)}px ${Math.max(0, W - r.right)}px ${Math.max(0, H - r.bottom)}px ${Math.max(0, r.left)}px round 14px)`;
+}
+function openQT() {
+  if (!IS_ADMIN) return;
+  const q = $('qt'); q.classList.remove('hidden'); document.body.classList.add('viewing');
+  q.animate([{ clipPath: qtClip() }, { clipPath: 'inset(0px 0px 0px 0px round 0px)' }], { duration: 600, easing: 'cubic-bezier(.2,.85,.25,1)' });
+  history.pushState({ qt: 1 }, '');
+  qtHome();
+}
+function closeQT() {
+  const q = $('qt'); if (q.classList.contains('hidden')) return;
+  const fin = () => { q.classList.add('hidden'); document.body.classList.remove('viewing'); };
+  try { q.animate([{ clipPath: 'inset(0px 0px 0px 0px round 0px)' }, { clipPath: qtClip() }], { duration: 400, easing: 'cubic-bezier(.4,0,.2,1)' }).onfinish = fin; } catch (e) { fin(); }
+}
+function qtMain(title, back) {
+  const m = $('qtMain'); m.textContent = ''; m.scrollTop = 0;
+  $('qtTitle').textContent = title || 'حصر الكميات';
+  $('qtBack2').hidden = !back; $('qtBack2').onclick = back || null;
+  return m;
+}
+
+/* ---------- المشروعات ---------- */
+async function qtHome() {
+  QT.cur = null;
+  const m = qtMain('حصر الكميات');
+  const hero = pjEl('div', 'qhero');
+  hero.append(pjEl('h2', '', 'حصر الكميات من اللوح'), pjEl('p', '', 'اعمل مشروع، وضيف فيه لوح AutoCAD (DWG). كل لوحة تكتب البند بتاعها، والسيستم يحصر الهاتش بالمساحة أو الخطوط بالطول أو البلوكات بالعدد، ويطلعلك الكمية على طول.'));
+  const nb = pjEl('button', 'qbtn on', '+ مشروع جديد'); nb.type = 'button'; nb.onclick = qtNew; hero.appendChild(nb);
+  m.appendChild(hero);
+  const grid = pjEl('div', 'qgrid'); grid.appendChild(pjEl('div', 'qempty', 'جاري التحميل…')); m.appendChild(grid);
+  const [{ data: ps, error }, { data: its }] = await Promise.all([
+    sb.from('qt_projects').select('*').order('updated_at', { ascending: false }),
+    sb.from('qt_items').select('project_id'),
+  ]);
+  grid.textContent = '';
+  if (error) { grid.appendChild(pjEl('div', 'qempty', 'تعذّر تحميل المشروعات.')); return; }
+  QT.list = ps || [];
+  if (!QT.list.length) { grid.appendChild(pjEl('div', 'qempty', 'لسه مفيش مشروعات. دوس «+ مشروع جديد».')); return; }
+  const cnt = {}; (its || []).forEach((x) => { cnt[x.project_id] = (cnt[x.project_id] || 0) + 1; });
+  QT.list.forEach((p) => {
+    const c = pjEl('button', 'qproj'); c.type = 'button';
+    c.append(pjEl('b', '', p.name), pjEl('span', '', (p.battalion ? 'ك ' + p.battalion + ' · ' : '') + (cnt[p.id] || 0) + ' لوحة'), pjEl('small', '', new Date(p.updated_at).toLocaleDateString('ar-EG')));
+    c.onclick = () => qtOpen(p.id);
+    grid.appendChild(c);
+  });
+}
+async function qtNew() {
+  const v = await qtDlg('مشروع حصر جديد', '', '');
+  if (!v) return;
+  const { data, error } = await sb.from('qt_projects').insert({ name: v.name, battalion: v.battalion }).select('*').single();
+  if (error) return alert('تعذّر إنشاء المشروع');
+  qtOpen(data.id);
+}
+function qtDlg(title, name, bat) {
+  return new Promise((res) => {
+    const w = pjEl('div', 'pjm'), bx = pjEl('div', 'bx'), hd = pjEl('div', 'hd'), bd = pjEl('div', 'bd'), ft = pjEl('div', 'ft');
+    hd.append(pjEl('b', '', title));
+    const l1 = pjEl('label', 'f', 'اسم المشروع'), i1 = pjEl('input'); i1.type = 'text'; i1.value = name || ''; i1.maxLength = 200;
+    const l2 = pjEl('label', 'f', 'الكتيبة (اختياري)'), i2 = pjEl('input'); i2.type = 'text'; i2.value = bat || ''; i2.placeholder = 'مثلاً 44';
+    const er = pjEl('div', 'err'); bd.append(l1, i1, l2, i2, er);
+    const ok = pjEl('button', 'ok', 'حفظ'); ok.type = 'button'; const no = pjEl('button', 'no', 'إلغاء'); no.type = 'button';
+    ft.append(ok, no); bx.append(hd, bd, ft); w.appendChild(bx); document.body.appendChild(w);
+    const done = (v) => { w.remove(); res(v); };
+    ok.onclick = () => { const n = i1.value.trim(); if (!n) { er.textContent = 'اكتب اسم المشروع'; i1.focus(); return; } done({ name: n, battalion: i2.value.trim().replace(/^ك\s*/, '') || null }); };
+    no.onclick = () => done(null); w.onclick = (e) => { if (e.target === w) done(null); };
+    [i1, i2].forEach((i) => (i.onkeydown = (e) => { if (e.key === 'Enter') ok.click(); if (e.key === 'Escape') done(null); }));
+    setTimeout(() => i1.focus(), 30);
+  });
+}
+
+/* ---------- مشروع ---------- */
+async function qtOpen(id) {
+  const m = qtMain('حصر الكميات', qtHome); m.appendChild(pjEl('div', 'qempty', 'جاري التحميل…'));
+  const [{ data: p }, { data: its, error }] = await Promise.all([
+    sb.from('qt_projects').select('*').eq('id', id).single(),
+    sb.from('qt_items').select('id,item,unit,mode,thickness,qty,file_name,file_path,sel,note,sort,created_at').eq('project_id', id).order('sort').order('created_at'),
+  ]);
+  if (!p || error) { m.textContent = ''; m.appendChild(pjEl('div', 'qempty', 'تعذّر تحميل المشروع.')); return; }
+  QT.cur = p; QT.items = its || [];
+  qtProject();
+}
+function qtProject() {
+  const p = QT.cur; const m = qtMain(p.name, qtHome);
+  const hero = pjEl('div', 'qhero'), hl = pjEl('div');
+  hl.append(pjEl('span', 'chip', p.battalion ? 'ك ' + p.battalion : 'مشروع'), pjEl('h2', '', p.name));
+  hero.appendChild(hl);
+  const hb = pjEl('div', 'hb');
+  const add = pjEl('button', 'qbtn on', '+ إضافة لوحة'); add.type = 'button'; add.onclick = qtAdd;
+  const ex = pjEl('button', 'qbtn', 'تصدير Excel'); ex.type = 'button'; ex.onclick = qtExport; ex.disabled = !QT.items.length;
+  const ed = pjEl('button', 'qbtn', 'تعديل الاسم'); ed.type = 'button';
+  ed.onclick = async () => { const v = await qtDlg('تعديل المشروع', p.name, p.battalion); if (!v) return; await sb.from('qt_projects').update({ ...v, updated_at: new Date().toISOString() }).eq('id', p.id); Object.assign(p, v); qtProject(); };
+  const del = pjEl('button', 'qbtn danger', 'حذف المشروع'); del.type = 'button';
+  del.onclick = async () => { if (!confirm('حذف المشروع «' + p.name + '» بكل لوحه؟')) return; const paths = QT.items.map((x) => x.file_path).filter(Boolean); if (paths.length) await sb.storage.from('qt').remove(paths); await sb.from('qt_projects').delete().eq('id', p.id); qtHome(); };
+  hb.append(add, ex, ed, del); hero.appendChild(hb); m.appendChild(hero);
+  if (!QT.items.length) { m.appendChild(pjEl('div', 'qempty', 'لسه مفيش لوح. دوس «+ إضافة لوحة» واختار ملف DWG.')); return; }
+  const tabs = pjEl('div', 'qtabs');
+  [['sum', 'الكميات'], ['det', 'التفاصيل']].forEach(([k, t]) => { const b = pjEl('button', QT.tab === k ? 'on' : '', t); b.type = 'button'; b.onclick = () => { QT.tab = k; qtProject(); }; tabs.appendChild(b); });
+  m.appendChild(tabs);
+  if (QT.tab === 'sum') qtSummary(m); else qtDetails(m);
+}
+function qtSummary(m) {
+  // الإجمالي لكل بند (لو البند متقسم على كذا لوحة بيتجمع)
+  const sums = new Map();
+  QT.items.forEach((x) => { const k = x.item + '|' + x.unit; const s = sums.get(k) || { item: x.item, unit: x.unit, qty: 0, n: 0 }; s.qty += +x.qty; s.n++; sums.set(k, s); });
+  const c = pjEl('div', 'qcard'); c.appendChild(pjEl('h3', '', 'إجمالي الكميات'));
+  const t = pjEl('table', 'qt'); t.innerHTML = '<tr><th class="c" style="width:44px">م</th><th>البند</th><th>الكمية</th><th class="c">الوحدة</th><th class="c">عدد اللوح</th></tr>';
+  [...sums.values()].forEach((s, i) => { const r = pjEl('tr'); r.append(pjEl('td', 'c', String(i + 1)), pjEl('td', '', s.item), pjEl('td', 'n big', qtN(s.qty)), pjEl('td', 'c', s.unit), pjEl('td', 'c', String(s.n))); t.appendChild(r); });
+  c.appendChild(t); m.appendChild(c);
+  const c2 = pjEl('div', 'qcard'); c2.appendChild(pjEl('h3', '', 'اللوح'));
+  const t2 = pjEl('table', 'qt'); t2.innerHTML = '<tr><th>البند</th><th>اللوحة</th><th>الطريقة</th><th>الكمية</th><th></th></tr>';
+  QT.items.forEach((x) => {
+    const r = pjEl('tr');
+    const md = QT_MODES[x.mode] ? QT_MODES[x.mode][0] + (x.mode === 'volume' && x.thickness ? ' (سُمك ' + qtN(x.thickness, 3) + ' م)' : '') : x.mode;
+    const a = pjEl('td', 'acts');
+    const dt = pjEl('button', 'qlink', 'التفاصيل'); dt.type = 'button'; dt.onclick = () => qtShowItem(x.id);
+    const dl = pjEl('button', 'qlink red', 'حذف'); dl.type = 'button';
+    dl.onclick = async () => { if (!confirm('حذف لوحة «' + x.item + '»؟')) return; if (x.file_path) await sb.storage.from('qt').remove([x.file_path]); await sb.from('qt_items').delete().eq('id', x.id); QT.items = QT.items.filter((y) => y.id !== x.id); qtProject(); };
+    a.append(dt, dl);
+    r.append(pjEl('td', '', x.item), pjEl('td', 'fn', x.file_name || '—'), pjEl('td', '', md), pjEl('td', 'n', qtN(x.qty) + ' ' + x.unit), a);
+    t2.appendChild(r);
+  });
+  c2.appendChild(t2); m.appendChild(c2);
+}
+async function qtDetails(m) {
+  const box = pjEl('div'); box.appendChild(pjEl('div', 'qempty', 'جاري التحميل…')); m.appendChild(box);
+  const { data } = await sb.from('qt_items').select('id,detail').eq('project_id', QT.cur.id);
+  const det = {}; (data || []).forEach((x) => { det[x.id] = x.detail; });
+  box.textContent = '';
+  QT.items.forEach((x) => box.appendChild(qtDetailCard(x, det[x.id])));
+}
+async function qtShowItem(id) {
+  QT.tab = 'det'; qtProject();
+  setTimeout(() => { const el = document.getElementById('qti-' + id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 600);
+}
+function qtDetailCard(x, d) {
+  const c = pjEl('div', 'qcard'); c.id = 'qti-' + x.id;
+  const h = pjEl('div', 'qdh'); h.append(pjEl('h3', '', x.item), pjEl('span', 'qq', qtN(x.qty) + ' ' + x.unit)); c.appendChild(h);
+  c.appendChild(pjEl('div', 'qsub', (x.file_name || '') + ' — ' + new Date(x.created_at).toLocaleString('ar-EG')));
+  if (!d) { c.appendChild(pjEl('div', 'qempty', 'مفيش تفاصيل.')); return c; }
+  const wrap = pjEl('div', 'qdet');
+  wrap.appendChild(qtSvg(d.groups || [], new Set(x.sel || []), d.bbox));
+  const side = pjEl('div');
+  (d.groups || []).filter((g) => (x.sel || []).includes(qtKey(g))).forEach((g) => side.appendChild(qtGroupDetail(g, x.mode, x.thickness)));
+  const f = pjEl('div', 'qformula');
+  f.textContent = qtFormula(x, d);
+  side.appendChild(f);
+  (d.warnings || []).forEach((w) => side.appendChild(pjEl('div', 'qwarn', '⚠️ ' + w)));
+  wrap.appendChild(side); c.appendChild(wrap);
+  return c;
+}
+function qtGroupDetail(g, mode, th) {
+  const b = pjEl('div', 'qg');
+  const hd = pjEl('div', 'qgh'); const sw = pjEl('i'); sw.style.background = g.hex; hd.append(sw, pjEl('b', '', qtKind(g)), pjEl('span', '', 'طبقة «' + g.layer + '»'));
+  b.appendChild(hd);
+  const ul = pjEl('ul');
+  if (g.kind === 'hatch') {
+    g.items.forEach((it, i) => {
+      const li = pjEl('li'); const pos = it.parts.filter((p) => !p.hole), neg = it.parts.filter((p) => p.hole);
+      li.textContent = (g.items.length > 1 ? 'هاتش ' + (i + 1) + ': ' : '') + pos.map((p) => qtN(p.a)).join(' + ') + (neg.length ? ' − (' + neg.map((p) => qtN(p.a)).join(' + ') + ' جزر)' : '') + ' = ' + qtN(it.net) + ' م²';
+      ul.appendChild(li);
+    });
+  } else if (g.kind === 'line') {
+    const li = pjEl('li'); li.textContent = g.n + ' خط، الطول ' + qtN(g.length) + ' م.ط' + (g.paint < g.length - 0.01 ? '، المدهون ' + qtN(g.paint) + ' م.ط (نسبة ' + qtN(g.paint / g.length * 100, 0) + '٪)' : '') + (g.area ? '، مساحة المقفول ' + qtN(g.area) + ' م²' : '');
+    ul.appendChild(li);
+    const top = g.items.slice().sort((a, b) => b.len - a.len).slice(0, 12);
+    const li2 = pjEl('li', 'muted'); li2.textContent = 'الأطوال: ' + top.map((t) => qtN(t.len)).join(' + ') + (g.items.length > 12 ? ' + …' : ''); ul.appendChild(li2);
+  } else {
+    const li = pjEl('li'); li.textContent = g.n + ' بلوك'; ul.appendChild(li);
+  }
+  b.appendChild(ul); return b;
+}
+function qtFormula(x, d) {
+  const gs = (d.groups || []).filter((g) => (x.sel || []).includes(qtKey(g)));
+  const base = gs.map((g) => qtN(x.mode === 'count' ? g.n : x.mode === 'length' ? g.length : x.mode === 'paint' ? g.paint : g.area));
+  let s = 'الكمية = ' + (base.length > 1 ? base.join(' + ') : base[0] || '0');
+  if (x.mode === 'volume') s += ' م² × ' + qtN(x.thickness, 3) + ' م';
+  return s + ' = ' + qtN(x.qty) + ' ' + x.unit;
+}
+function qtSvg(groups, sel, bbox) {
+  const NS = 'http://www.w3.org/2000/svg', W = bbox ? bbox[2] : 1, H = bbox ? bbox[3] : 1, pad = Math.max(W, H) * 0.03;
+  const s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', `${-pad} ${-pad} ${W + 2 * pad} ${H + 2 * pad}`); s.setAttribute('class', 'qsvg');
+  const g0 = document.createElementNS(NS, 'g'); g0.setAttribute('transform', `translate(0 ${H}) scale(1 -1)`); s.appendChild(g0);
+  const order = groups.slice().sort((a, b) => (sel.has(qtKey(a)) ? 1 : 0) - (sel.has(qtKey(b)) ? 1 : 0));
+  order.forEach((g) => {
+    const on = sel.has(qtKey(g));
+    (g.geom || []).forEach((e) => {
+      if (e.t === 'h') {
+        const p = document.createElementNS(NS, 'path');
+        p.setAttribute('d', e.polys.map((q) => 'M' + q.map((v) => v[0] + ' ' + v[1]).join('L') + 'Z').join(''));
+        p.setAttribute('fill-rule', 'evenodd'); p.setAttribute('fill', on ? g.hex : '#cfd8e3'); p.setAttribute('fill-opacity', on ? '.55' : '.35');
+        p.setAttribute('stroke', on ? g.hex : '#b0bccb'); p.setAttribute('stroke-width', on ? '1.2' : '.5'); p.setAttribute('vector-effect', 'non-scaling-stroke');
+        g0.appendChild(p);
+      } else if (e.t === 'l') {
+        const p = document.createElementNS(NS, e.closed ? 'polygon' : 'polyline');
+        p.setAttribute('points', e.pts.map((v) => v[0] + ',' + v[1]).join(' '));
+        p.setAttribute('fill', 'none'); p.setAttribute('stroke', on ? g.hex : '#b8c2cf'); p.setAttribute('stroke-width', on ? '2.2' : '.6'); p.setAttribute('vector-effect', 'non-scaling-stroke');
+        g0.appendChild(p);
+      } else {
+        const c = document.createElementNS(NS, 'circle'); c.setAttribute('cx', e.at[0]); c.setAttribute('cy', e.at[1]); c.setAttribute('r', Math.max(W, H) * (on ? 0.006 : 0.003));
+        c.setAttribute('fill', on ? g.hex : '#b8c2cf'); g0.appendChild(c);
+      }
+    });
+  });
+  return s;
+}
+
+/* ---------- إضافة لوحة ---------- */
+async function qtAdd() {
+  const p = QT.cur; const m = qtMain(p.name + ' — لوحة جديدة', qtProject);
+  const c = pjEl('div', 'qcard');
+  c.appendChild(pjEl('h3', '', 'لوحة جديدة'));
+  const row = pjEl('div', 'qrow');
+  const l1 = pjEl('label', 'qf'); l1.appendChild(pjEl('span', '', 'البند'));
+  const it = pjEl('input'); it.type = 'text'; it.placeholder = 'مثلاً كشط أسفلت'; it.setAttribute('list', 'qtItemsDL');
+  const dl = pjEl('datalist'); dl.id = 'qtItemsDL'; [...new Set([...QT_ITEMS, ...QT.items.map((x) => x.item)])].forEach((v) => { const o = pjEl('option'); o.value = v; dl.appendChild(o); });
+  l1.append(it, dl);
+  const l2 = pjEl('label', 'qf'); l2.appendChild(pjEl('span', '', 'ملف اللوحة (DWG أو DXF)'));
+  const fi = pjEl('input'); fi.type = 'file'; fi.accept = '.dwg,.dxf'; l2.appendChild(fi);
+  row.append(l1, l2); c.appendChild(row);
+  const st = pjEl('div', 'qstat'); c.appendChild(st);
+  m.appendChild(c);
+  const res = pjEl('div'); m.appendChild(res);
+  setTimeout(() => it.focus(), 50);
+  const go = async () => {
+    const f = fi.files[0]; if (!f) return;
+    if (!it.value.trim()) { st.textContent = 'اكتب اسم البند الأول'; it.focus(); return; }
+    if (f.size > 50 * 1048576) { st.textContent = 'الملف أكبر من 50 ميجا'; return; }
+    res.textContent = ''; fi.disabled = true;
+    st.innerHTML = '<span class="spin"></span> بيرفع اللوحة…';
+    const path = p.id + '/' + Date.now() + '-' + (f.name.replace(/[^\w.\-]+/g, '_').replace(/^_+/, '') || 'drawing.dwg');
+    const up = await sb.storage.from('qt').upload(path, f, { upsert: false, contentType: 'application/octet-stream' });
+    if (up.error) { st.textContent = 'تعذّر رفع الملف: ' + up.error.message; fi.disabled = false; return; }
+    st.innerHTML = '<span class="spin"></span> بيقرا اللوحة ويحصر الكميات…';
+    let r, j;
+    try {
+      const { data: { session: s } } = await sb.auth.getSession();
+      r = await fetch('/api/qt', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.access_token }, body: JSON.stringify({ path }) });
+      j = await r.json();
+    } catch (e) { j = { error: 'تعذّر الاتصال' }; }
+    fi.disabled = false;
+    if (!r || !r.ok || !j.groups) { st.textContent = '⚠️ ' + (j.error || 'تعذّر قراءة اللوحة'); await sb.storage.from('qt').remove([path]); return; }
+    st.textContent = '';
+    qtPick(res, it.value.trim(), f.name, path, j);
+  };
+  fi.onchange = go;
+  it.onkeydown = (e) => { if (e.key === 'Enter' && fi.files[0]) go(); };
+}
+async function qtPick(box, item, fname, path, R) {
+  // آخر اختيار لنفس البند (من أي مشروع)
+  let mem = null;
+  try { const { data } = await sb.from('qt_items').select('mode,sel,thickness').eq('item', item).order('created_at', { ascending: false }).limit(1); mem = data && data[0]; } catch (e) { /* */ }
+  const groups = R.groups || [];
+  const keys = new Set(groups.map(qtKey));
+  let sel = new Set(), mode, th = mem && mem.thickness ? +mem.thickness : null;
+  if (mem && (mem.sel || []).some((k) => keys.has(k))) { sel = new Set(mem.sel.filter((k) => keys.has(k))); mode = mem.mode; }
+  else {
+    // افتراضياً: الهاتش لو موجود، غير كده مفيش اختيار
+    const hs = groups.filter((g) => g.kind === 'hatch' && g.area > 1);
+    if (hs.length) { sel = new Set([qtKey(hs[0])]); mode = 'area'; }
+    else mode = 'length';
+  }
+  if (mem && mem.mode && !mode) mode = mem.mode;
+  const c = pjEl('div', 'qcard');
+  const wrap = pjEl('div', 'qdet');
+  const svgBox = pjEl('div', 'qsvgbox');
+  const side = pjEl('div');
+  wrap.append(svgBox, side); c.appendChild(wrap); box.appendChild(c);
+  const tot = pjEl('div', 'qtotal');
+  const draw = () => {
+    svgBox.textContent = ''; svgBox.appendChild(qtSvg(groups, sel, R.bbox));
+    side.textContent = '';
+    side.appendChild(pjEl('div', 'qhint', mem && mem.sel ? 'اخترتلك نفس اللي اخترته آخر مرة لبند «' + item + '». غيّره لو محتاج.' : 'علّم على الحاجة اللي تتحسب للبند ده. اللي متعلّم بيظهر ملوّن في الرسم.'));
+    const ml = pjEl('div', 'qmodes');
+    Object.entries(QT_MODES).forEach(([k, [t]]) => { const b = pjEl('button', mode === k ? 'on' : '', t); b.type = 'button'; b.onclick = () => { mode = k; draw(); }; ml.appendChild(b); });
+    side.appendChild(ml);
+    if (mode === 'volume') {
+      const l = pjEl('label', 'qf inl'); l.appendChild(pjEl('span', '', 'السُمك / العمق (م)'));
+      const i = pjEl('input'); i.type = 'number'; i.step = '0.01'; i.min = '0'; i.value = th || ''; i.placeholder = 'مثلاً 0.40';
+      i.oninput = () => { th = parseFloat(i.value) || null; calc(); };
+      l.appendChild(i); side.appendChild(l);
+      setTimeout(() => { if (!th) i.focus(); }, 30);
+    }
+    const list = pjEl('div', 'qglist');
+    groups.forEach((g) => {
+      const k = qtKey(g), row = pjEl('label', 'qgi' + (sel.has(k) ? ' on' : ''));
+      const cb = pjEl('input'); cb.type = 'checkbox'; cb.checked = sel.has(k);
+      cb.onchange = () => { if (cb.checked) sel.add(k); else sel.delete(k); draw(); };
+      const sw = pjEl('i'); sw.style.background = g.hex;
+      const v = pjEl('span', 'v', g.kind === 'hatch' ? qtN(g.area) + ' م²' : g.kind === 'line' ? qtN(g.length) + ' م.ط' : g.n + ' عدد');
+      if (g.kind === 'line' && g.area) v.appendChild(pjEl('small', '', 'مقفول: ' + qtN(g.area) + ' م²'));
+      if (g.kind === 'line' && g.paint < g.length - 0.01) v.appendChild(pjEl('small', '', 'مدهون: ' + qtN(g.paint) + ' م.ط'));
+      row.append(cb, sw, pjEl('b', '', qtKind(g)), pjEl('span', 'ly', g.layer), v);
+      list.appendChild(row);
+    });
+    side.appendChild(list);
+    (R.warnings || []).forEach((w) => side.appendChild(pjEl('div', 'qwarn', '⚠️ ' + w)));
+    side.appendChild(tot); calc();
+  };
+  const qtyOf = () => {
+    const gs = groups.filter((g) => sel.has(qtKey(g)));
+    if (!gs.length) return null;
+    const sum = (f) => gs.reduce((s, g) => s + f(g), 0);
+    if (mode === 'area') return sum((g) => g.area);
+    if (mode === 'volume') return th ? sum((g) => g.area) * th : null;
+    if (mode === 'length') return sum((g) => g.length);
+    if (mode === 'paint') return sum((g) => g.paint);
+    return sum((g) => g.n);
+  };
+  const calc = () => {
+    tot.textContent = '';
+    const q = qtyOf(), u = QT_MODES[mode][1];
+    tot.append(pjEl('span', '', item + ' ='), pjEl('b', '', q == null ? '—' : qtN(q)), pjEl('span', '', u));
+    const sv = pjEl('button', 'qbtn on', '✓ حفظ الكمية'); sv.type = 'button'; sv.disabled = q == null;
+    sv.onclick = async () => {
+      sv.disabled = true;
+      const keep = groups.map((g) => sel.has(qtKey(g)) ? g : { ...g, items: g.kind === 'line' ? [] : g.items, geom: (g.geom || []).map((e) => e.t === 'l' ? { ...e, pts: e.pts.filter((_, i, a) => i % 3 === 0 || i === a.length - 1) } : e) });
+      const row = { project_id: QT.cur.id, item, unit: u, mode, thickness: mode === 'volume' ? th : null, qty: +q.toFixed(3), file_name: fname, file_path: path, sel: [...sel], detail: { groups: keep, bbox: R.bbox, warnings: R.warnings || [] }, sort: QT.items.length };
+      const { data, error } = await sb.from('qt_items').insert(row).select('id,item,unit,mode,thickness,qty,file_name,file_path,sel,note,sort,created_at').single();
+      if (error) { sv.disabled = false; alert('تعذّر الحفظ'); return; }
+      await sb.from('qt_projects').update({ updated_at: new Date().toISOString() }).eq('id', QT.cur.id);
+      QT.items.push(data); QT.tab = 'sum'; qtProject();
+    };
+    const cancel = pjEl('button', 'qbtn', 'إلغاء'); cancel.type = 'button';
+    cancel.onclick = async () => { await sb.storage.from('qt').remove([path]); qtProject(); };
+    const act = pjEl('div', 'qact'); act.append(sv, cancel); tot.appendChild(act);
+  };
+  draw();
+}
+function qtExport() {
+  const p = QT.cur;
+  const sums = new Map(); QT.items.forEach((x) => { const k = x.item + '|' + x.unit; const s = sums.get(k) || { item: x.item, unit: x.unit, qty: 0 }; s.qty += +x.qty; sums.set(k, s); });
+  const esc = (v) => String(v == null ? '' : v).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  let h = '<table border="1" dir="rtl"><tr><th colspan="4">حصر كميات — ' + esc(p.name) + '</th></tr><tr><th>م</th><th>البند</th><th>الكمية</th><th>الوحدة</th></tr>';
+  [...sums.values()].forEach((s, i) => { h += '<tr><td>' + (i + 1) + '</td><td>' + esc(s.item) + '</td><td>' + (+s.qty.toFixed(2)) + '</td><td>' + esc(s.unit) + '</td></tr>'; });
+  h += '<tr></tr><tr><th>البند</th><th>اللوحة</th><th>الكمية</th><th>الوحدة</th></tr>';
+  QT.items.forEach((x) => { h += '<tr><td>' + esc(x.item) + '</td><td>' + esc(x.file_name) + '</td><td>' + (+(+x.qty).toFixed(2)) + '</td><td>' + esc(x.unit) + '</td></tr>'; });
+  h += '</table>';
+  const b = new Blob(['﻿<html><head><meta charset="utf-8"></head><body>' + h + '</body></html>'], { type: 'application/vnd.ms-excel' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'حصر كميات - ' + p.name + '.xls'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+$('qtCard').onclick = (e) => { e.preventDefault(); openQT(); };
+$('qtBack').onclick = () => { if (history.state && history.state.qt) history.back(); else closeQT(); };
+addEventListener('popstate', (e) => { if (!(e.state && e.state.qt)) closeQT(); });
+
 </script>
 </body>
 </html>
