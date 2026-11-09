@@ -378,6 +378,34 @@ body.in footer{color:#7f94b8}
 #qt .qgrph{background:rgba(5,14,28,.7)}
 #qt .qsvg{background:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px) 0 0/24px 24px,linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px) 0 0/24px 24px,#071224;border-color:var(--bd)}
 #qt .qcard.upd .qsvgw::after{content:'بيقرا تفاصيل اللوحة كاملة…';position:absolute;bottom:10px;inset-inline-start:10px;background:rgba(5,14,28,.85);color:var(--ac2);font-size:12px;font-weight:700;border-radius:8px;padding:4px 10px}
+#qt .qlbar,#qt .qlist{max-width:980px;margin-inline:auto}
+#qt .qlbar{display:flex;gap:10px;align-items:center;margin-bottom:12px}
+#qt .qlq{flex:1;min-width:0;background:rgba(5,14,28,.6);border:1px solid var(--bd);border-radius:12px;padding:10px 14px;font:inherit;font-size:14px;color:#fff}
+#qt .qlq:focus{outline:2px solid rgba(233,165,20,.35);border-color:var(--ac)}
+#qt .qlbar .qbtn{padding:10px 16px;white-space:nowrap}
+#qt .qlist{background:rgba(9,22,42,.78);border:1px solid var(--bd);border-radius:16px;overflow:hidden;backdrop-filter:blur(10px);box-shadow:0 16px 40px rgba(0,0,0,.32)}
+#qt .qls{display:flex;align-items:center;gap:10px;padding:13px 18px 10px;background:linear-gradient(90deg,rgba(233,165,20,0),rgba(233,165,20,.10));border-top:1px solid var(--bd);box-shadow:inset -3px 0 0 var(--ac);color:#fff}
+#qt .qls:first-child{border-top:0}
+#qt .qls i{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:rgba(233,165,20,.14);color:var(--ac2);font-style:normal;font-size:13px}
+#qt .qls b{font-size:15.5px;font-weight:800;letter-spacing:.2px;color:var(--ac2)}
+#qt .qls span{font-size:11.5px;color:var(--mut);font-weight:700}
+#qt .qlr{--mc:#14b8c4;display:grid;grid-template-columns:minmax(0,1fr) auto 150px;align-items:center;gap:12px;padding:11px 18px;border-top:1px solid rgba(148,173,212,.08);cursor:pointer;transition:background .12s}
+#qt .qlr:hover,#qt .qlr:focus-visible{background:rgba(255,255,255,.045);outline:0}
+#qt .qlr.m-length,#qt .qlr.m-paint{--mc:#3b82f6}#qt .qlr.m-count{--mc:#a78bfa}#qt .qlr.m-fill,#qt .qlr.m-cut{--mc:#f59e0b}#qt .qlr.m-volume,#qt .qlr.m-section{--mc:#818cf8}
+#qt .qlr .nm{display:flex;align-items:center;gap:12px;min-width:0}
+#qt .qlr .nm i{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;flex:none;font-style:normal;font-size:14px;background:color-mix(in srgb,var(--mc) 18%,transparent);color:color-mix(in srgb,var(--mc) 60%,#fff)}
+#qt .qlr .tt{min-width:0;display:flex;flex-direction:column}
+#qt .qlr .tt b{font-size:15px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#qt .qlr .tt small{font-size:11.5px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#qt .qlr .qv{display:flex;align-items:baseline;gap:6px;justify-content:flex-end}
+#qt .qlr .qv b{font-size:22px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+#qt .qlr .qv span{font-size:13px;color:var(--mut);font-weight:700;min-width:30px}
+#qt .qlr .ac{display:flex;gap:2px;justify-content:flex-end;opacity:0;transition:opacity .12s}
+@media(hover:none){#qt .qlr .ac{opacity:1}}
+#qt .qlr:hover .ac,#qt .qlr:focus-within .ac{opacity:1}
+#qt .qlr.flash{animation:qflash3 2.4s ease}
+@keyframes qflash3{from{background:rgba(233,165,20,.22)}to{background:transparent}}
+@media(max-width:760px){#qt .qlr{grid-template-columns:minmax(0,1fr) auto;row-gap:4px}#qt .qlr .ac{grid-column:1/-1;grid-row:2;opacity:1;justify-content:flex-start}#qt .qlr .qv b{font-size:19px}}
 #qt .qsecs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,370px),1fr));gap:16px;align-items:start}
 #qt .qsec{background:rgba(8,20,40,.55);border:1px solid var(--bd);border-radius:18px;padding:14px 14px 16px;backdrop-filter:blur(8px);box-shadow:0 14px 34px rgba(0,0,0,.28)}
 #qt .qsec .qsech{margin:0 2px 12px}
@@ -2947,18 +2975,50 @@ const qtSecOf = (item) => (QT_SECS.find((x) => x[3].test(item)) || QT_SECS[QT_SE
 function qtSummary(m) {
   const secs = new Map();
   qtGroups().forEach((G) => { const k = G.mode === 'formula' ? 'etc' : qtSecOf(G.item)[0]; if (!secs.has(k)) secs.set(k, []); secs.get(k).push(G); });
-  const wrapS = pjEl('div', 'qsecs'); m.appendChild(wrapS);
+  // شريط: بحث + إضافة
+  const bar = pjEl('div', 'qlbar');
+  const q = pjEl('input'); q.type = 'search'; q.placeholder = '🔍  دوّر على بند…'; q.className = 'qlq';
+  bar.append(q); m.appendChild(bar);
+  const L = pjEl('div', 'qlist'); m.appendChild(L);
+  if (!secs.size) { L.appendChild(pjEl('div', 'qempty', 'لسه مفيش بنود — ارفع أول لوحة.')); return; }
+  const rows = [];
   QT_SECS.filter(([k]) => secs.has(k)).forEach(([k, name, ic]) => {
     const list = secs.get(k);
-    const sec = pjEl('section', 'qsec'), hd = pjEl('div', 'qsech');
-    hd.append(pjEl('i', '', ic), pjEl('h3', '', name), pjEl('span', 'n', list.length + (list.length === 1 ? ' بند' : list.length < 11 ? ' بنود' : ' بند')));
-    const g = pjEl('div', 'qtiles stack'); sec.append(hd, g); wrapS.appendChild(sec);
-    list.forEach((G) => qtTile(G, g));
+    const sh = pjEl('div', 'qls'); sh.append(pjEl('i', '', ic), pjEl('b', '', name), pjEl('span', '', list.length + (list.length === 1 ? ' بند' : list.length < 11 ? ' بنود' : ' بند')));
+    L.appendChild(sh);
+    const items = [];
+    list.forEach((G) => { const r = qtRow(G); L.appendChild(r); items.push(r); rows.push([r, G.item]); });
+    sh._items = items;
   });
-  const g = pjEl('div', 'qtiles qaddrow');
-  const ad = pjEl('button', 'qadd'); ad.type = 'button'; ad.append(pjEl('span', '', '+'), document.createTextNode('إضافة لوحة')); ad.onclick = () => qtAdd();
-  g.appendChild(ad);
-  m.appendChild(g);
+  q.oninput = () => {
+    const f = q.value.trim();
+    rows.forEach(([r, t]) => { r.hidden = !!f && !t.includes(f); });
+    L.querySelectorAll('.qls').forEach((h) => { h.hidden = h._items.every((r) => r.hidden); });
+  };
+}
+// صف بند: الاسم | الكمية | الوحدة | أوامر
+function qtRow(G) {
+  const x = G.rows[0], many = G.rows.length > 1;
+  const r = pjEl('div', 'qlr m-' + x.mode); r.tabIndex = 0;
+  const nm = pjEl('div', 'nm'); nm.append(pjEl('i', '', QT_ICON[x.mode] || '•'));
+  const tt = pjEl('div', 'tt'); tt.appendChild(pjEl('b', '', x.item));
+  const fp = x.mode === 'fill' ? G.rows.map(qtFillParts).find(Boolean) : null;
+  const sub = many ? G.rows.length + ' لوح' + (fp && fp.k && fp.digs.length ? ' · سطح + إحلال' : '') : fp && fp.k ? (fp.digs.length ? 'سطح الفرق + إحلال الحفر × ' + qtN(fp.k, 3) : 'سطح الفرق') : (x.file_name || '').replace(/^\d+-/, '');
+  tt.appendChild(pjEl('small', '', sub)); nm.appendChild(tt);
+  const qv = pjEl('div', 'qv'); qv.append(pjEl('b', '', qtN(G.qty)), pjEl('span', '', x.unit));
+  const ac = pjEl('div', 'ac');
+  const btn = (t, c, f, ttl) => { const b = pjEl('button', c, t); b.type = 'button'; if (ttl) b.title = ttl; b.onclick = (e) => { e.stopPropagation(); f(); }; ac.appendChild(b); };
+  btn('التفاصيل', 'qlink', () => qtShowItem(x.id));
+  if (x.mode !== 'formula') btn('+ لوحة', 'qlink', () => qtAdd(x.item), 'ضيف لوحة تانية لنفس البند');
+  btn('حذف', 'qlink red', async () => {
+    if (!confirm('حذف بند «' + x.item + '»' + (many ? ' بكل لوحه (' + G.rows.length + ')' : '') + '؟')) return;
+    const paths = G.rows.map((y) => y.file_path).filter(Boolean); if (paths.length) await sb.storage.from('qt').remove(paths);
+    const ids = G.rows.map((y) => y.id); await sb.from('qt_items').delete().in('id', ids); QT.items = QT.items.filter((y) => !ids.includes(y.id)); await qtRecalc(); qtProject();
+  });
+  r.append(nm, ac, qv);
+  r.onclick = () => qtShowItem(x.id); r.onkeydown = (e) => { if (e.key === 'Enter') qtShowItem(x.id); };
+  if (G.rows.some((y) => y.id === QT.flash)) { r.classList.add('flash'); QT.flash = null; }
+  return r;
 }
 function qtTile(G, g) {
   {
