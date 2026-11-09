@@ -2184,6 +2184,24 @@ function pjMakeCopy(si, name) {
   PAnames[ni] = name;
   return ni;
 }
+// نسخة تانية من نفس البند في الموازنة (بنفس أرقامه، وليها كمية لوحدها)
+async function pjDupItem(si, nm) {
+  const p = PJ.cur; p.extra = p.extra || {}; p.extra.copies = p.extra.copies || [];
+  const base = PA.sheets[si].copyOf != null ? PA.sheets[si].copyOf : si;
+  const src = PA.sheets[si].copyKey != null ? p.extra.copies.find((x) => x.key === PA.sheets[si].copyKey) : null;
+  if (!nm) { const t = (PAnames[si] || PA.sheets[si].title.trim()).replace(/\s*\(\d+\)$/, ''); let n = 2; const used = new Set(p.items.map((x) => (x < PJ_SAF ? PAnames[x] || PA.sheets[x].title.trim() : ''))); while (used.has(t + ' (' + n + ')')) n++; nm = t + ' (' + n + ')'; }
+  const key = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  p.extra.copies.push({ key, base, name: nm, eq: src ? JSON.parse(JSON.stringify(src.eq || [])) : [] });
+  const ov = PAE.dump(); pjRebuild();
+  const ni = PA.sheets.length - 1;
+  if (ov[si]) { const d = PAE.dump(); d[ni] = JSON.parse(JSON.stringify(ov[si])); PAE.resetAll(); PAE.load(d); }
+  const at = p.items.indexOf(si); p.items.splice(at < 0 ? p.items.length : at + 1, 0, ni);
+  PAnames[ni] = nm;
+  const b = p.basics = p.basics || {}; if (b.sec && b.sec[si]) { b.sec[ni] = b.sec[si]; } if (b.kind && b.kind[si]) { b.kind[ni] = b.kind[si]; } if (b.dist && b.dist[si] != null) b.dist[ni] = b.dist[si];
+  if (b.wiz && b.wiz.secs) b.wiz.secs.forEach((sx) => { const j = sx.items.indexOf(si); if (j >= 0) sx.items.splice(j + 1, 0, ni); });
+  await pjSaveExtra(); paSave(); paUndoReset();
+  return ni;
+}
 async function pjCopyItem(si) {
   const p = PJ.cur; p.extra = p.extra || {}; p.extra.copies = p.extra.copies || [];
   const base = PA.sheets[si].copyOf != null ? PA.sheets[si].copyOf : si;
@@ -2728,6 +2746,9 @@ function pjBOQ() {
             const rn = pjEl('button', 'noexp pjop', '✎ الاسم'); rn.type = 'button'; rn.title = 'تغيير وصف البند في الموازنة دي بس';
             rn.onclick = async () => { const cur = b.desc[si] || (it.std ? it.desc : (PAnames[si] || it.desc)); const v = await qtForm('وصف البند في الموازنة', 'بيتغير في موازنة المشروع ده بس — التحليل نفسه زي ما هو. سيبه فاضي يرجع للأصلي.', [{ k: 'd', label: 'الوصف', type: 'area', value: cur, req: false }], 'حفظ'); if (!v) return; if (v.d && v.d !== (it.std ? it.desc : (PAnames[si] || it.desc))) b.desc[si] = v.d; else delete b.desc[si]; paSave(); draw(); };
             const tools = pjEl('div', 'noexp pjitools'); tools.append(sel, op, rn);
+            if (!it.cus && si < PJ_SAF) { const dp = pjEl('button', 'noexp pjop', '⧉ مرة تانية'); dp.type = 'button'; dp.title = 'ضيف نفس البند مرة تانية بكمية لوحدها'; dp.onclick = async () => { await pjDupItem(si); paNav($('paQ').value); pjBOQ(); }; tools.appendChild(dp); }
+            else if (si >= PJ_SAF && si < PJ_CUS) { const dp = pjEl('button', 'noexp pjop', '⧉ مرة تانية'); dp.type = 'button'; dp.onclick = async () => { let k = PJ_SAF + pjSafIdx(si), m2 = 0; while (p.items.includes(k)) { m2++; k = PJ_SAF + pjSafIdx(si) + 100 * m2; } p.items.splice(p.items.indexOf(si) + 1, 0, k); await sb.from('pa_projects').update({ items: p.items, updated_at: new Date().toISOString() }).eq('id', p.id); paNav($('paQ').value); pjBOQ(); }; tools.appendChild(dp); }
+            else if (it.cus) { const dp = pjEl('button', 'noexp pjop', '⧉ مرة تانية'); dp.type = 'button'; dp.onclick = () => { const c0 = pjCus(si); const k = b.custom.reduce((m2, x) => Math.max(m2, x.k), PJ_CUS) + 1; b.custom.splice(b.custom.indexOf(c0) + 1, 0, { ...c0, k }); b.sec[k] = c0.sec; paSave(); pjBOQ(); }; tools.appendChild(dp); }
             { const dl = pjEl('button', 'noexp pjop red', '🗑 حذف'); dl.type = 'button'; dl.title = 'حذف البند من موازنة المشروع ده'; dl.onclick = () => pjDelItem(si, it.cus); tools.appendChild(dl); }
             dt.appendChild(tools);
           }
@@ -2800,7 +2821,7 @@ function pjAddFromPA() {
       const inUse = c.si < PJ_SAF ? used.has(c.si) : [...used].some((x) => x >= PJ_SAF && x < PJ_CUS && pjSafIdx(x) === c.si - PJ_SAF);
       const r = pjEl('label', 'it' + (picked.has(c.si) ? ' on' : '')); const cb = pjEl('input'); cb.type = 'checkbox'; cb.checked = picked.has(c.si);
       cb.onchange = () => { if (cb.checked) picked.add(c.si); else picked.delete(c.si); r.classList.toggle('on', cb.checked); ok.textContent = picked.size ? 'إضافة (' + picked.size + ')' : 'إضافة'; };
-      r.append(cb, pjEl('span', '', c.t), pjEl('small', '', (c.unit || '') + (inUse ? ' · موجود في الموازنة' : ''))); list.appendChild(r);
+      r.append(cb, pjEl('span', '', c.t), pjEl('small', '', (c.unit || '') + (inUse ? ' · موجود — هيتضاف مرة تانية' : ''))); list.appendChild(r);
     });
   };
   const ok = pjEl('button', 'ok', 'إضافة'); ok.type = 'button'; const no = pjEl('button', 'no', 'إلغاء'); no.type = 'button';
@@ -2814,9 +2835,11 @@ function pjAddFromPA() {
       if (si < PJ_SAF) { if (!all.has(si)) all.add(si); return; }
       let k = si, m2 = 0; while (all.has(k)) { m2++; k = si + 100 * m2; } all.add(k); // نفس بند الأمن والسلامة ممكن يتكرر
     });
+    const dups = [...picked].filter((si) => si < PJ_SAF && p.items.includes(si));
     p.items = [...all];
     const { error } = await sb.from('pa_projects').update({ items: p.items, updated_at: new Date().toISOString() }).eq('id', p.id);
     if (error) return alert('تعذّر الإضافة');
+    for (const si of dups) await pjDupItem(si); // البند موجود قبل كده → نسخة تانية منه
     done(); paNav($('paQ').value); pjBOQ();
   };
 }
