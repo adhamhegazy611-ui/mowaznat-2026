@@ -378,6 +378,21 @@ body.in footer{color:#7f94b8}
 #qt .qgrph{background:rgba(5,14,28,.7)}
 #qt .qsvg{background:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px) 0 0/24px 24px,linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px) 0 0/24px 24px,#071224;border-color:var(--bd)}
 #qt .qcard.upd .qsvgw::after{content:'بيقرا تفاصيل اللوحة كاملة…';position:absolute;bottom:10px;inset-inline-start:10px;background:rgba(5,14,28,.85);color:var(--ac2);font-size:12px;font-weight:700;border-radius:8px;padding:4px 10px}
+#qt .qbtn.gold2{background:linear-gradient(180deg,#f6c34a,#e9a514);border-color:#e9a514;color:#1b1405;font-weight:800}
+.qbud{width:min(980px,96vw)!important}
+.qbud .qbw{max-height:52vh;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;margin-top:10px}
+.qbud table.qbt{width:100%;border-collapse:collapse;font-size:13px}
+.qbud .qbt th{position:sticky;top:0;background:#0f2747;color:#fff;padding:8px;font-weight:700;text-align:start;z-index:1}
+.qbud .qbt td{padding:7px 8px;border-top:1px solid #eef2f7;vertical-align:top}
+.qbud .qbt td.n b{display:block;color:#0f2747}.qbud .qbt td.n small{color:#64748b;font-size:11px}
+.qbud .qbt td.q,.qbud .qbt td.r{white-space:nowrap;font-weight:800;font-variant-numeric:tabular-nums;color:#0f2747}
+.qbud .qbt select{width:100%;min-width:220px;font:inherit;font-size:12.5px;padding:6px;border:1px solid #cbd5e1;border-radius:8px;background:#fff}
+.qbud .qbt input.k{width:76px;font:inherit;padding:6px;border:1px solid #cbd5e1;border-radius:8px}
+.qbud .qbt .w{color:#b45309;font-size:11.5px;margin-top:4px;font-weight:700}
+.qbud .qbt tr.off td{opacity:.5}
+.qbud select:not(.qbt select){width:100%;font:inherit;padding:8px;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:4px}
+.qbud .qbnote{margin-top:10px;font-size:12.5px;color:#475569;background:#f8fafc;border-radius:8px;padding:8px 10px;line-height:1.7}
+.qbud .qbmsg{padding:20px;text-align:center;color:#64748b}
 #qt .qlbar,#qt .qlist{max-width:980px;margin-inline:auto}
 #qt .qlbar{display:flex;gap:10px;align-items:center;margin-bottom:12px}
 #qt .qlq{flex:1;min-width:0;background:rgba(5,14,28,.6);border:1px solid var(--bd);border-radius:12px;padding:10px 14px;font:inherit;font-size:14px;color:#fff}
@@ -2637,7 +2652,7 @@ function pjBOQ() {
   const X = pjScan(); p.qty = p.qty || {}; const b = p.basics = p.basics || {};
   b.form = b.form || {}; b.sec = b.sec || {}; b.note = b.note || {};
   const mode = b.mode === 'excl' ? 'excl' : 'incl';
-  const m = pjHero(pjBatLabel(p.battalion), 'موازنة ' + p.name, 'نفس فورمة الموازنة. اختار شامل ولا غير شامل، واكتب الكميات، والأرقام بتتحسب من تحليل الأسعار بالبيانات الأساسية بتاعة المشروع.', [['← البيانات الأساسية', pjBasics], ['تصدير Excel', () => pjExport()], ['طباعة / PDF', () => pjPrint()]]);
+  const m = pjHero(pjBatLabel(p.battalion), 'موازنة ' + p.name, p.qt_id ? 'الكميات جاية من حصر الكميات (من اللوح). الأسعار بتتحسب من تحليل الأسعار بالبيانات الأساسية بتاعة المشروع.' : 'نفس فورمة الموازنة. اختار شامل ولا غير شامل، واكتب الكميات، والأرقام بتتحسب من تحليل الأسعار بالبيانات الأساسية بتاعة المشروع.', [...(p.qt_id && typeof IS_QT !== 'undefined' && IS_QT ? [['🔄 تحديث الكميات من الحصر', pjSyncFromQT]] : []), ['← البيانات الأساسية', pjBasics], ['تصدير Excel', () => pjExport()], ['طباعة / PDF', () => pjPrint()]]);
   // شريط الإعدادات
   const bar = pjEl('div', 'pjcard pjfbar');
   const seg = pjEl('div', 'pjseg');
@@ -2951,7 +2966,8 @@ function qtProject() {
   ed.onclick = async () => { const v = await qtDlg('تعديل المشروع', p.name, p.battalion); if (!v) return; await sb.from('qt_projects').update({ ...v, updated_at: new Date().toISOString() }).eq('id', p.id); Object.assign(p, v); qtProject(); };
   const del = pjEl('button', 'qbtn danger', 'حذف المشروع'); del.type = 'button';
   del.onclick = async () => { if (!confirm('حذف المشروع «' + p.name + '» بكل لوحه؟')) return; const paths = QT.items.map((x) => x.file_path).filter(Boolean); if (paths.length) await sb.storage.from('qt').remove(paths); await sb.from('qt_projects').delete().eq('id', p.id); qtHome(); };
-  hb.append(add, ex, ed, del); hero.appendChild(hb); m.appendChild(hero);
+  const bg = pjEl('button', 'qbtn gold2', '💰 التسعير والموازنة ←'); bg.type = 'button'; bg.title = 'ابعت الكميات لتحليل الأسعار وطلّع الموازنة'; bg.onclick = qtBudget; bg.disabled = !QT.items.length;
+  hb.append(bg, add, ex, ed, del); hero.appendChild(hb); m.appendChild(hero);
   if (!QT.items.length) { qtSummary(m); m.appendChild(pjEl('div', 'qempty', 'ارفع أول لوحة: اكتب البند واختار ملف DWG، والكمية هتطلع لوحدها.')); return; }
   const tabs = pjEl('div', 'qtabs');
   [['sum', 'الكميات'], ['det', 'التفاصيل والحسابات']].forEach(([k, t]) => { const b = pjEl('button', QT.tab === k ? 'on' : '', t); b.type = 'button'; b.onclick = () => { QT.tab = k; qtProject(); }; tabs.appendChild(b); });
@@ -3503,6 +3519,122 @@ function qtFxDlg(existing) {
     done(); QT.flash = res.data.id; qtProject();
   };
   draw(); setTimeout(() => (existing ? null : i1.focus()), 30);
+}
+/* ===== الربط: حصر الكميات ← تحليل الأسعار ← الموازنة =====
+   كل بند في الحصر بيتربط ببند من تحليل الأسعار (بمعامل لو الوحدات مختلفة)،
+   والكميات بتتكتب في موازنة مشروع تحليل الأسعار المربوط. الربط محفوظ في qt_projects (pa_id, pa_map). */
+function qtPaCands() {
+  const X = pjScan(), out = [];
+  PA.sheets.forEach((sh, i) => { if (sh.copyDel || /سيارات|العمالة/.test(sh.grp) || /^ملخص$/.test((sh.title || '').trim())) return; const it = X.item[i] || {}; out.push({ si: i, t: (PAnames[i] || sh.title || '').trim(), g: sh.grp, unit: it.unit || '' }); });
+  (PA.items || []).forEach((x, k) => out.push({ si: PJ_SAF + k, t: x.t, g: 'الأمن والسلامة', unit: x.unit || '' }));
+  return out;
+}
+const qtUnitN = (u) => pjNorm(u || '').replace(/\s|\.|\//g, '').replace(/مترمربع|م2|م٢/g, 'م²').replace(/مترمكعب|م3|م٣/g, 'م³').replace(/مترطولي|مط|م\.ط/g, 'م.ط').replace(/^عدد$/, 'عدد');
+// تخمين بند تحليل الأسعار: الكلمة الأساسية في اسم البند لازم تبقى في اسم بند التحليل، والوحدة المتطابقة ليها أولوية
+const QT_SYN = [[/^حفر$/, 'حفر عاديه'], [/اساس/, 'سن 6'], [/تشريب/, 'mc'], [/لاصق/, 'rc'], [/^ردم$/, 'ردم اتربه'], [/عدايات|عبارات/, 'برابخ'], [/تخطيط/, 'تخطيط']];
+function qtGuess(item, cands, unit) {
+  const n = pjNorm(item).toLowerCase(), tk = n.split(' ').filter((w) => w.length > 1 && !/^(طبقه|اعمال|بند|سم|كم|م)$/.test(w));
+  const syn = (QT_SYN.find(([re]) => re.test(n)) || [])[1];
+  const key = syn ? syn.split(' ')[0] : tk[0];
+  let pool = cands.filter((c) => pjNorm(c.t).toLowerCase().includes(key)); if (!pool.length) pool = cands;
+  let best = null, bs = 0;
+  pool.forEach((c) => {
+    const cn = pjNorm(c.t).toLowerCase(); if (!cn) return;
+    let sc = cn === n ? 100 : 0;
+    if (syn && cn.includes(syn)) sc += 30;
+    tk.forEach((w) => { if (cn.includes(w)) sc += w.length; });
+    if (unit && c.unit && qtUnitN(c.unit) === qtUnitN(unit)) sc += 4;
+    sc -= cn.length / 200; // الأقصر أعم
+    if (sc > bs) { bs = sc; best = c; }
+  });
+  return bs >= 2 ? best : null;
+}
+async function qtBudget() {
+  const p = QT.cur;
+  const w = pjEl('div', 'pjm'), bx = pjEl('div', 'bx qbud'), hd = pjEl('div', 'hd'), bd = pjEl('div', 'bd'), ft = pjEl('div', 'ft');
+  hd.append(pjEl('b', '', 'التسعير والموازنة — ' + p.name), pjEl('small', '', 'اربط كل بند في الحصر ببنده في تحليل الأسعار، والكميات هتتكتب في الموازنة لوحدها.'));
+  bx.append(hd, bd, ft); w.appendChild(bx); document.body.appendChild(w);
+  bd.appendChild(pjEl('div', 'qbmsg', 'جاري تحميل تحليل الأسعار…'));
+  const done = () => w.remove();
+  try { await loadPA(); if (PJ.cur) await pjExit(false); } catch (e) { bd.textContent = 'تعذّر تحميل تحليل الأسعار.'; return; }
+  const [{ data: qp }, { data: pl }] = await Promise.all([sb.from('qt_projects').select('pa_id,pa_map').eq('id', p.id).single(), sb.from('pa_projects').select('id,name,battalion').order('updated_at', { ascending: false })]);
+  const map = (qp && qp.pa_map) || {}, cands = qtPaCands(), byS = new Map(cands.map((c) => [c.si, c]));
+  bd.textContent = '';
+  // المشروع في تحليل الأسعار
+  const l0 = pjEl('label', 'f', 'مشروع الموازنة في تحليل الأسعار'), s0 = pjEl('select');
+  const on = pjEl('option', '', '➕ مشروع جديد: ' + p.name + (p.battalion ? ' (ك' + p.battalion + ')' : '')); on.value = ''; s0.appendChild(on);
+  (pl || []).forEach((x) => { const o = pjEl('option', '', x.name + (x.battalion ? ' — ك' + x.battalion : '')); o.value = x.id; if (qp && qp.pa_id === x.id) o.selected = true; s0.appendChild(o); });
+  bd.append(l0, s0);
+  // جدول الربط
+  const G = qtGroups().filter((g) => g.mode !== 'formula');
+  const tb = pjEl('table', 'qbt'), hr = pjEl('tr'); ['بند الحصر', 'الكمية', 'بند تحليل الأسعار', 'معامل', 'الكمية في الموازنة'].forEach((h) => hr.appendChild(pjEl('th', '', h))); tb.appendChild(hr);
+  const rows = [];
+  G.forEach((g) => {
+    const k = g.key, m0 = map[k] || {}, guess = m0.si != null ? byS.get(m0.si) : qtGuess(g.item, cands, g.unit);
+    const tr = pjEl('tr'), sel = pjEl('select'), kin = pjEl('input'), res = pjEl('td', 'r'), warn = pjEl('div', 'w');
+    const o0 = pjEl('option', '', '— مش هيتسعّر —'); o0.value = ''; sel.appendChild(o0);
+    let grp = null, og = null; cands.forEach((c) => { if (c.g !== grp) { grp = c.g; og = pjEl('optgroup'); og.label = grp || 'بنود'; sel.appendChild(og); } const o = pjEl('option', '', c.t + (c.unit ? ' (' + c.unit + ')' : '')); o.value = c.si; if (guess && guess.si === c.si && m0.si !== null) o.selected = true; og.appendChild(o); });
+    if (m0.si === null) sel.value = '';
+    kin.type = 'number'; kin.step = 'any'; kin.value = m0.k != null ? m0.k : 1; kin.className = 'k';
+    const calc = () => {
+      const c = byS.get(+sel.value), kk = parseFloat(kin.value); res.textContent = c && isFinite(kk) ? qtN(g.qty * kk) + ' ' + (c.unit || g.unit) : '—';
+      warn.textContent = c && c.unit && qtUnitN(c.unit) !== qtUnitN(g.unit) && kk === 1 ? '⚠️ الوحدة مختلفة (' + g.unit + ' ← ' + c.unit + ') — حط المعامل (مثلاً العمق)' : '';
+      tr.classList.toggle('off', !c);
+    };
+    sel.onchange = calc; kin.oninput = calc;
+    const c1 = pjEl('td', 'n'); c1.append(pjEl('b', '', g.item), pjEl('small', '', qtSecOf(g.item)[1]));
+    const c3 = pjEl('td'); c3.append(sel, warn);
+    const c4 = pjEl('td'); c4.appendChild(kin);
+    tr.append(c1, pjEl('td', 'q', qtN(g.qty) + ' ' + g.unit), c3, c4, res); tb.appendChild(tr);
+    rows.push({ g, sel, kin }); calc();
+  });
+  const tw = pjEl('div', 'qbw'); tw.appendChild(tb); bd.appendChild(tw);
+  bd.appendChild(pjEl('div', 'qbnote', 'بعد الحفظ هيفتحلك موازنة المشروع في تحليل الأسعار: الأسعار بتتحسب من التحليل، وتقدر تطبعها A3. ولو الحصر اتغير بعد كده، ارجع هنا ودوس «إرسال» تاني والكميات هتتحدث.'));
+  const er = pjEl('div', 'err'); bd.appendChild(er);
+  const ok = pjEl('button', 'ok', 'إرسال الكميات وفتح الموازنة'); ok.type = 'button'; const no = pjEl('button', 'no', 'إلغاء'); no.type = 'button';
+  ft.append(ok, no); no.onclick = done; w.onclick = (e) => { if (e.target === w) done(); };
+  ok.onclick = async () => {
+    const bad = rows.filter(({ g, sel, kin }) => { const c = byS.get(+sel.value); return sel.value !== '' && c && c.unit && qtUnitN(c.unit) !== qtUnitN(g.unit) && parseFloat(kin.value) === 1; });
+    if (bad.length && !confirm('فيه ' + bad.length + ' بند وحدته في الحصر غير وحدته في التحليل والمعامل 1:\n' + bad.map((r) => '• ' + r.g.item).join('\n') + '\n\nتكمل كده؟ (الأحسن تحط المعامل، زي العمق أو العرض)')) return;
+    ok.disabled = true; er.textContent = '';
+    const nm = {}, qty = {}, srcs = {};
+    rows.forEach(({ g, sel, kin }) => {
+      const si = sel.value === '' ? null : +sel.value, k = parseFloat(kin.value); nm[g.key] = { si, k: isFinite(k) ? k : 1, item: g.item };
+      if (si == null || !isFinite(k)) return; qty[si] = (qty[si] || 0) + g.qty * k; (srcs[si] = srcs[si] || []).push(g.item);
+    });
+    const sis = Object.keys(qty).map(Number); if (!sis.length) { er.textContent = 'اختار بند تحليل أسعار لبند واحد على الأقل'; ok.disabled = false; return; }
+    Object.keys(qty).forEach((k) => { qty[k] = Math.round(qty[k]); }); // الموازنة بأرقام صحيحة
+    let paId = s0.value;
+    if (!paId) {
+      const base = { o: PAE.dump(), n: PAnames, p: PAtx, h: PAhid };
+      const ins = await sb.from('pa_projects').insert({ name: p.name, battalion: p.battalion || null, items: sis, qty, ov: base.o, names: base.n, tx: base.p, hid: base.h, qt_id: p.id, basics: { note: {} } }).select('id').single();
+      if (ins.error) { er.textContent = 'تعذّر إنشاء مشروع الموازنة'; ok.disabled = false; return; }
+      paId = ins.data.id;
+    } else {
+      const { data: pr, error } = await sb.from('pa_projects').select('items,qty').eq('id', paId).single();
+      if (error) { er.textContent = 'تعذّر فتح مشروع الموازنة'; ok.disabled = false; return; }
+      // البنود اللي كانت جاية من الحصر قبل كده واتشالت من الربط: كميتها بتتمسح
+      const old = Object.values(map).map((x) => x && x.si).filter((x) => x != null);
+      const q2 = { ...(pr.qty || {}) }; old.forEach((si) => { if (!(si in qty)) delete q2[si]; }); Object.assign(q2, qty);
+      const items = [...new Set([...(pr.items || []), ...sis])];
+      const up = await sb.from('pa_projects').update({ items, qty: q2, qt_id: p.id, updated_at: new Date().toISOString() }).eq('id', paId);
+      if (up.error) { er.textContent = 'تعذّر تحديث الموازنة'; ok.disabled = false; return; }
+    }
+    await sb.from('qt_projects').update({ pa_id: paId, pa_map: nm, updated_at: new Date().toISOString() }).eq('id', p.id);
+    done(); closeQT();
+    await openPA(); await pjOpen(paId);
+  };
+}
+// من جوه الموازنة: تحديث الكميات من الحصر المربوط
+async function pjSyncFromQT() {
+  const p = PJ.cur; if (!p || !p.qt_id) return;
+  const [{ data: qp }, { data: its }] = await Promise.all([sb.from('qt_projects').select('name,pa_map').eq('id', p.qt_id).single(), sb.from('qt_items').select('item,unit,mode,qty').eq('project_id', p.qt_id)]);
+  if (!qp) return alert('تعذّر قراءة الحصر');
+  const sum = {}; (its || []).forEach((x) => { if (x.mode === 'formula') return; const k = x.item.trim() + '|' + x.unit; sum[k] = (sum[k] || 0) + +x.qty; });
+  const qty = {}; Object.entries(qp.pa_map || {}).forEach(([k, m]) => { if (!m || m.si == null || !(k in sum)) return; qty[m.si] = (qty[m.si] || 0) + sum[k] * (m.k || 1); });
+  Object.entries(qty).forEach(([si, v]) => { p.qty[si] = Math.round(v); if (!p.items.includes(+si)) p.items.push(+si); });
+  await sb.from('pa_projects').update({ items: p.items, qty: p.qty, updated_at: new Date().toISOString() }).eq('id', p.id);
+  paNav($('paQ').value); pjBOQ();
 }
 function qtExport() {
   const p = QT.cur;
