@@ -685,6 +685,7 @@ body.in footer{color:#7f94b8}
 .pmenu button{border:0;background:none;text-align:right;padding:9px 12px;border-radius:8px;font:600 13.5px inherit;color:#0f2747;cursor:pointer;font-family:inherit}
 .pmenu button:hover{background:#eef3fb}
 .pmenu button:disabled:hover{background:none;cursor:default}
+.pmenu button.red{color:#b42318}
 .pjtoast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:10000;background:#0f2747;color:#fff;font-weight:700;font-size:14px;padding:11px 18px;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.3);max-width:min(720px,92vw);text-align:center;transition:opacity .5s}
 .pjtoast.out{opacity:0}
 #pa td input.pfi{direction:ltr;text-align:center}
@@ -2723,6 +2724,7 @@ function pjBOQ() {
   };
   function draw() {
     paper.textContent = '';
+    const D = []; PJ.boqD = { title: 'موازنة مشروع ' + p.name, rows: D };
     paper.appendChild(pjEl('div', 'pjtitle', pjD('موازنة مشروع ' + p.name)));
     const t = pjEl('table', 'pjform'); t.id = 'pjBoqT';
     const cg = pjEl('colgroup'); [4, 40, 7, 11, 9, 11, 18].forEach((w) => { const c = pjEl('col'); c.style.width = w + '%'; cg.appendChild(c); }); t.appendChild(cg);
@@ -2734,19 +2736,20 @@ function pjBOQ() {
       const qm = p.qty, nm = b.note;
       const secs = []; order.filter((si) => pjKindOf(si) === pk).forEach((si) => { const s = b.sec[si] || pjAutoSec(si); let g = secs.find((x) => x.n === s); if (!g) secs.push(g = { n: s, l: [] }); g.l.push(si); });
       const so = (b.secOrderT && b.secOrderT[pk]) || b.secOrder || []; secs.sort((a, c) => (so.length ? ((so.indexOf(a.n) + 1) || 99) - ((so.indexOf(c.n) + 1) || 99) : 0) || (PJ_SECS.indexOf(a.n) + 1 || 99) - (PJ_SECS.indexOf(c.n) + 1 || 99));
-      const pr0 = pjEl('tr', 'part'), pd = pjEl('td', 'pr', plabel); pd.colSpan = 7; pr0.appendChild(pd); t.appendChild(pr0);
+      D.push({ t: 'part', label: plabel }); const pr0 = pjEl('tr', 'part'), pd = pjEl('td', 'pr', plabel); pd.colSpan = 7; pr0.appendChild(pd); t.appendChild(pr0);
       let k = 0, ptot = 0;
       secs.forEach((g, gi) => {
         const h1 = pjEl('tr', 'yh'), h2 = pjEl('tr');
         const th = (x, rs, cls) => { const c = pjEl('th', cls || '', x); if (rs) c.rowSpan = rs; return c; };
         h1.append(th('م', 2), th('البند'), th('الوحدة', 2), th('الكمية', 2), th('الفئة', 2), th('الاجمالي\n( مليون جنية )', 2), th('ملاحظات', 2));
-        h2.appendChild(pjEl('th', 'sec', (PJ_ORD[gi] || '') + ': ' + g.n));
+        h2.appendChild(pjEl('th', 'sec', (PJ_ORD[gi] || '') + ': ' + g.n)); D.push({ t: 'sec', name: (PJ_ORD[gi] || '') + ': ' + g.n });
         t.append(h1, h2);
         let sub = 0;
         g.l.forEach((si) => {
           k++;
           const it = si >= PJ_CUS ? { desc: pjItemName(si), std: true, unit: (pjCus(si) || {}).unit || '', cus: true } : si >= PJ_SAF ? { desc: pjItemName(si), std: true, unit: (PA.items[pjSafIdx(si)] || {}).unit || '' } : X.item[si], pr = priceOf(si), q = qm[si];
           const tot = q != null && pr != null ? (q * pr) / 1e6 : null; sub += tot || 0;
+          D.push({ t: 'it', k, desc: b.desc[si] || (it.std ? it.desc : (PAnames[si] || it.desc)), unit: it.unit || '', q: q == null ? null : q, pr: pr == null ? null : pr, note: nm[si] || '' });
           const tr = pjEl('tr', 'ir');
           tr.appendChild(pjEl('td', 'c', pjAr(k, 0)));
           const dt = pjEl('td', 'd'); dt.appendChild(pjEl('div', 'dx', pjD(b.desc[si] || (it.std ? it.desc : (PAnames[si] || it.desc)))));
@@ -2778,18 +2781,18 @@ function pjBOQ() {
           t.appendChild(tr);
         });
         ptot += sub;
-        const st = pjEl('tr', 'sub'), sl = pjEl('td', 'c', 'الاجمالى ( مليون جنية )'); sl.colSpan = 5; st.append(sl, pjEl('td', 'c b', pjAr(sub, 2)), pjEl('td', 'e', ''));
+        D.push({ t: 'sub' }); const st = pjEl('tr', 'sub'), sl = pjEl('td', 'c', 'الاجمالى ( مليون جنية )'); sl.colSpan = 5; st.append(sl, pjEl('td', 'c b', pjAr(sub, 2)), pjEl('td', 'e', ''));
         t.appendChild(st);
         const sp = pjEl('tr', 'sp'), spd = pjEl('td'); spd.colSpan = 7; sp.appendChild(spd); t.appendChild(sp);
       });
       grand += ptot; ptots.push([plabel, ptot]);
       if (parts.length > 1) {
-        const tr = pjEl('tr', 'ptot'), l = pjEl('td', 'c', 'إجمالي ' + plabel + ' ( مليون جنية )'); l.colSpan = 5; tr.append(l, pjEl('td', 'c b', pjAr(ptot, 2)), pjEl('td', 'e', '')); t.appendChild(tr);
+        D.push({ t: 'ptot', label: 'إجمالي ' + plabel + ' ( مليون جنية )' }); const tr = pjEl('tr', 'ptot'), l = pjEl('td', 'c', 'إجمالي ' + plabel + ' ( مليون جنية )'); l.colSpan = 5; tr.append(l, pjEl('td', 'c b', pjAr(ptot, 2)), pjEl('td', 'e', '')); t.appendChild(tr);
         const sp = pjEl('tr', 'sp'), spd = pjEl('td'); spd.colSpan = 7; sp.appendChild(spd); t.appendChild(sp);
       }
     });
     if (parts.length > 1) ptots.forEach(([l0, v]) => { const tr = pjEl('tr', 'sub'), l = pjEl('td', 'c', 'إجمالي ' + l0 + ' ( مليون جنية )'); l.colSpan = 5; tr.append(l, pjEl('td', 'c b', pjAr(v, 2)), pjEl('td', 'e', '')); t.appendChild(tr); });
-    const gt = pjEl('tr', 'grand'), gl = pjEl('td', 'c', 'الاجمالى العام'); gl.colSpan = 5; gt.append(gl, pjEl('td', 'c b', pjAr(grand, 2)), pjEl('td', 'e', ''));
+    D.push({ t: 'grand' }); const gt = pjEl('tr', 'grand'), gl = pjEl('td', 'c', 'الاجمالى العام'); gl.colSpan = 5; gt.append(gl, pjEl('td', 'c b', pjAr(grand, 2)), pjEl('td', 'e', ''));
     t.appendChild(gt);
     paper.appendChild(t);
     if (!order.length) paper.appendChild(pjEl('div', 'pjnote noexp', 'المشروع لسه مفيهوش بنود. اختار البنود الأول.'));
@@ -2900,8 +2903,88 @@ table.pjform td.d{font-size:13.5px}
 table.pjform tr{break-inside:avoid;page-break-inside:avoid}
 table.pjform tr.yh,table.pjform tr.yh+tr,table.pjform tr.part{break-after:avoid;page-break-after:avoid}
 .pjtitle{font-size:22px}}`;
-function pjExport() { const h = pjBoqHtml(); if (!h) return; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + h], { type: 'application/vnd.ms-excel' })); a.download = 'موازنة ' + PJ.cur.name + '.xls'; a.click(); }
-function pjPrint() { const h = pjBoqHtml(); if (!h) return; const w = window.open('', '_blank'); if (!w) return alert('اسمح بفتح النوافذ المنبثقة عشان الطباعة'); w.document.write(h); w.document.close(); w.focus(); setTimeout(() => w.print(), 400); }
+// ===== ملف xlsx حقيقي (من غير مكتبات): zip بدون ضغط + XML =====
+const pjCrc = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return (u) => { let c = 0xffffffff; for (let i = 0; i < u.length; i++) c = t[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }; })();
+function pjZip(files) { // [[name, string]]
+  const enc = new TextEncoder(), parts = [], cen = []; let off = 0;
+  const u16 = (v) => [v & 255, (v >>> 8) & 255], u32 = (v) => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
+  for (const [n, txt] of files) {
+    const nm = enc.encode(n), d = enc.encode(txt), crc = pjCrc(d);
+    const h = new Uint8Array([...u32(0x04034b50), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(d.length), ...u32(d.length), ...u16(nm.length), ...u16(0)]);
+    parts.push(h, nm, d);
+    cen.push(new Uint8Array([...u32(0x02014b50), ...u16(20), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(d.length), ...u32(d.length), ...u16(nm.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(off)]), nm);
+    off += h.length + nm.length + d.length;
+  }
+  const cs = cen.reduce((a, x) => a + x.length, 0);
+  const end = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(cs), ...u32(off), ...u16(0)]);
+  return new Blob([...parts, ...cen, end], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+// Excel بمعادلات زي شيت الموازنة: الإجمالي = الكمية × الفئة ÷ 1,000,000 ، والإجماليات SUM
+function pjExport() {
+  const B = PJ.boqD; if (!B) return;
+  const X = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const col = (c) => 'ABCDEFG'[c - 1];
+  const rows = new Map(), merges = [], heights = {};
+  const put = (r, c, st, v, f) => { if (!rows.has(r)) rows.set(r, []); rows.get(r).push({ c, st, v, f }); };
+  const boxRow = (r, c1, c2, st) => { for (let c = c1; c <= c2; c++) put(r, c, st, null); }; // حدود الخلايا المدموجة
+  let r = 1;
+  put(r, 1, 1, B.title); boxRow(r, 2, 7, 0); merges.push('A1:G1'); heights[r] = 34; r += 2;
+  let subStart = 0, partSubs = [], partTots = [], allSubs = [];
+  for (const x of B.rows) {
+    if (x.t === 'part') { put(r, 1, 2, x.label); boxRow(r, 2, 7, 2); merges.push('A' + r + ':G' + r); heights[r] = 26; r++; partSubs = []; continue; }
+    if (x.t === 'sec') {
+      ['م', 'البند', 'الوحدة', 'الكمية', 'الفئة', 'الاجمالي ( مليون جنية )', 'ملاحظات'].forEach((h, i) => put(r, i + 1, 3, h));
+      [1, 3, 4, 5, 6, 7].forEach((c) => { put(r + 1, c, 3, null); merges.push(col(c) + r + ':' + col(c) + (r + 1)); });
+      heights[r] = 34; put(r + 1, 2, 4, x.name); heights[r + 1] = 22; r += 2; subStart = r; continue;
+    }
+    if (x.t === 'it') {
+      put(r, 1, 5, x.k); put(r, 2, 6, x.desc); put(r, 3, 5, x.unit); put(r, 4, 7, x.q); put(r, 5, 8, x.pr);
+      put(r, 6, 9, x.q != null && x.pr != null ? x.q * x.pr / 1e6 : null, 'IF(OR(D' + r + '="",E' + r + '=""),"",D' + r + '*E' + r + '/1000000)');
+      put(r, 7, 5, x.note || null); heights[r] = Math.max(30, Math.ceil(String(x.desc || '').length / 62) * 17 + 8); r++; continue;
+    }
+    if (x.t === 'sub') { put(r, 1, 10, 'الاجمالى ( مليون جنية )'); boxRow(r, 2, 5, 10); merges.push('A' + r + ':E' + r); put(r, 6, 11, null, subStart < r ? 'SUM(F' + subStart + ':F' + (r - 1) + ')' : '0'); put(r, 7, 16, null); partSubs.push('F' + r); allSubs.push('F' + r); heights[r] = 24; r += 2; continue; }
+    if (x.t === 'ptot') { put(r, 1, 12, x.label); boxRow(r, 2, 5, 12); merges.push('A' + r + ':E' + r); put(r, 6, 13, null, partSubs.join('+') || '0'); put(r, 7, 16, null); partTots.push('F' + r); heights[r] = 24; r += 2; continue; }
+    if (x.t === 'grand') { put(r, 1, 14, 'الاجمالى العام'); boxRow(r, 2, 5, 14); merges.push('A' + r + ':E' + r); put(r, 6, 15, null, (partTots.length ? partTots : allSubs).join('+') || '0'); put(r, 7, 16, null); heights[r] = 28; r++; }
+  }
+  const cell = (rr, o) => {
+    const ref = col(o.c) + rr;
+    if (o.f) return '<c r="' + ref + '" s="' + o.st + '"><f>' + X(o.f) + '</f>' + (typeof o.v === 'number' ? '<v>' + o.v + '</v>' : '') + '</c>';
+    if (o.v == null || o.v === '') return '<c r="' + ref + '" s="' + o.st + '"/>';
+    if (typeof o.v === 'number') return '<c r="' + ref + '" s="' + o.st + '"><v>' + o.v + '</v></c>';
+    return '<c r="' + ref + '" s="' + o.st + '" t="inlineStr"><is><t xml:space="preserve">' + X(o.v) + '</t></is></c>';
+  };
+  const sd = [...rows.keys()].sort((a2, b2) => a2 - b2).map((rr) => { const cs = rows.get(rr).sort((a2, b2) => a2.c - b2.c).filter((o, i, ar) => !i || ar[i - 1].c !== o.c); return '<row r="' + rr + '"' + (heights[rr] ? ' ht="' + heights[rr] + '" customHeight="1"' : '') + '>' + cs.map((o) => cell(rr, o)).join('') + '</row>'; }).join('');
+  const sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><sheetViews><sheetView rightToLeft="1" showGridLines="0" workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols><col min="1" max="1" width="6" customWidth="1"/><col min="2" max="2" width="62" customWidth="1"/><col min="3" max="3" width="10" customWidth="1"/><col min="4" max="4" width="15" customWidth="1"/><col min="5" max="5" width="12" customWidth="1"/><col min="6" max="6" width="17" customWidth="1"/><col min="7" max="7" width="26" customWidth="1"/></cols><sheetData>' + sd + '</sheetData>' + (merges.length ? '<mergeCells count="' + merges.length + '">' + merges.map((m) => '<mergeCell ref="' + m + '"/>').join('') + '</mergeCells>' : '') + '<printOptions horizontalCentered="1"/><pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.2" footer="0.2"/><pageSetup paperSize="8" orientation="portrait" fitToWidth="1" fitToHeight="0"/></worksheet>';
+  const bd = '<border><left style="medium"><color auto="1"/></left><right style="medium"><color auto="1"/></right><top style="medium"><color auto="1"/></top><bottom style="medium"><color auto="1"/></bottom><diagonal/></border>';
+  const fill = (c) => '<fill><patternFill patternType="solid"><fgColor rgb="FF' + c + '"/><bgColor indexed="64"/></patternFill></fill>';
+  const xf = (font, fl, brd, h, fmt, wrap) => '<xf numFmtId="' + (fmt || 0) + '" fontId="' + font + '" fillId="' + fl + '" borderId="' + brd + '" applyFont="1" applyFill="1" applyBorder="1"' + (fmt ? ' applyNumberFormat="1"' : '') + ' applyAlignment="1"><alignment horizontal="' + h + '" vertical="center"' + (wrap ? ' wrapText="1"' : '') + (h === 'right' ? ' readingOrder="2"' : '') + '/></xf>';
+  const styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="3"><numFmt numFmtId="164" formatCode="#,##0.###"/><numFmt numFmtId="165" formatCode="#,##0"/><numFmt numFmtId="166" formatCode="#,##0.00"/></numFmts>'
+    + '<fonts count="7"><font><sz val="11"/><name val="Arial"/></font><font><b/><sz val="11"/><name val="Arial"/></font><font><b/><u/><sz val="18"/><name val="Arial"/></font><font><b/><sz val="14"/><color rgb="FFFFFFFF"/><name val="Arial"/></font><font><b/><sz val="13"/><name val="Arial"/></font><font><b/><sz val="15"/><name val="Arial"/></font><font><b/><u/><sz val="13"/><name val="Arial"/></font></fonts>'
+    + '<fills count="7"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' + fill('0F2747') + fill('FFEF3A') + fill('C9CCD1') + fill('FFE08A') + fill('BBB6A8') + '</fills>'
+    + '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>' + bd + '</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+    + '<cellXfs count="17">' + [
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>', xf(2, 0, 0, 'center'), xf(3, 2, 1, 'right'), xf(1, 3, 1, 'center', 0, 1), xf(6, 4, 1, 'right'),
+      xf(1, 0, 1, 'center', 0, 1), xf(1, 0, 1, 'right', 0, 1), xf(1, 0, 1, 'center', 164), xf(1, 0, 1, 'center', 165), xf(1, 0, 1, 'center', 166),
+      xf(4, 4, 1, 'center'), xf(4, 4, 1, 'center', 166), xf(4, 5, 1, 'center'), xf(4, 5, 1, 'center', 166), xf(5, 6, 1, 'center'), xf(5, 6, 1, 'center', 166), xf(0, 0, 1, 'center')].join('') + '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  const blob = pjZip([
+    ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'],
+    ['_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
+    ['xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="موازنة" sheetId="1" r:id="rId1"/></sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>'],
+    ['xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
+    ['xl/styles.xml', styles], ['xl/worksheets/sheet1.xml', sheet]]);
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'موازنة ' + PJ.cur.name + '.xlsx'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  return blob;
+}
+// طباعة من غير نافذة منبثقة (iframe مخفي) — بتشتغل حتى لو المتصفح قافل الـ popups
+function pjPrint() {
+  const h = pjBoqHtml(); if (!h) return;
+  document.querySelectorAll('iframe.pjprint').forEach((x) => x.remove());
+  const f = document.createElement('iframe'); f.className = 'pjprint'; f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.appendChild(f); const d = f.contentWindow.document; d.open(); d.write(h); d.close();
+  const go = () => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { alert('تعذّرت الطباعة'); } setTimeout(() => f.remove(), 60000); };
+  if (d.fonts && d.fonts.ready) d.fonts.ready.then(() => setTimeout(go, 250)); else setTimeout(go, 600);
+}
+
 
 
 sb.auth.getSession().then(({ data }) => show(data.session));
@@ -3157,7 +3240,15 @@ function qtProject() {
   del.onclick = async () => { if (!confirm('حذف المشروع «' + p.name + '» بكل لوحه؟')) return; const paths = QT.items.map((x) => x.file_path).filter(Boolean); if (paths.length) await sb.storage.from('qt').remove(paths); await sb.from('qt_projects').delete().eq('id', p.id); qtHome(); };
   const bg = pjEl('button', 'qbtn gold2', '💰 التسعير والموازنة ←'); bg.type = 'button'; bg.title = 'ابعت الكميات لتحليل الأسعار وطلّع الموازنة'; bg.onclick = qtBudget; bg.disabled = !QT.items.length;
   const mn = pjEl('button', 'qbtn', '✎ بند يدوي'); mn.type = 'button'; mn.title = 'بند بكمية بتكتبها بإيدك من غير لوحة'; mn.onclick = () => qtManual();
-  hb.append(bg, add, mn, ex, ed, del); hero.appendChild(hb); m.appendChild(hero);
+  const cmd = pjEl('button', 'qbtn on', '⋯ الأوامر ▾'); cmd.type = 'button';
+  cmd.onclick = (ev) => {
+    ev.stopPropagation(); document.querySelectorAll('.pmenu').forEach((x) => x.remove());
+    const mu = pjEl('div', 'pmenu qmenu'), r0 = cmd.getBoundingClientRect(); mu.style.top = (r0.bottom + 6) + 'px'; mu.style.left = Math.max(8, r0.left) + 'px';
+    [[bg, '💰 التسعير والموازنة'], [add, '+ إضافة لوحة'], [mn, '✎ بند يدوي'], [ex, '📊 تصدير Excel'], [ed, '✏️ تعديل الاسم'], [del, '🗑 حذف المشروع']].forEach(([b0, t]) => { const x = pjEl('button', b0 === del ? 'red' : '', t); x.type = 'button'; if (b0.disabled) { x.disabled = true; x.style.opacity = '.45'; } x.onclick = () => { mu.remove(); b0.onclick(); }; mu.appendChild(x); });
+    document.body.appendChild(mu);
+    setTimeout(() => document.addEventListener('click', function f(e2) { if (!mu.contains(e2.target)) { mu.remove(); document.removeEventListener('click', f); } }), 0);
+  };
+  hb.append(cmd); hero.appendChild(hb); m.appendChild(hero);
   if (!QT.items.length) { qtSummary(m); m.appendChild(pjEl('div', 'qempty', 'ارفع أول لوحة: اكتب البند واختار ملف DWG، والكمية هتطلع لوحدها.')); return; }
   const tabs = pjEl('div', 'qtabs');
   [['sum', 'الكميات'], ['det', 'التفاصيل والحسابات']].forEach(([k, t]) => { const b = pjEl('button', QT.tab === k ? 'on' : '', t); b.type = 'button'; b.onclick = () => { QT.tab = k; qtProject(); }; tabs.appendChild(b); });
@@ -3184,7 +3275,8 @@ function qtSummary(m) {
   // شريط: بحث + إضافة
   const bar = pjEl('div', 'qlbar');
   const q = pjEl('input'); q.type = 'search'; q.placeholder = '🔍  دوّر على بند…'; q.className = 'qlq';
-  bar.append(q); m.appendChild(bar);
+  const ad2 = pjEl('button', 'qbtn on', '+ إضافة لوحة'); ad2.type = 'button'; ad2.onclick = () => qtAdd();
+  bar.append(q, ad2); m.appendChild(bar);
   const L = pjEl('div', 'qlist'); m.appendChild(L);
   if (!secs.size) { L.appendChild(pjEl('div', 'qempty', 'لسه مفيش بنود — ارفع أول لوحة.')); return; }
   const rows = [];
@@ -3858,8 +3950,8 @@ function pjCmdMenu(btn) {
   const add = (t, f, dis, ttl) => { const x = pjEl('button', '', t); x.type = 'button'; if (dis) { x.disabled = true; x.style.opacity = '.45'; x.title = ttl || ''; } x.onclick = () => { mn.remove(); f(); }; mn.appendChild(x); };
   const linked = p && p.qt_id && typeof IS_QT !== 'undefined' && IS_QT;
   add('🔄 تحديث الكميات من الحصر', pjSyncFromQT, !linked, 'المشروع ده مش مربوط بحصر كميات — اربطه من «التسعير والموازنة» في حصر الكميات');
-  add('📊 تصدير Excel', () => pjExport());
-  add('🖨 طباعة / PDF', () => pjPrint());
+  add('📊 تصدير Excel (بالمعادلات)', () => pjExport());
+  add('🖨 طباعة / حفظ PDF (A3)', () => pjPrint());
   document.body.appendChild(mn);
   setTimeout(() => document.addEventListener('click', function f(ev) { if (!mn.contains(ev.target)) { mn.remove(); document.removeEventListener('click', f); } }), 0);
 }
