@@ -1334,6 +1334,7 @@ function PAEngine(sheets) {
 
 /* ===== تحليل أسعار (للأدمن بس: الداتا مشفرة والمفتاح في قاعدة البيانات بصلاحية الأدمن) ===== */
 let PA = null, PAcur = null, PAE = null, PAmode = 'x';
+const PJ_COPY0 = 200;
 async function loadPA() {
   if (PA) return PA;
   const { data, error } = await sb.from('price_key').select('k').eq('id', 1).maybeSingle();
@@ -1346,12 +1347,14 @@ async function loadPA() {
   PA = JSON.parse(txt);
   const HDR = /^(الهيئة الهندسية للقوات المسلحة|إدارة المهندسين العسكريين|فرع الطرق|المكتب الاستشاري فرع الطرق)$/;
   PA.sheets.forEach((s) => s.rows.forEach((r) => r[1].forEach((c) => { if (typeof c[0] === 'string' && !c[6] && HDR.test(c[0].replace(/ـ/g, '').replace(/\s+/g, ' ').trim())) c[0] = ''; })));
+  // النسخ اللي جوه المشاريع بتبدأ من رقم ثابت (PJ_COPY0) عشان إضافة شيتات جديدة للتحليل متلخبطش أرقامها
+  for (let i = PA.sheets.length; i < PJ_COPY0; i++) PA.sheets.push({ title: '', name: '__pad' + i, grp: '', rows: [], w: [], st: [], x: [], copyDel: true, pad: true });
   PAE = PAEngine(PA.sheets); paLoadSaved(); paUndoReset();
   return PA;
 }
 function paItems() {
   const out = [{ g: 'أعمال الأمن والسلامة (مايو 2026)', t: PAnames.s || 'جدول الأسعار', safety: true }];
-  PA.sheets.forEach((s, i) => out.push({ g: s.grp, t: PAnames[i] || s.title, i }));
+  PA.sheets.forEach((s, i) => { if (!s.pad) out.push({ g: s.grp, t: PAnames[i] || s.title, i }); });
   if (PJ.cur) {
     const mp = new Map(out.map((it) => [it.safety ? -1 : it.i, it]));
     const l = PJ.cur.items.map((k) => (k >= PJ_SAF ? pjSafItem(k) : mp.get(k))).filter((it) => it && !(it.i != null && PA.sheets[it.i] && PA.sheets[it.i].copyDel));
@@ -1378,7 +1381,11 @@ function paNav(q) {
 
 let PAsel = null, PAnames = {}, PAtx = {}, PAhid = {}, PAhm = false;
 function paSave() { paUndoPush(); if (PJ.cur) return pjSaveSoon(); try { localStorage.setItem('pa_edits_v1', JSON.stringify({ o: PAE.dump(), n: PAnames, p: PAtx, h: PAhid })); } catch (e) { /* ignore */ } }
-function paLoadSaved() { try { const j = JSON.parse(localStorage.getItem('pa_edits_v1') || 'null'); if (j) { PAE.load(j.o || []); PAnames = j.n || {}; PAtx = j.p || {}; PAhid = j.h || {}; } } catch (e) { /* ignore */ } }
+function paLoadSaved() {
+  try { const j = JSON.parse(localStorage.getItem('pa_edits_v1') || 'null'); if (j) { const rv = +(localStorage.getItem('pa_reset_v') || 0); (PA.reset || []).forEach(([v, l]) => { if (v > rv && j.o) l.forEach((si) => { j.o[si] = []; }); }); PAE.load(j.o || []); PAnames = j.n || {}; PAtx = j.p || {}; PAhid = j.h || {}; } } catch (e) { /* ignore */ }
+  // شيتات اتبدلت في التحليل: تعديلات المتصفح القديمة عليها بتتشال مرة واحدة
+  try { const mv = Math.max(0, ...(PA.reset || []).map((x) => x[0])); if (mv) localStorage.setItem('pa_reset_v', mv); } catch (e) { /* ignore */ }
+}
 /* تعديل نص في أي مكان: يرجّع القيمة الجديدة عبر cb (فاضي = رجوع للأصل) */
 function paEditText(node, cur, cb, multi) {
   if (node.querySelector && node.querySelector('textarea')) return;
@@ -2647,7 +2654,7 @@ function pjBasics() {
   m.appendChild(pjEl('div', 'pjnote', 'عايز تعدّل رقم معين جوه بند (زي معدل الإنتاج أو سعر خامة)؟ افتح البند من القايمة واضغط على الرقم.'));
 }
 /* ===== الموازنة بنفس فورمة الهيئة ===== */
-const PJ_SECS = ['أعمال الجسر الترابي', 'أعمال طبقات الأساس', 'أعمال طبقات الرصف', 'أعمال الأرصفة والبردورات', 'أعمال البرابخ', 'أعمال الأمن والسلامة', 'أعمال عامة'];
+const PJ_SECS = ['أعمال الجسر الترابي', 'أعمال طبقات الأساس', 'أعمال طبقات الرصف', 'أعمال الأرصفة والبردورات', 'أعمال البرابخ', 'أعمال الغرف', 'أعمال الأمن والسلامة', 'أعمال عامة'];
 const PJ_ORD = ['أولاً', 'ثانياً', 'ثالثاً', 'رابعاً', 'خامساً', 'سادساً', 'سابعاً', 'ثامناً', 'تاسعاً', 'عاشراً'];
 const PJ_SAF = 10000;
 const pjSafIdx = (k) => (k - PJ_SAF) % 100;
@@ -2658,15 +2665,16 @@ function pjItemName(si) { if (si >= PJ_CUS) { const c = pjCus(si); return c ? c.
 const PJ_CUS = 30000;
 const pjCus = (si) => ((PJ.cur && PJ.cur.basics && PJ.cur.basics.custom) || []).find((c) => c.k === si);
 function pjAutoSec(si) {
-  if (si >= PJ_CUS) { const c = pjCus(si); return (c && c.sec) || PJ_SECS[6]; }
-  if (si >= PJ_SAF) return PJ_SECS[5];
+  if (si >= PJ_CUS) { const c = pjCus(si); return (c && c.sec) || PJ_SECS[7]; }
+  if (si >= PJ_SAF) return PJ_SECS[6];
   const t = pjNorm((PA.sheets[si].title || '') + ' ' + (PA.sheets[si].grp || ''));
   if (/برابخ|بربخ/.test(t)) return PJ_SECS[4];
+  if (/غرف|فواريغ/.test(t)) return PJ_SECS[5];
   if (/رابطه|سطحيه|سوائل|mc|rc|تشريب|لصق|اسفلتي/i.test(t) && !/تكسير|كشط/.test(t)) return PJ_SECS[2];
   if (/سن ?\d|سن1|fdr|احلال|اساس|مغبر/i.test(t)) return PJ_SECS[1];
   if (/بردور|نيوجيرس|نبوجرس|انترلوك|إنترلوك|خرسانه|بلاط|قدمه|دكه|دهان|عش النحل|دبش/.test(t)) return PJ_SECS[3];
   if (/حفر|ردم|تسويه|تطهير|ازاله|تكسير|كشط|نقل|ناتج/.test(t)) return PJ_SECS[0];
-  return PJ_SECS[6];
+  return PJ_SECS[7];
 }
 const pjD = (x) => String(x == null ? '' : x).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
 // نوع الأعمال لكل قسم: أعمال شركات / أعمال ذاتي (أو أي كلام تكتبه)
@@ -2865,7 +2873,7 @@ async function pjCusDlg(c, after) {
     { k: 'desc', label: 'وصف البند', type: 'area', value: c ? c.desc : '' },
     { k: 'unit', label: 'الوحدة', value: c ? c.unit : 'م²', list: QT_UNITS },
     { k: 'price', label: 'الفئة (جنيه)', type: 'num', value: c && c.price != null ? c.price : '', req: false },
-    { k: 'sec', label: 'القسم', options: PJ_SECS, value: c ? c.sec : PJ_SECS[6] },
+    { k: 'sec', label: 'القسم', options: PJ_SECS, value: c ? c.sec : PJ_SECS[7] },
   ], c ? 'حفظ' : 'إضافة');
   if (!v) return;
   if (c) Object.assign(c, v); else { const k = b.custom.reduce((m, x) => Math.max(m, x.k), PJ_CUS) + 1; b.custom.push({ k, ...v }); b.sec = b.sec || {}; b.sec[k] = v.sec; }
@@ -3736,7 +3744,7 @@ function qtGuess(item, cands, unit) {
   });
   return bs >= 2 ? best : null;
 }
-const QT2PJ = { kasht: 0, hafr: 0, radm: 0, sen: 1, asph: 2, rasf: 3, sena: 4, mark: 5, etc: 6 };
+const QT2PJ = { kasht: 0, hafr: 0, radm: 0, sen: 1, asph: 2, rasf: 3, sena: 5, mark: 6, etc: 7 };
 async function qtBudget() {
   const p = QT.cur;
   const w = pjEl('div', 'pjm'), bx = pjEl('div', 'bx qbud'), hd = pjEl('div', 'hd'), bd = pjEl('div', 'bd'), ft = pjEl('div', 'ft');
@@ -3809,7 +3817,7 @@ async function qtBudget() {
       const k = parseFloat(kin.value), kk = isFinite(k) ? k : 1; let si = sel.value === '' ? null : sel.value === 'new' ? 'new' : +sel.value;
       if (si === 'new') { // بند جديد في الموازنة بنفس اسم بند الحصر
         let c = pb.custom.find((x) => x.desc === g.item);
-        if (!c) { const nk = pb.custom.reduce((m2, x) => Math.max(m2, x.k), PJ_CUS) + 1; c = { k: nk, desc: g.item, unit: g.unit, price: null, sec: PJ_SECS[QT2PJ[qtSecOf(g.item)[0]] || 6] }; pb.custom.push(c); pb.sec[nk] = c.sec; }
+        if (!c) { const nk = pb.custom.reduce((m2, x) => Math.max(m2, x.k), PJ_CUS) + 1; c = { k: nk, desc: g.item, unit: g.unit, price: null, sec: PJ_SECS[QT2PJ[qtSecOf(g.item)[0]] || 7] }; pb.custom.push(c); pb.sec[nk] = c.sec; }
         si = c.k;
       }
       nm[g.key] = { si, k: kk, item: g.item };
