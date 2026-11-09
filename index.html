@@ -263,6 +263,7 @@ body.in footer{color:#7f94b8}
 #qt .qgrph h3{margin:0;font-size:20px}#qt .qgrph .qq{background:#f5b301;color:#111;border-radius:10px;padding:3px 10px;font-weight:900}
 #qt .qgrp > .qformula{margin-bottom:12px}
 #qt .qtile.fx{border-color:rgba(245,179,1,.55)}
+#qt .qg li.plus{color:#0f5132}#qt .qg li.minus{color:#b42318}#qt .qg li.net{font-weight:800}#qt .qg li.hd{font-weight:800;list-style:none;margin-inline-start:-14px}
 #qt ul.qfx{margin:8px 0;padding-inline-start:20px;line-height:1.9}
 #qt .qtotal{background:#1f2833;border-top:4px solid var(--line)}
 #qt .qtotal .qbtn.on{background:var(--line);border-color:var(--line);color:#1b1b1b}
@@ -2907,10 +2908,13 @@ function qtGroupDetail(g, mode, th) {
   }
   if (g.kind === 'hatch') {
     g.items.forEach((it, i) => {
-      const li = pjEl('li'); const pos = it.parts.filter((p) => !p.hole), neg = it.parts.filter((p) => p.hole);
-      li.textContent = (g.items.length > 1 ? 'هاتش ' + (i + 1) + ': ' : '') + pos.map((p) => qtN(p.a)).join(' + ') + (neg.length ? ' − (' + neg.map((p) => qtN(p.a)).join(' + ') + ' جزر)' : '') + ' = ' + qtN(it.net) + ' م²';
-      ul.appendChild(li);
+      const pos = it.parts.filter((p) => !p.hole), neg = it.parts.filter((p) => p.hole);
+      if (g.items.length > 1) li('هاتش ' + (i + 1) + ' = ' + qtN(it.net) + ' م²', 'hd');
+      pos.forEach((p, j) => li((pos.length > 1 ? 'حدود خارجية ' + (j + 1) : 'الحدود الخارجية للهاتش') + ' = ' + qtN(p.a) + ' م²', 'plus'));
+      neg.forEach((p, j) => li('جزيرة ' + (j + 1) + ' جوا الهاتش (مش متهشرة) = ' + qtN(p.a) + ' م² — بتتطرح', 'minus'));
+      if (neg.length || pos.length > 1) li('الصافي = ' + pos.map((p) => qtN(p.a)).join(' + ') + (neg.length ? ' − ' + neg.map((p) => qtN(p.a)).join(' − ') : '') + ' = ' + qtN(it.net) + ' م²', 'net');
     });
+    li('إزاي اتحسبت: كل هاتش ليه حدود (Boundary). المساحة بتتحسب من إحداثيات نقط الحدود نفسها، والأقواس بتتحسب بالظبط مش تقريب. الحدود الخارجية هي محيط الهاتش كله، والجزر هي الأماكن المقفولة اللي جوه الهاتش ومش متهشرة (زي الجزر الوسطى أو البلوكات اللي اتعمل حواليها الهاتش)، فبتتطرح. تقدر تراجعها في AutoCAD: اختار الهاتش واكتب LIST أو افتح Properties، هتلاقي Area = الصافي ده.', 'muted');
   } else if (g.kind === 'line') {
     const li = pjEl('li'); li.textContent = g.n + ' خط، الطول ' + qtN(g.length) + ' م.ط' + (g.paint < g.length - 0.01 ? '، المدهون ' + qtN(g.paint) + ' م.ط (نسبة ' + qtN(g.paint / g.length * 100, 0) + '٪)' : '') + (g.area ? '، مساحة المقفول ' + qtN(g.area) + ' م²' : '');
     ul.appendChild(li);
