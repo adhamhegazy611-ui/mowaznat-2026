@@ -378,6 +378,22 @@ body.in footer{color:#7f94b8}
 #qt .qgrph{background:rgba(5,14,28,.7)}
 #qt .qsvg{background:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px) 0 0/24px 24px,linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px) 0 0/24px 24px,#071224;border-color:var(--bd)}
 #qt .qcard.upd .qsvgw::after{content:'بيقرا تفاصيل اللوحة كاملة…';position:absolute;bottom:10px;inset-inline-start:10px;background:rgba(5,14,28,.85);color:var(--ac2);font-size:12px;font-weight:700;border-radius:8px;padding:4px 10px}
+#qt .qsecs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,370px),1fr));gap:16px;align-items:start}
+#qt .qsec{background:rgba(8,20,40,.55);border:1px solid var(--bd);border-radius:18px;padding:14px 14px 16px;backdrop-filter:blur(8px);box-shadow:0 14px 34px rgba(0,0,0,.28)}
+#qt .qsec .qsech{margin:0 2px 12px}
+#qt .qtiles.stack{grid-template-columns:1fr;gap:10px}
+#qt .qtiles.stack .qtile{padding:12px 14px 10px;box-shadow:none;background:rgba(18,38,68,.85)}
+#qt .qtiles.stack .qtile::before{inset:0 auto 0 0;width:3px;height:auto}
+#qt .qtiles.stack .qtile .tn{font-size:14px}#qt .qtiles.stack .qtile .tn i{width:30px;height:30px;font-size:14px}
+#qt .qtiles.stack .qtile .tq{margin:8px 0 2px}#qt .qtiles.stack .qtile .tq b{font-size:28px}
+#qt .qtiles.stack .qtile .tf{margin-top:8px;padding-top:7px}
+#qt .qaddrow{margin-top:16px}
+#qt .qaddrow .qadd{min-height:110px}
+#qt .qsech{display:flex;align-items:center;gap:10px;margin:6px 2px 12px;padding-bottom:8px;border-bottom:1px solid rgba(148,173,212,.18)}
+#qt .qsech i{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:rgba(233,165,20,.14);color:var(--ac2);font-style:normal;font-size:14px;flex:none}
+#qt .qsech h3{margin:0;font-size:17px;font-weight:800;color:#fff;letter-spacing:.2px}
+#qt .qsech .n{font-size:12px;font-weight:700;color:var(--mut);background:rgba(255,255,255,.05);border:1px solid var(--bd);border-radius:20px;padding:1px 10px}
+#qt .qsech::after{content:"";flex:1}
 #qt .qsvgw{position:relative}
 #qt .qsvgw .qsvg{display:block;width:100%;height:clamp(320px,58vh,640px);max-height:none;cursor:grab;touch-action:none;user-select:none}
 #qt .qsvgw .qsvg.drag{cursor:grabbing}
@@ -2915,9 +2931,37 @@ function qtProject() {
   if (QT.tab === 'sum') qtSummary(m); else qtDetails(m);
 }
 const QT_ICON = { area: '▦', volume: '⬛', section: '◩', length: '━', paint: '┅', count: '#', fill: '▲', cut: '▼', formula: 'ƒ' };
+// الأقسام الرئيسية (بالترتيب) — البند بيتحط في قسمه من اسمه
+const QT_SECS = [
+  ['kasht', 'أعمال الكشط والإزالة', '⛏', /كشط|إزال|ازال|تكسير|هدم|تطهير/],
+  ['hafr', 'أعمال الحفر', '▼', /حفر/],
+  ['radm', 'أعمال الردم', '▲', /ردم|إحلال|احلال|طبان|تسوية|ترابي/],
+  ['sen', 'أعمال طبقات الأساس (السن)', '▤', /سن ?\d|سن\b|أساس|اساس|FDR|دبش|مثبت/i],
+  ['asph', 'أعمال الأسفلت', '▬', /أسفلت|اسفلت|تشريب|لاصق|MC|RC|رابط|سطحي|مطب/i],
+  ['rasf', 'أعمال الأرصفة والبردورات', '▦', /بردور|انترلوك|إنترلوك|رصف|رصيف|بلاط|قدمة|نيوجيرسي|نيوجرسي|نيوجرسى|نبوجرسى|كيستون|دكة|خرسان/],
+  ['sena', 'الأعمال الصناعية والصرف', '◫', /عداي|عبار|ماسور|برابخ|برب|غرف|غرفة|بلاع|منهول|صرف/],
+  ['mark', 'أعمال التخطيط والأمان', '┅', /تخطيط|دهان|علامات|لوحات|عواكس|متاريس|كابولي|جانتري|حواجز/],
+  ['etc', 'أعمال أخرى', '•', /./],
+];
+const qtSecOf = (item) => (QT_SECS.find((x) => x[3].test(item)) || QT_SECS[QT_SECS.length - 1]);
 function qtSummary(m) {
-  const g = pjEl('div', 'qtiles');
-  qtGroups().forEach((G, gi) => {
+  const secs = new Map();
+  qtGroups().forEach((G) => { const k = G.mode === 'formula' ? 'etc' : qtSecOf(G.item)[0]; if (!secs.has(k)) secs.set(k, []); secs.get(k).push(G); });
+  const wrapS = pjEl('div', 'qsecs'); m.appendChild(wrapS);
+  QT_SECS.filter(([k]) => secs.has(k)).forEach(([k, name, ic]) => {
+    const list = secs.get(k);
+    const sec = pjEl('section', 'qsec'), hd = pjEl('div', 'qsech');
+    hd.append(pjEl('i', '', ic), pjEl('h3', '', name), pjEl('span', 'n', list.length + (list.length === 1 ? ' بند' : list.length < 11 ? ' بنود' : ' بند')));
+    const g = pjEl('div', 'qtiles stack'); sec.append(hd, g); wrapS.appendChild(sec);
+    list.forEach((G) => qtTile(G, g));
+  });
+  const g = pjEl('div', 'qtiles qaddrow');
+  const ad = pjEl('button', 'qadd'); ad.type = 'button'; ad.append(pjEl('span', '', '+'), document.createTextNode('إضافة لوحة')); ad.onclick = () => qtAdd();
+  g.appendChild(ad);
+  m.appendChild(g);
+}
+function qtTile(G, g) {
+  {
     const x = G.rows[0], many = G.rows.length > 1;
     const t = pjEl('div', 'qtile m-' + x.mode);
     const tn = pjEl('div', 'tn'); tn.append(pjEl('i', '', QT_ICON[x.mode] || '•'), pjEl('span', '', x.item));
@@ -2943,17 +2987,17 @@ function qtSummary(m) {
     t.append(tn, tq, tf);
     if (G.rows.some((y) => y.id === QT.flash)) { t.classList.add('flash'); QT.flash = null; }
     g.appendChild(t);
-  });
-  const ad = pjEl('button', 'qadd'); ad.type = 'button'; ad.append(pjEl('span', '', '+'), document.createTextNode('إضافة لوحة')); ad.onclick = () => qtAdd();
-  g.appendChild(ad);
-  m.appendChild(g);
+  }
 }
 async function qtDetails(m) {
   const box = pjEl('div'); box.appendChild(pjEl('div', 'qempty', 'جاري التحميل…')); m.appendChild(box);
   const { data } = await sb.from('qt_items').select('id,detail').eq('project_id', QT.cur.id);
   const det = {}; (data || []).forEach((x) => { det[x.id] = x.detail; });
   box.textContent = '';
-  qtGroups().forEach((G) => {
+  let lastSec = null;
+  qtGroups().map((G) => [QT_SECS.findIndex((x) => x === (G.mode === 'formula' ? QT_SECS[QT_SECS.length - 1] : qtSecOf(G.item))), G]).sort((a, b) => a[0] - b[0]).map((p) => p[1]).forEach((G) => {
+    const sc = G.mode === 'formula' ? QT_SECS[QT_SECS.length - 1] : qtSecOf(G.item);
+    if (sc !== lastSec) { lastSec = sc; const hd = pjEl('div', 'qsech'); hd.append(pjEl('i', '', sc[2]), pjEl('h3', '', sc[1])); box.appendChild(hd); }
     if (G.rows.length < 2) { box.appendChild(qtDetailCard(G.rows[0], det[G.rows[0].id])); return; }
     const sec = pjEl('div', 'qgrp');
     const h = pjEl('div', 'qgrph'); h.append(pjEl('h3', '', G.item), pjEl('span', 'qq', qtN(G.qty) + ' ' + G.unit));
@@ -3404,7 +3448,12 @@ function qtExport() {
   const p = QT.cur;
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
   let h = '<table border="1" dir="rtl"><tr><th colspan="4">حصر كميات — ' + esc(p.name) + '</th></tr><tr><th>م</th><th>البند</th><th>الكمية</th><th>الوحدة</th></tr>';
-  qtGroups().forEach((x, i) => { h += '<tr><td>' + (i + 1) + '</td><td>' + esc(x.item) + '</td><td>' + Math.round(+x.qty) + '</td><td>' + esc(x.unit) + '</td></tr>'; });
+  let i = 0;
+  QT_SECS.forEach((sc) => {
+    const gs = qtGroups().filter((G) => (G.mode === 'formula' ? QT_SECS[QT_SECS.length - 1] : qtSecOf(G.item)) === sc); if (!gs.length) return;
+    h += '<tr><th colspan="4" style="background:#0b1f3a;color:#fff;text-align:right">' + esc(sc[1]) + '</th></tr>';
+    gs.forEach((x) => { h += '<tr><td>' + (++i) + '</td><td>' + esc(x.item) + '</td><td>' + Math.round(+x.qty) + '</td><td>' + esc(x.unit) + '</td></tr>'; });
+  });
   h += '</table>';
   const b = new Blob(['\ufeff<html><head><meta charset="utf-8"></head><body>' + h + '</body></html>'], { type: 'application/vnd.ms-excel' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'حصر كميات - ' + p.name + '.xls'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
