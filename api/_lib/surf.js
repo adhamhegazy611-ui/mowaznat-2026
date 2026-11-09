@@ -66,7 +66,7 @@ function volumeOf(pts, maxEdge = 30) {
 
 // json: ناتج dwgread -O JSON (نص)
 function surfaces(jsonText) {
-  const J = JSON.parse(jsonText);
+  const J = typeof jsonText === 'string' ? JSON.parse(jsonText) : jsonText;
   const cls = {}; (J.CLASSES || []).forEach((c) => { cls[c.number] = c.dxfname; });
   const out = [];
   for (const o of J.OBJECTS || []) {
@@ -116,4 +116,11 @@ function surfaceGroups(jsonText, origin) {
   return { groups: out, other };
 }
 
-module.exports = { surfaces, surfaceGroups, decodePoints, volumeOf };
+// عدد عناصر Civil 3D حسب النوع (محاور، كوريدور، قطاعات، سطوح ...)
+function civilCounts(J) {
+  const cls = {}; (J.CLASSES || []).forEach((c) => { cls[c.number] = c.dxfname; });
+  const n = {}; for (const o of J.OBJECTS || []) { const k = cls[o.type]; if (o.entity === 'UNKNOWN_ENT' && k && /^AEC/.test(k)) n[k] = (n[k] || 0) + 1; }
+  return n;
+}
+
+module.exports = { civilCounts, surfaces, surfaceGroups, decodePoints, volumeOf };

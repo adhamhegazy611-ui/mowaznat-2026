@@ -4,7 +4,7 @@ const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');
 const { analyze } = require('./_lib/qt');
-const { surfaceGroups } = require('./_lib/surf');
+const { surfaceGroups, civilCounts } = require('./_lib/surf');
 
 const URL_ = 'https://qadrtqtydtgzachfzpqw.supabase.co';
 const ANON = 'sb_publishable_YWBHuhE3Eb3Qs9VkOP1jEA_335B_9SB';
@@ -56,7 +56,9 @@ module.exports = async (req, res) => {
       try {
         spawnSync(bin('dwgread'), ['-O', 'JSON', '-o', tmpJ, tmpIn], { timeout: 40000, encoding: 'utf8', maxBuffer: 1 << 24 });
         if (fs.existsSync(tmpJ)) {
-          const sg = surfaceGroups(fs.readFileSync(tmpJ, 'latin1'), result.groups.length ? result.origin : null);
+          const J = JSON.parse(fs.readFileSync(tmpJ, 'latin1'));
+          if (result.inv) result.inv.civil = civilCounts(J);
+          const sg = surfaceGroups(J, result.groups.length ? result.origin : null);
           if (sg.groups.length) {
             result.groups.unshift(...sg.groups);
             result.warnings = result.warnings.filter((w) => !/Civil 3D/.test(w));
