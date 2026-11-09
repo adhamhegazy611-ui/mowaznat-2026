@@ -3696,15 +3696,24 @@ async function qtAdd(pre) {
   const l2 = pjEl('label', 'qf'); l2.appendChild(pjEl('span', '', 'ملف اللوحة (DWG أو DXF)'));
   const fi = pjEl('input'); fi.type = 'file'; fi.accept = '.dwg,.dxf'; l2.appendChild(fi);
   row.append(l1, l2); c.appendChild(row);
+  const goB = pjEl('button', 'qbtn on', '⚡ حصر اللوحة'); goB.type = 'button'; goB.disabled = true; c.appendChild(goB);
   const st = pjEl('div', 'qstat'); c.appendChild(st);
   m.appendChild(c);
   const res = pjEl('div'); m.appendChild(res);
   if (pre) { it.value = pre; const n = QT.items.filter((x) => x.item === pre && x.mode !== 'formula').length; if (n) c.appendChild(pjEl('div', 'qhint', 'البند ده فيه ' + n + ' لوحة — اللوحة الجديدة هتتجمع عليهم.')); }
   setTimeout(() => (pre ? fi.click() : it.focus()), 50);
+  let busy = false, ran = false;
+  const sync = () => { goB.disabled = busy || !fi.files[0] || !it.value.trim(); };
   const go = async () => {
-    const f = fi.files[0]; if (!f) return;
-    if (!it.value.trim()) { st.textContent = 'اكتب اسم البند الأول'; it.focus(); return; }
+    const f = fi.files[0]; sync(); if (!f || busy) return;
+    if (!it.value.trim()) { st.textContent = 'اكتب اسم البند وبعدين دوس «حصر اللوحة»'; it.focus(); return; }
     if (f.size > 50 * 1048576) { st.textContent = 'الملف أكبر من 50 ميجا'; return; }
+    if (!/\.(dwg|dxf)$/i.test(f.name)) { st.textContent = 'الملف لازم يكون DWG أو DXF'; return; }
+    busy = true; ran = true; sync();
+    try { await go1(f); } catch (e) { st.textContent = '⚠️ حصل خطأ: ' + (e && e.message || e); }
+    finally { busy = false; fi.disabled = false; sync(); }
+  };
+  const go1 = async (f) => {
     res.textContent = ''; fi.disabled = true;
     st.innerHTML = '<span class="spin"></span> بيرفع اللوحة…';
     const path = p.id + '/' + Date.now() + '-' + (f.name.replace(/[^\w.\-]+/g, '_').replace(/^_+/, '') || 'drawing.dwg');
@@ -3727,8 +3736,9 @@ async function qtAdd(pre) {
     st.textContent = '';
     qtPick(res, item, f.name, path, j, null, au || (mem ? { mode: mem.mode, sel: [], th: mem.thickness } : null), true);
   };
-  fi.onchange = go;
+  fi.onchange = go; goB.onclick = go; it.oninput = sync;
   it.onkeydown = (e) => { if (e.key === 'Enter' && fi.files[0]) go(); };
+  it.onchange = () => { if (fi.files[0] && it.value.trim() && !busy && !ran) go(); };
 }
 async function qtSave(item, fname, path, R, a, q, existing) {
   const groups = R.groups || [], sel = new Set(a.sel.filter((k) => !QT_XK.test(k)));
