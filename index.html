@@ -2620,7 +2620,8 @@ const QT_RULES = [
   [/تخطيط|دهان|خطوط/, 'length', 'mark'],
   [/عداي|عبار|عبّار|ماسور/, 'count', 'open'],
   [/غرف|غرفة|بلاع|منهول|عمود|أعمدة|اعمدة|شجر|عدد/, 'count', 'closed'],
-  [/بردور|حرف|سور|سياج|كانستين/, 'length'],
+  [/بردور|حرف|سور|سياج|كانستين|نيوجيرسي|نيوجرسي|نيوجرسى|نبوجرسى|قدمة|دكة/, 'length'],
+  [/دبش|عش النحل|خرسانة|تطهير|تسوية|FDR|تكسير|ازالة|إزالة|سن ?\d|مطب|كيستون/i, 'area'],
   [/كشط|تشريب|MC|RC|لاصق|رابط|سطحي|أسفلت|اسفلت|انترلوك|إنترلوك|بلاط|رصف|حفر|ردم|إحلال|احلال|أساس|اساس|تسوية|زراعة/i, 'area'],
 ];
 const QT_XK = /^[AB]\|/; // مفاتيح إضافية في sel: B|حجم ردم السطح، A|معامل ردم الإحلال
@@ -2987,6 +2988,19 @@ function qtSvg(groups, sel, bbox) {
 }
 
 /* ---------- إضافة لوحة ---------- */
+// بنود المنظومة (من تحليل الأسعار وأسعار الأمن والسلامة) عشان تظهر في اختيار البند
+let QT_SYS = null;
+async function qtSysItems() {
+  if (QT_SYS) return QT_SYS;
+  try { await loadPA(); } catch (e) { return null; }
+  const skip = /^ملخص$|علاوات|يومية|^توريد|عرض أسعار|الاشراف|بدون علاوة/;
+  const clean = (t) => String(t || '').replace(/\(\s*2\s*\)/g, '').replace(/^\(/, '').replace(/^تحليل (سعر|اسعار|أسعار)\s+/, '').replace(/^تحليل ب/, '').replace(/\s*استقطاع.*$/, '').replace(/\s+/g, ' ').trim();
+  const bySheet = [];
+  PA.sheets.forEach((sh, i) => { if (/سيارات|العمالة/.test(sh.grp) || sh.copyDel) return; const t = clean((typeof PAnames !== 'undefined' && PAnames[i]) || sh.title); if (t && !skip.test(t)) bySheet.push(t); });
+  const safety = (PA.items || []).map((x) => clean(x.t));
+  QT_SYS = [[bySheet, 'تحليل الأسعار'], [safety, 'الأمن والسلامة']];
+  return QT_SYS;
+}
 async function qtAdd(pre) {
   pre = typeof pre === 'string' ? pre : '';
   const p = QT.cur; const m = qtMain(p.name + (pre ? ' — لوحة جديدة لبند ' + pre : ' — لوحة جديدة'), qtProject);
@@ -2995,7 +3009,9 @@ async function qtAdd(pre) {
   const row = pjEl('div', 'qrow');
   const l1 = pjEl('label', 'qf'); l1.appendChild(pjEl('span', '', 'البند'));
   const it = pjEl('input'); it.type = 'text'; it.placeholder = 'مثلاً كشط أسفلت'; it.setAttribute('list', 'qtItemsDL');
-  const dl = pjEl('datalist'); dl.id = 'qtItemsDL'; [...new Set([...QT_ITEMS, ...QT.items.map((x) => x.item)])].forEach((v) => { const o = pjEl('option'); o.value = v; dl.appendChild(o); });
+  const dl = pjEl('datalist'); dl.id = 'qtItemsDL';
+  const fillDL = (sys) => { dl.textContent = ''; const seen = new Set(); [[QT.items.map((x) => x.item), 'في المشروع'], [QT_ITEMS, 'بنود الحصر'], ...(sys || [])].forEach(([vs, g]) => vs.forEach((v) => { v = (v || '').trim(); if (!v || seen.has(v)) return; seen.add(v); const o = pjEl('option'); o.value = v; o.label = g; dl.appendChild(o); })); };
+  fillDL(); qtSysItems().then((sys) => sys && fillDL(sys));
   l1.append(it, dl);
   const l2 = pjEl('label', 'qf'); l2.appendChild(pjEl('span', '', 'ملف اللوحة (DWG أو DXF)'));
   const fi = pjEl('input'); fi.type = 'file'; fi.accept = '.dwg,.dxf'; l2.appendChild(fi);
