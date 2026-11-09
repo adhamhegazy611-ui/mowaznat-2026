@@ -462,6 +462,7 @@ body.in footer{color:#7f94b8}
 /* ---------- تحليل الأسعار (أدمن) ---------- */
 /* تحليل سعر لمشروع جديد */
 #pa table.pjform tr.part td{background:#0f2747;color:#fff;font-weight:800;font-size:15px;letter-spacing:.3px}
+#pa table.pjform tr.part td.pr{text-align:right;padding-inline:12px}
 #pa table.pjform tr.ptot td{background:#ffe08a;font-weight:800;font-size:14px}
 #pa table.pjform tr.ptot td.e{background:#fff}
 
@@ -683,6 +684,9 @@ body.in footer{color:#7f94b8}
 .pmenu{position:fixed;z-index:9999;background:#fff;border:1px solid #d7deea;border-radius:12px;box-shadow:0 10px 30px rgba(15,39,71,.22);padding:6px;display:flex;flex-direction:column;min-width:170px}
 .pmenu button{border:0;background:none;text-align:right;padding:9px 12px;border-radius:8px;font:600 13.5px inherit;color:#0f2747;cursor:pointer;font-family:inherit}
 .pmenu button:hover{background:#eef3fb}
+.pmenu button:disabled:hover{background:none;cursor:default}
+.pjtoast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:10000;background:#0f2747;color:#fff;font-weight:700;font-size:14px;padding:11px 18px;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.3);max-width:min(720px,92vw);text-align:center;transition:opacity .5s}
+.pjtoast.out{opacity:0}
 #pa td input.pfi{direction:ltr;text-align:center}
 #pa td input.pfi.bad{outline:2px solid #ef4444;background:#fef2f2}
 #pa td.sel{outline:2.5px solid #0ea5e9;outline-offset:-2px}
@@ -2286,7 +2290,7 @@ function pjAddEq(si) {
 
 /* ===== اختيار البنود خطوة بخطوة: الأقسام الرئيسية (أولاً، ثانياً…) وتحت كل قسم بنوده الفرعية ===== */
 const PJ_ORD2 = ['أولاً', 'ثانياً', 'ثالثاً', 'رابعاً', 'خامساً', 'سادساً', 'سابعاً', 'ثامناً', 'تاسعاً', 'عاشراً', 'حادي عشر', 'ثاني عشر', 'ثالث عشر', 'رابع عشر', 'خامس عشر'];
-const PJ_KINDS = { co: 'أعمال الشركات', self: 'أعمال الذاتي' };
+const PJ_KINDS = { co: 'أعمال منفذة بالشركات ( تشغيلات لدي الغير )', self: 'أعمال الذاتي' };
 // حالة الاختيار: لكل نوع أعمال (شركات / ذاتي) أقسامه الرئيسية وبنوده الفرعية لوحده
 function pjWizState() {
   const p = PJ.cur, b = p.basics = p.basics || {};
@@ -2693,7 +2697,7 @@ function pjBOQ() {
   const X = pjScan(); p.qty = p.qty || {}; const b = p.basics = p.basics || {};
   b.form = b.form || {}; b.sec = b.sec || {}; b.note = b.note || {};
   const mode = b.mode === 'excl' ? 'excl' : 'incl';
-  const m = pjHero(pjBatLabel(p.battalion), 'موازنة ' + p.name, p.qt_id ? 'الكميات جاية من حصر الكميات (من اللوح). الأسعار بتتحسب من تحليل الأسعار بالبيانات الأساسية بتاعة المشروع.' : 'نفس فورمة الموازنة. اختار شامل ولا غير شامل، واكتب الكميات، والأرقام بتتحسب من تحليل الأسعار بالبيانات الأساسية بتاعة المشروع.', [...(p.qt_id && typeof IS_QT !== 'undefined' && IS_QT ? [['🔄 تحديث الكميات من الحصر', pjSyncFromQT]] : []), ['← البيانات الأساسية', pjBasics], ['تصدير Excel', () => pjExport()], ['طباعة / PDF', () => pjPrint()]]);
+  const m = pjHero(pjBatLabel(p.battalion), 'موازنة ' + p.name, p.qt_id ? 'الكميات جاية من حصر الكميات (من اللوح). الأسعار بتتحسب من تحليل الأسعار بالبيانات الأساسية بتاعة المشروع.' : 'نفس فورمة الموازنة. اختار شامل ولا غير شامل، واكتب الكميات، والأرقام بتتحسب من تحليل الأسعار بالبيانات الأساسية بتاعة المشروع.', [['← البيانات الأساسية', pjBasics], ['⋯ الأوامر ▾', (ev) => pjCmdMenu(ev.currentTarget)]]);
   // شريط الإعدادات
   const bar = pjEl('div', 'pjcard pjfbar');
   const seg = pjEl('div', 'pjseg');
@@ -2730,7 +2734,7 @@ function pjBOQ() {
       const qm = p.qty, nm = b.note;
       const secs = []; order.filter((si) => pjKindOf(si) === pk).forEach((si) => { const s = b.sec[si] || pjAutoSec(si); let g = secs.find((x) => x.n === s); if (!g) secs.push(g = { n: s, l: [] }); g.l.push(si); });
       const so = (b.secOrderT && b.secOrderT[pk]) || b.secOrder || []; secs.sort((a, c) => (so.length ? ((so.indexOf(a.n) + 1) || 99) - ((so.indexOf(c.n) + 1) || 99) : 0) || (PJ_SECS.indexOf(a.n) + 1 || 99) - (PJ_SECS.indexOf(c.n) + 1 || 99));
-      const pr0 = pjEl('tr', 'part'), pd = pjEl('td', 'c', plabel); pd.colSpan = 7; pr0.appendChild(pd); t.appendChild(pr0);
+      const pr0 = pjEl('tr', 'part'), pd = pjEl('td', 'pr', plabel); pd.colSpan = 7; pr0.appendChild(pd); t.appendChild(pr0);
       let k = 0, ptot = 0;
       secs.forEach((g, gi) => {
         const h1 = pjEl('tr', 'yh'), h2 = pjEl('tr');
@@ -2809,6 +2813,7 @@ table.pjform tr.sub td.e,table.pjform tr.grand td.e{background:#fff}
 table.pjform tr.sp td{border:0;height:14px;padding:0}
 table.pjform tr.grand td{background:#bbb6a8;font-weight:800;font-size:15px}
 table.pjform tr.part td{background:#0f2747;color:#fff;font-weight:800;font-size:15px}
+table.pjform tr.part td.pr{text-align:right;padding-right:12px}
 table.pjform tr.ptot td{background:#ffe08a;font-weight:800;font-size:14px}
 table.pjform tr.ptot td.e{background:#fff}
 .pjsign{margin-top:22px;font-weight:800;font-size:14px;line-height:1.8}
@@ -3845,15 +3850,32 @@ async function qtBudget() {
   };
 }
 // من جوه الموازنة: تحديث الكميات من الحصر المربوط
+// قايمة الأوامر: تحديث الكميات من الحصر + تصدير Excel + طباعة PDF
+function pjCmdMenu(btn) {
+  document.querySelectorAll('.pmenu').forEach((x) => x.remove());
+  const p = PJ.cur, mn = pjEl('div', 'pmenu'), r = btn.getBoundingClientRect();
+  mn.style.top = (r.bottom + 6) + 'px'; mn.style.left = Math.max(8, r.left) + 'px';
+  const add = (t, f, dis, ttl) => { const x = pjEl('button', '', t); x.type = 'button'; if (dis) { x.disabled = true; x.style.opacity = '.45'; x.title = ttl || ''; } x.onclick = () => { mn.remove(); f(); }; mn.appendChild(x); };
+  const linked = p && p.qt_id && typeof IS_QT !== 'undefined' && IS_QT;
+  add('🔄 تحديث الكميات من الحصر', pjSyncFromQT, !linked, 'المشروع ده مش مربوط بحصر كميات — اربطه من «التسعير والموازنة» في حصر الكميات');
+  add('📊 تصدير Excel', () => pjExport());
+  add('🖨 طباعة / PDF', () => pjPrint());
+  document.body.appendChild(mn);
+  setTimeout(() => document.addEventListener('click', function f(ev) { if (!mn.contains(ev.target)) { mn.remove(); document.removeEventListener('click', f); } }), 0);
+}
+function pjToast(t) { const x = pjEl('div', 'pjtoast', t); document.body.appendChild(x); setTimeout(() => x.classList.add('out'), 3800); setTimeout(() => x.remove(), 4400); }
 async function pjSyncFromQT() {
   const p = PJ.cur; if (!p || !p.qt_id) return;
   const [{ data: qp }, { data: its }] = await Promise.all([sb.from('qt_projects').select('name,pa_map').eq('id', p.qt_id).single(), sb.from('qt_items').select('item,unit,mode,qty').eq('project_id', p.qt_id)]);
   if (!qp) return alert('تعذّر قراءة الحصر');
   const sum = {}; (its || []).forEach((x) => { if (x.mode === 'formula') return; const k = x.item.trim() + '|' + x.unit; sum[k] = (sum[k] || 0) + +x.qty; });
   const qty = {}; Object.entries(qp.pa_map || {}).forEach(([k, m]) => { if (!m || m.si == null || !(k in sum)) return; qty[m.si] = (qty[m.si] || 0) + sum[k] * (m.k || 1); });
-  Object.entries(qty).forEach(([si, v]) => { p.qty[si] = Math.round(v); if (+si < PJ_CUS && !p.items.includes(+si)) p.items.push(+si); });
-  await sb.from('pa_projects').update({ items: p.items, qty: p.qty, updated_at: new Date().toISOString() }).eq('id', p.id);
+  let ch = 0; Object.entries(qty).forEach(([si, v]) => { const nv = Math.round(v); if (p.qty[si] !== nv) ch++; p.qty[si] = nv; if (+si < PJ_CUS && !p.items.includes(+si)) p.items.push(+si); });
+  const { error } = await sb.from('pa_projects').update({ items: p.items, qty: p.qty, updated_at: new Date().toISOString() }).eq('id', p.id);
+  if (error) return alert('تعذّر تحديث الموازنة');
+  const unm = Object.keys(sum).filter((k) => !(qp.pa_map || {})[k]).length;
   paNav($('paQ').value); pjBOQ();
+  pjToast('✓ الكميات اتحدثت من حصر «' + qp.name + '»' + (ch ? ' — اتغير ' + ch + ' بند' : ' — مفيش تغيير') + (unm ? ' · فيه ' + unm + ' بند جديد في الحصر مش مربوط (اربطه من «التسعير والموازنة»)' : ''));
 }
 function qtExport() {
   const p = QT.cur;
