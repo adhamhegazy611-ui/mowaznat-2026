@@ -3052,7 +3052,7 @@ sb.auth.onAuthStateChange((_ev, session) => setTimeout(() => show(session), 0));
    والمستخدم بيختار اللي يتحسب، والاختيار بيتفتكر للبند ده بعد كده. */
 const QT = { list: [], cur: null, items: [], tab: 'sum' };
 const QT_ITEMS = ['كشط أسفلت', 'حفر', 'ردم', 'إحلال', 'أساس', 'طبقة تشريب MC', 'طبقة لاصقة RC', 'أسفلت رابط', 'أسفلت سطحي', 'طبانات', 'بردورة', 'انترلوك', 'تخطيط', 'عدايات'];
-const QT_MODES = { area: ['مساحة', 'م²'], volume: ['حجم (مساحة × سُمك)', 'م³'], section: ['حجم (قطاع × طول)', 'م³'], length: ['طول', 'م.ط'], paint: ['طول مدهون (خط متقطع)', 'م.ط'], count: ['عدد', 'عدد'], fill: ['ردم من سطح الفرق', 'م³'], cut: ['حفر من سطح الفرق', 'م³'] };
+const QT_MODES = { area: ['مساحة', 'م²'], volume: ['حجم (مساحة × سُمك)', 'م³'], section: ['حجم (قطاع × طول)', 'م³'], length: ['طول', 'م.ط'], paint: ['طول مدهون (خط متقطع)', 'م.ط'], count: ['عدد', 'عدد'], fill: ['ردم (Volume Dashboard)', 'م³'], cut: ['حفر (Volume Dashboard)', 'م³'] };
 // كل بند بيتحسب إزاي: البند بيحدد نوع الكمية، واللوحة بتحدد الحاجة اللي تتحسب
 const QT_RULES = [
   [/طبان/, 'section'],
@@ -3062,10 +3062,13 @@ const QT_RULES = [
   [/غرف|غرفة|بلاع|منهول|عمود|أعمدة|اعمدة|شجر|عدد/, 'count', 'closed'],
   [/بردور|حرف|سور|سياج|كانستين|نيوجيرسي|نيوجرسي|نيوجرسى|نبوجرسى|قدمة|دكة/, 'length'],
   [/دبش|عش النحل|خرسانة|تطهير|تسوية|FDR|تكسير|ازالة|إزالة|سن ?\d|مطب|كيستون/i, 'area'],
-  [/كشط|تشريب|MC|RC|لاصق|رابط|سطحي|أسفلت|اسفلت|انترلوك|إنترلوك|بلاط|رصف|حفر|ردم|إحلال|احلال|أساس|اساس|تسوية|زراعة/i, 'area'],
+  [/كشط|تشريب|MC|RC|لاصق|رابط|سطحي|أسفلت|اسفلت|انترلوك|إنترلوك|بلاط|رصف|أساس|اساس|تسوية|زراعة/i, 'area'],
 ];
 const QT_XK = /^[AB]\|/; // مفاتيح إضافية في sel: B|حجم ردم السطح، A|معامل ردم الإحلال
 const QT_DIG = /حفر|إحلال|احلال/;
+// الحفر بكل أنواعه (عادي/متماسك/صخر/إحلال) والردم: الكمية من سطح الفرق زي Volume Dashboard في Civil 3D
+const QT_EW = /حفر|ردم|ترابي|تراب/;
+const qtEwMode = (item) => (/ردم/.test(item) ? 'fill' : 'cut');
 // بند الردم من السطح بيضيف لوحده ردم الإحلال = مسطح الحفر × المعامل
 // البند الواحد ممكن يتحسب من كذا لوحة: كل لوحة صف، والبند = مجموع لوحه (بنفس الاسم والوحدة)
 const qtGKey = (x) => x.item.trim() + '|' + x.unit;
@@ -3095,9 +3098,12 @@ function qtAuto(item, groups, mem) {
 function qtAuto0(item, groups, mem) {
   const keys = new Set(groups.map(qtKey));
   if (mem && mem.sel) mem = { ...mem, sel: mem.sel.filter((k) => !QT_XK.test(k)) };
+  if (QT_EW.test(item)) {
+    const em = qtEwMode(item), sfs = groups.filter((g) => g.kind === 'surface').sort((a, b) => b.area - a.area);
+    if (mem && mem.mode === em && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: em, sel: mem.sel.slice(), how: 'mem' };
+    return sfs.length ? { mode: em, sel: [qtKey(sfs[0])] } : null;
+  }
   if (mem && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: mem.mode, sel: mem.sel.slice(), th: mem.thickness ? +mem.thickness : null, how: 'mem', only: mem.mode === 'count' ? ((QT_RULES.find(([re]) => re.test(item)) || [])[2] || null) : null };
-  const sf = groups.filter((g) => g.kind === 'surface').sort((a, b) => b.area - a.area);
-  if (sf.length && /ردم|حفر|ترابي|تراب/.test(item)) return { mode: /حفر/.test(item) && !/ردم/.test(item) ? 'cut' : 'fill', sel: [qtKey(sf[0])] };
   const rule = QT_RULES.find(([re]) => re.test(item)) || [null, null];
   const [, rmode, hint] = rule;
   const hs = groups.filter((g) => g.kind === 'hatch' && g.area > 0).sort((a, b) => b.area - a.area);
@@ -3476,7 +3482,8 @@ function qtDetailCard(x, d, no) {
   c.appendChild(pjEl('div', 'qsub', (x.file_name || '') + ' — ' + new Date(x.created_at).toLocaleString('ar-EG')));
   if (!d) { c.appendChild(pjEl('div', 'qempty', 'مفيش تفاصيل.')); return c; }
   const wrap = pjEl('div', 'qdet');
-  wrap.appendChild(qtSvg(d.groups || [], new Set(x.sel || []), d.bbox, d.inv));
+  const selS = new Set(x.sel || []), mine = (d.groups || []).filter((g) => selS.has(qtKey(g)));
+  wrap.appendChild(qtSvg(mine.length ? mine : d.groups || [], selS, d.bbox, null, x.mode));
   const side = pjEl('div');
   (d.groups || []).filter((g) => (x.sel || []).includes(qtKey(g))).forEach((g) => side.appendChild(qtGroupDetail(g, x.mode, x.thickness)));
   const fp = qtFillParts(x);
@@ -3499,7 +3506,6 @@ function qtDetailCard(x, d, no) {
   f.textContent = qtFormula(x, d);
   side.appendChild(f);
   (d.warnings || []).filter(qtWarnOk).forEach((w) => side.appendChild(pjEl('div', 'qwarn', '⚠️ ' + w)));
-  if (d.inv) side.appendChild(qtInventory(d.inv, d.groups || []));
   wrap.appendChild(side); c.appendChild(wrap);
   return c;
 }
@@ -3551,9 +3557,9 @@ function qtGroupDetail(g, mode, th) {
   if (g.kind === 'surface') {
     li('عدد النقط ' + qtN(g.n, 0) + ' نقطة، اتعمل منها ' + qtN(g.tris, 0) + ' مثلث (شبكة TIN)');
     li('المساحة المغطاة ' + qtN(g.area) + ' م² — الفرق بين المنسوبين من ' + qtN(g.zmin, 3) + ' لحد +' + qtN(g.zmax, 3) + ' م');
-    li((mode === 'cut' ? '' : '◀ ') + 'الردم (الفرق موجب) = ' + qtN(g.fill) + ' م³');
-    li((mode === 'cut' ? '◀ ' : '') + 'الحفر (الفرق سالب) = ' + qtN(g.cut) + ' م³');
-    li('الصافي = ' + qtN(g.fill - g.cut) + ' م³ ' + (g.fill >= g.cut ? 'ردم' : 'حفر'));
+    if (mode === 'cut') li('◀ الحفر Cut (الفرق سالب) = ' + qtN(g.cut) + ' م³ — نفس رقم Cut في Volume Dashboard');
+    else if (mode === 'fill') li('◀ الردم Fill (الفرق موجب) = ' + qtN(g.fill) + ' م³ — نفس رقم Fill في Volume Dashboard');
+    else { li('الردم Fill = ' + qtN(g.fill) + ' م³'); li('الحفر Cut = ' + qtN(g.cut) + ' م³'); }
     li('الطريقة: كل مثلث حجمه = مساحته × متوسط الفرق في رؤوسه، والمثلث اللي فيه موجب وسالب بيتقسم عند خط الصفر. المثلثات اللي ضلعها أطول من ' + g.maxEdge + ' م بتتشال (برا حدود السطح).', 'muted');
     b.appendChild(ul); return b;
   }
@@ -3594,7 +3600,7 @@ const QT_ACI = { 1: '#ff3b30', 2: '#ffd60a', 3: '#34c759', 4: '#32d4f5', 5: '#3b
 const qtCad = (c) => QT_ACI[c] || (c >= 10 && c < 250 ? `hsl(${Math.round(((c - 10) / 240) * 360)},80%,${[62, 72, 52, 66, 46][Math.floor((c % 10) / 2)] || 60}%)` : '#e8eef6');
 const QT_CIVN = { Alignment: 'محور', Corridor: 'كوريدور', SurfaceTin: 'سطح', CogoPoint: 'نقطة', Assembly: 'Assembly', Subassembly: 'Subassembly', GraphProfile: 'شاشة بروفيل', VAlignment: 'بروفيل', SampleLine: 'خط قطاع', SectionView: 'شاشة قطاع', FeatureLine: 'Feature line', Parcel: 'قطعة', Pipe: 'ماسورة', Structure: 'غرفة' };
 // رسم اللوحة: كل العناصر بألوان طبقاتها زي الأوتوكاد، والمحسوب بالذهبي، مع تكبير وتحريك
-function qtSvg(groups, sel, bbox, inv) {
+function qtSvg(groups, sel, bbox, inv, mode) {
   const NS = 'http://www.w3.org/2000/svg', E = (t, at) => { const e = document.createElementNS(NS, t); for (const k in at) e.setAttribute(k, at[k]); return e; };
   const Hb = bbox ? bbox[3] : 1;
   // حدود: المحسوب، واللوحة كلها (من غير العناصر الشاردة)
@@ -3617,7 +3623,7 @@ function qtSvg(groups, sel, bbox, inv) {
     (g.geom || []).forEach((e) => {
       if (e.t === 'g') {
         const zs = e.z.filter((v) => v != null), mx = Math.max(1, ...zs.map(Math.abs)); const path = {};
-        e.z.forEach((v, k) => { if (v == null) return; const lv = Math.min(4, Math.ceil(Math.abs(v) / mx * 4.0001)), key = (v >= 0 ? 'f' : 'c') + lv; const x = e.x0 + (k % e.nx) * e.cs, y = e.y0 + Math.floor(k / e.nx) * e.cs; path[key] = (path[key] || '') + 'M' + x.toFixed(2) + ' ' + y.toFixed(2) + 'h' + e.cs + 'v' + e.cs + 'h' + (-e.cs) + 'Z'; });
+        e.z.forEach((v, k) => { if (v == null || (on && mode === 'cut' && v >= 0) || (on && mode === 'fill' && v <= 0)) return; const lv = Math.min(4, Math.ceil(Math.abs(v) / mx * 4.0001)), key = (v >= 0 ? 'f' : 'c') + lv; const x = e.x0 + (k % e.nx) * e.cs, y = e.y0 + Math.floor(k / e.nx) * e.cs; path[key] = (path[key] || '') + 'M' + x.toFixed(2) + ' ' + y.toFixed(2) + 'h' + e.cs + 'v' + e.cs + 'h' + (-e.cs) + 'Z'; });
         const F = ['#fff3c4', '#ffd75e', '#f5b301', '#e07b00'], C = ['#cfe6ff', '#8cc4ff', '#3d8bfd', '#1f5fd1'];
         Object.entries(path).forEach(([k, d]) => g0.appendChild(E('path', { d, fill: (k[0] === 'f' ? F : C)[+k[1] - 1], 'fill-opacity': on ? '.9' : '.35' })));
       } else if (e.t === 'h') {
@@ -3734,6 +3740,7 @@ async function qtAdd(pre) {
     const au = qtAuto(item, j.groups, mem), q = au && qtQty(j.groups, au);
     if (au && q != null && q > 0) { st.innerHTML = '<span class="spin"></span> بيحفظ…'; const row = await qtSave(item, f.name, path, j, au, q); if (row) { QT.flash = row.id; QT.tab = 'sum'; qtProject(); return; } }
     st.textContent = '';
+    if (QT_EW.test(item) && !j.groups.some((g) => g.kind === 'surface')) st.textContent = '⚠️ «' + item + '» بيتحسب من سطح الفرق (Volume Surface) زي Volume Dashboard في Civil 3D، واللوحة دي مفيهاش سطح فرق. ادخل اللوحة اللي فيها الـ Volume Surface.';
     qtPick(res, item, f.name, path, j, null, au || (mem ? { mode: mem.mode, sel: [], th: mem.thickness } : null), true);
   };
   fi.onchange = go; goB.onclick = go; it.oninput = sync;
@@ -3744,7 +3751,7 @@ async function qtSave(item, fname, path, R, a, q, existing) {
   const groups = R.groups || [], sel = new Set(a.sel.filter((k) => !QT_XK.test(k)));
   const keep = groups.map((g) => sel.has(qtKey(g)) ? g : { ...g, items: g.kind === 'line' ? g.items.map((it) => ({ closed: it.closed, len: it.len })) : g.items, geom: (g.geom || []).map((e) => e.t === 'l' ? { ...e, pts: e.pts.filter((_, i, ar) => i % 3 === 0 || i === ar.length - 1) } : e) });
   let extra = [];
-  if (a.mode === 'fill') { const old = existing && (existing.sel || []).find((k) => /^A\|/.test(k)); extra = ['B|' + (+q.toFixed(3)), old || 'A|0.5']; }
+  if (a.mode === 'fill') { const old = existing && (existing.sel || []).find((k) => /^A\|/.test(k)); extra = ['B|' + (+q.toFixed(3))].concat(old ? [old] : []); }
   const row = { item, unit: QT_MODES[a.mode][1], mode: a.mode, thickness: a.mode === 'volume' ? a.th : null, qty: +q.toFixed(3), sel: [...sel, ...extra], detail: { groups: keep, bbox: R.bbox, warnings: R.warnings || [], only: a.only || null, inv: R.inv || null } };
   const cols = 'id,item,unit,mode,thickness,qty,file_name,file_path,sel,note,sort,created_at';
   let res;
