@@ -1,7 +1,7 @@
 import type { CellColor, Project } from './types'
 
 export type ColKind = 'seq' | 'text' | 'longtext' | 'int' | 'num' | 'person' | 'date' | 'mark' | 'path' | 'battalion'
-export type FieldKey = Exclude<keyof Project, 'id' | 'colors' | 'updated_at'>
+export type FieldKey = Exclude<keyof Project, 'id' | 'colors' | 'updated_at' | 'sheet_path' | 'sheet_name'>
 
 export interface Column {
   key: FieldKey

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { isUrl } from '../lib/files'
+import { isUrl, openSheet } from '../lib/files'
 import {
   ACTION_SUGGESTIONS,
   BUDGET_STATUS_SUGGESTIONS,
@@ -75,6 +75,9 @@ export default function ProjectForm({ initial, reviewers, projects, canEdit, isA
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [history, setHistory] = useState<HistoryEntry[] | null>(null)
+  // شيت الموازنة: ملف جديد مستني الحفظ، أو طلب شيل الشيت الحالي
+  const [sheetFile, setSheetFile] = useState<File | null>(null)
+  const [dropSheet, setDropSheet] = useState(false)
   const isNew = !('id' in d) || !d.id
   const ro = !canEdit
 
@@ -114,7 +117,16 @@ export default function ProjectForm({ initial, reviewers, projects, canEdit, isA
     setBusy(true)
     setErr('')
     try {
-      await api.saveProject({ ...d, name: d.name.trim() })
+      const oldPath = (initial as Project).sheet_path ?? null
+      const saved = await api.saveProject({ ...d, name: d.name.trim() })
+      if (sheetFile) {
+        const path = await api.uploadSheet(saved.id, sheetFile)
+        await api.patchProject(saved.id, { sheet_path: path, sheet_name: sheetFile.name })
+        if (oldPath) await api.removeSheet(oldPath).catch(() => {})
+      } else if (dropSheet && oldPath) {
+        await api.patchProject(saved.id, { sheet_path: null, sheet_name: null })
+        await api.removeSheet(oldPath).catch(() => {})
+      }
       onSaved(isNew ? 'اتضاف المشروع ✓' : 'اتحفظت التعديلات ✓')
     } catch (e) {
       setErr((e as Error).message)
@@ -308,6 +320,41 @@ export default function ProjectForm({ initial, reviewers, projects, canEdit, isA
                       )}
                     </div>
                   </Field>
+                  <div className="field wide">
+                    <div className="lab">شيت الموازنة (Excel)<span className="x">بيظهر في «مكان المشروع» كلينك «فتح الشيت»</span></div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                      {sheetFile ? (
+                        <span className="file-link xls"><span className="fi">XLS</span>{sheetFile.name} — هيترفع لما تحفظ</span>
+                      ) : d.sheet_path && !dropSheet ? (
+                        <a className="file-link xls" href="#" title="فتح الشيت"
+                          onClick={(e) => { e.preventDefault(); openSheet(d.sheet_path!, d.sheet_name).catch((x) => setErr((x as Error).message)) }}>
+                          <span className="fi">XLS</span>{d.sheet_name || 'فتح الشيت'}
+                        </a>
+                      ) : (
+                        <span style={{ color: 'var(--ink-3)', fontSize: 13 }}>{dropSheet ? 'الشيت هيتشال لما تحفظ' : 'مفيش شيت مرفوع'}</span>
+                      )}
+                      {!ro && (
+                        <label className="btn small" style={{ cursor: 'pointer' }}>
+                          {d.sheet_path || sheetFile ? 'تغيير الشيت' : 'رفع شيت Excel'}
+                          <input type="file" hidden accept=".xlsx,.xlsm,.xls,.xlsb,.csv"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0]
+                              e.target.value = ''
+                              if (!f) return
+                              if (f.size > 50 * 1024 * 1024) return setErr('الشيت أكبر من 50 ميجا')
+                              setErr('')
+                              setSheetFile(f)
+                              setDropSheet(false)
+                            }} />
+                        </label>
+                      )}
+                      {!ro && (sheetFile || (d.sheet_path && !dropSheet)) && (
+                        <button type="button" className="btn small" onClick={() => { if (sheetFile) setSheetFile(null); else setDropSheet(true) }}>
+                          {sheetFile ? 'إلغاء' : 'شيل الشيت'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
                   <Field {...fp('notes')} wide>
                     {area('notes')}
                   </Field>

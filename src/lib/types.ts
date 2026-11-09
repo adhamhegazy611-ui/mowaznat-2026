@@ -29,6 +29,9 @@ export interface Project {
   budget_status: string | null
   file_path: string | null
   notes: string | null
+  /** شيت الموازنة المرفوع على الموقع (مسار في التخزين + اسم الملف الأصلي) */
+  sheet_path?: string | null
+  sheet_name?: string | null
   colors: Partial<Record<keyof Project, CellColor>>
   updated_at?: string
 }

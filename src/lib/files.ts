@@ -1,4 +1,17 @@
 // لينك ملف المشروع (Google Drive / OneDrive / أي لينك): بيتعرض زرار يفتح الملف
+import { api } from './api'
+
+/** بيفتح شيت الموازنة المرفوع: لينك مؤقت (10 دقايق) بينزّل الملف باسمه الأصلي فيفتح على Excel */
+export async function openSheet(path: string, name?: string | null) {
+  const url = await api.sheetUrl(path, name || '')
+  const a = document.createElement('a')
+  a.href = url
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}
+
 export const isUrl = (v: string) => /^\s*https?:\/\//i.test(v)
 
 export function fileKind(url: string): { tag: string; label: string; cls: string } {

@@ -64,6 +64,11 @@ export interface Api {
   /** التحديث من شيت «موقف المشاريع» على Google Drive (بيحصل لوحده كل يوم، وده للتحديث الفوري) */
   lastSync(): Promise<SyncEntry | null>
   driveSync(): Promise<SyncEntry>
+
+  /** شيت الموازنة كملف على الموقع: رفع / لينك فتح / حذف */
+  uploadSheet(projectId: number, file: File): Promise<string>
+  sheetUrl(path: string, name: string): Promise<string>
+  removeSheet(path: string): Promise<void>
 }
 
 export interface SyncEntry { at: string; ok: boolean; summary: string }
@@ -213,6 +218,21 @@ function supabaseApi(sb: SupabaseClient): Api {
       const x = j.mz ?? {}
       if (!r.ok || !x.ok) throw new Error(x.error || j.error || 'HTTP ' + r.status)
       return { at: new Date().toISOString(), ok: true, summary: x.summary as string }
+    },
+    async uploadSheet(projectId, file) {
+      const ext = (file.name.match(/\.(xlsx|xlsm|xls|xlsb|csv)$/i)?.[1] ?? 'xlsx').toLowerCase()
+      const path = projectId + '/' + Date.now() + '.' + ext
+      const { error } = await sb.storage.from('mz').upload(path, file, { contentType: file.type || 'application/octet-stream' })
+      if (error) throw new Error(/row-level|policy|unauthorized/i.test(error.message) ? 'مش مسموحلك ترفع شيت للمشروع ده' : error.message)
+      return path
+    },
+    async sheetUrl(path, name) {
+      const { data, error } = await sb.storage.from('mz').createSignedUrl(path, 600, { download: name || true })
+      if (error || !data) throw new Error('مقدرتش أفتح الشيت: ' + (error?.message ?? ''))
+      return data.signedUrl
+    },
+    async removeSheet(path) {
+      await sb.storage.from('mz').remove([path])
     },
   }
 }
@@ -382,6 +402,9 @@ function demoApi(): Api {
     },
     async lastSync() { return null },
     async driveSync() { return { at: new Date().toISOString(), ok: true, summary: 'تجربة' } },
+    async uploadSheet() { throw new Error('رفع الشيتات مش متاح في الوضع التجريبي') },
+    async sheetUrl() { throw new Error('مش متاح في الوضع التجريبي') },
+    async removeSheet() {},
   }
 }
 

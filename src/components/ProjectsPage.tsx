@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { COLUMNS, cellBg, emptyProject, type Column, type FieldKey } from '../lib/columns'
 import type { Mark, Project, Reviewer } from '../lib/types'
 import { BLANK, QUICK_LABEL, quickPass, type QuickKey, computeTotals, copyText, displayValue, fmtDate, fmtNum, loadPref, normalize, savePref } from '../lib/util'
-import { isUrl, fileKind } from '../lib/files'
+import { isUrl, fileKind, openSheet } from '../lib/files'
 import { exportToExcel } from '../lib/exportExcel'
 import ColumnFilter, { type SortDir } from './ColumnFilter'
 import ProjectForm from './ProjectForm'
@@ -139,6 +139,18 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
       case 'date':
         return fmtDate(v as string)
       case 'path':
+        if (p.sheet_path) {
+          return (
+            <a className="file-link xls" href="#" title={p.sheet_name ?? 'شيت الموازنة'}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                openSheet(p.sheet_path!, p.sheet_name).catch((x) => toast((x as Error).message))
+              }}>
+              <span className="fi">XLS</span>فتح الشيت
+            </a>
+          )
+        }
         if (v && isUrl(v as string)) {
           const k = fileKind(v as string)
           return (

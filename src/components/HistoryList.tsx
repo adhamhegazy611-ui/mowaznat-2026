@@ -4,7 +4,7 @@ import type { HistoryEntry } from '../lib/types'
 const ACT: Record<string, string> = { insert: 'إضافة مشروع', update: 'تعديل', delete: 'حذف مشروع' }
 const COLOR_AR: Record<string, string> = { green: 'أخضر', darkgreen: 'أخضر غامق', orange: 'برتقالي', yellow: 'أصفر', red: 'أحمر' }
 
-const fieldLabel = (k: string) => COLUMNS.find((c) => c.key === k)?.label ?? (k === 'colors' ? 'الألوان' : k)
+const fieldLabel = (k: string) => COLUMNS.find((c) => c.key === k)?.label ?? (k === 'colors' ? 'الألوان' : k === 'sheet_name' ? 'شيت الموازنة' : k)
 
 function show(v: unknown): string {
   if (v == null || v === '') return 'فاضي'
@@ -30,7 +30,7 @@ export default function HistoryList({ items, showProject = true }: { items: Hist
           {h.action === 'update' && h.changes && (
             <div className="ch">
               {Object.entries(h.changes)
-                .filter(([k]) => k !== 'updated_at')
+                .filter(([k]) => k !== 'updated_at' && k !== 'sheet_path')
                 .map(([k, [o, n]]) => (
                   <div key={k}>
                     <b>{fieldLabel(k)}:</b> <del>{show(o)}</del> ← <ins>{show(n)}</ins>
