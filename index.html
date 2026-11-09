@@ -381,6 +381,14 @@ body.in footer{color:#7f94b8}
 #qt .qbtn.gold2{background:linear-gradient(180deg,#f6c34a,#e9a514);border-color:#e9a514;color:#1b1405;font-weight:800}
 .qbud{width:min(1080px,96vw)!important}
 .pjop.red{color:#b42318!important}
+.pjbrow{display:flex;gap:6px;flex-wrap:wrap}
+.pjpick{width:min(640px,96vw)!important}
+.pjpick .pjpq{width:100%;font:inherit;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;margin-bottom:8px}
+.pjpick .pjpl{max-height:55vh;overflow:auto;border:1px solid #e2e8f0;border-radius:10px}
+.pjpick .pjpl .g{position:sticky;top:0;background:#0f2747;color:#fff;font-weight:800;font-size:12.5px;padding:6px 10px}
+.pjpick .pjpl .it{display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid #eef2f7;cursor:pointer;font-size:13.5px}
+.pjpick .pjpl .it:hover{background:#f8fafc}.pjpick .pjpl .it.on{background:#fffbeb}
+.pjpick .pjpl .it span{flex:1}.pjpick .pjpl .it small{color:#64748b;font-size:11.5px;white-space:nowrap}
 .qbud .qbt input.d{width:70px;font:inherit;padding:6px;border:1px solid #cbd5e1;border-radius:8px}
 .qbud .qball{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13px;font-weight:700;color:#0f2747}.qbud .qball input{width:90px;font:inherit;padding:6px;border:1px solid #cbd5e1;border-radius:8px}
 .qbud .qbw{max-height:52vh;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;margin-top:10px}
@@ -2668,8 +2676,9 @@ function pjBOQ() {
   const segw = pjEl('label', 'pjf'); segw.append(pjEl('span', '', 'المشروع'), seg);
   const seg2 = pjEl('button', 'pjbtn', '✎ الأعمال والأقسام'); seg2.type = 'button'; seg2.onclick = pjWizard;
   const segw2 = pjEl('label', 'pjf'); segw2.append(pjEl('span', '', 'شركات / ذاتي'), seg2);
+  const sega = pjEl('button', 'pjbtn', '+ بند من التحليل'); sega.type = 'button'; sega.title = 'ضيف بند من بنود تحليل الأسعار'; sega.onclick = pjAddFromPA;
   const segc = pjEl('button', 'pjbtn', '+ بند مش في التحليل'); segc.type = 'button'; segc.title = 'بند بوصفه ووحدته وفئته بتكتبهم بإيدك'; segc.onclick = () => pjCusDlg(null, () => pjBOQ());
-  const segw3 = pjEl('label', 'pjf'); segw3.append(pjEl('span', '', 'بند جديد'), segc);
+  const segw3 = pjEl('label', 'pjf'); const sgr = pjEl('div', 'pjbrow'); sgr.append(sega, segc); segw3.append(pjEl('span', '', 'إضافة بند'), sgr);
   bar.append(segw, segw2, segw3);
   m.appendChild(bar);
   const paper = pjEl('div', 'pjpaper'); paper.id = 'pjPaper'; m.appendChild(paper);
@@ -2775,6 +2784,42 @@ table.pjform tr.ptot td{background:#ffe08a;font-weight:800;font-size:14px}
 table.pjform tr.ptot td.e{background:#fff}
 .pjsign{margin-top:22px;font-weight:800;font-size:14px;line-height:1.8}
 .noexp,.pjq,.pjn{display:none}`;
+// إضافة بند من تحليل الأسعار للموازنة (بحث واختيار)
+function pjAddFromPA() {
+  const p = PJ.cur; if (!p) return;
+  const used = new Set(p.items), cands = qtPaCands();
+  const w = pjEl('div', 'pjm'), bx = pjEl('div', 'bx pjpick'), hd = pjEl('div', 'hd'), bd = pjEl('div', 'bd'), ft = pjEl('div', 'ft');
+  hd.append(pjEl('b', '', 'إضافة بند من تحليل الأسعار'), pjEl('small', '', 'اختار بند أو أكتر، وهيتضافوا للموازنة وتكتب كمياتهم.'));
+  const q = pjEl('input'); q.type = 'search'; q.placeholder = 'دوّر على بند…'; q.className = 'pjpq';
+  const list = pjEl('div', 'pjpl'); bd.append(q, list);
+  const picked = new Set();
+  const draw = () => {
+    list.textContent = ''; const f = pjNorm(q.value.trim()); let grp = null;
+    cands.filter((c) => !f || pjNorm(c.t + ' ' + c.g).includes(f)).forEach((c) => {
+      if (c.g !== grp) { grp = c.g; list.appendChild(pjEl('div', 'g', grp || 'بنود')); }
+      const inUse = c.si < PJ_SAF ? used.has(c.si) : [...used].some((x) => x >= PJ_SAF && x < PJ_CUS && pjSafIdx(x) === c.si - PJ_SAF);
+      const r = pjEl('label', 'it' + (picked.has(c.si) ? ' on' : '')); const cb = pjEl('input'); cb.type = 'checkbox'; cb.checked = picked.has(c.si);
+      cb.onchange = () => { if (cb.checked) picked.add(c.si); else picked.delete(c.si); r.classList.toggle('on', cb.checked); ok.textContent = picked.size ? 'إضافة (' + picked.size + ')' : 'إضافة'; };
+      r.append(cb, pjEl('span', '', c.t), pjEl('small', '', (c.unit || '') + (inUse ? ' · موجود في الموازنة' : ''))); list.appendChild(r);
+    });
+  };
+  const ok = pjEl('button', 'ok', 'إضافة'); ok.type = 'button'; const no = pjEl('button', 'no', 'إلغاء'); no.type = 'button';
+  ft.append(ok, no); bx.append(hd, bd, ft); w.appendChild(bx); document.body.appendChild(w);
+  const done = () => w.remove(); no.onclick = done; w.onclick = (e) => { if (e.target === w) done(); };
+  q.oninput = draw; draw(); setTimeout(() => q.focus(), 30);
+  ok.onclick = async () => {
+    if (!picked.size) return done();
+    const all = new Set(p.items);
+    picked.forEach((si) => {
+      if (si < PJ_SAF) { if (!all.has(si)) all.add(si); return; }
+      let k = si, m2 = 0; while (all.has(k)) { m2++; k = si + 100 * m2; } all.add(k); // نفس بند الأمن والسلامة ممكن يتكرر
+    });
+    p.items = [...all];
+    const { error } = await sb.from('pa_projects').update({ items: p.items, updated_at: new Date().toISOString() }).eq('id', p.id);
+    if (error) return alert('تعذّر الإضافة');
+    done(); paNav($('paQ').value); pjBOQ();
+  };
+}
 // حذف بند من الموازنة (من المشروع ده بس — التحليل العام زي ما هو)
 async function pjDelItem(si, cus, after) {
   const p = PJ.cur; if (!p) return; const b = p.basics;
