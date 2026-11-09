@@ -110,7 +110,7 @@ main{max-width:1100px;margin:0 auto;padding:34px 20px 40px}
 .card .go{align-self:stretch;margin-top:10px}
 .card .go span,.card .go small{white-space:nowrap}.card .go small{font-size:11px}
 .card p{margin:0;color:var(--ink2);font-size:14px;line-height:1.75;flex:1}
-.go{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:14px;font-weight:700;color:var(--c);font-size:14.5px}
+.go{display:flex;align-items:center;justify-content:center;border-top:1px solid var(--line);padding-top:14px;font-weight:700;color:var(--c);font-size:14.5px}
 .go small{font-weight:400;color:var(--muted);font-size:12px;direction:ltr}
 main{padding-top:max(11vh,48px)}
 .hero{text-align:center;margin-bottom:max(8vh,44px)}
@@ -923,27 +923,27 @@ body:not(.in) footer{color:#6f84a6}
     <a class="card c1" href="https://mo2ysaaat.vercel.app/" data-sso>
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l1 2h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h3z"/><path d="M9 3v3h6V3"/><path d="M8 11h8M8 15h8M8 19h5"/></svg></div>
       <h2>متابعة المقايسات</h2>
-      <div class="go"><span>دخول ←</span><small>mo2ysaaat.vercel.app</small></div>
+      <div class="go"><span>دخول ←</span></div>
     </a>
     <a class="card c2" href="https://mowaznat-2026.vercel.app/" data-sso>
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16"/><path d="M6 20v-6M10 20V9M14 20v-8M18 20V5"/><path d="M5 10l5-5 4 4 5-5"/></svg></div>
       <h2>الموازنات</h2>
-      <div class="go"><span>دخول ←</span><small>mowaznat-2026.vercel.app</small></div>
+      <div class="go"><span>دخول ←</span></div>
     </a>
     <a class="card c3" href="https://hagz-moraga3a.vercel.app/" data-sso>
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M9 15l2 2 4-4"/></svg></div>
       <h2>حجز مواعيد المراجعة</h2>
-      <div class="go"><span>دخول ←</span><small>hagz-moraga3a.vercel.app</small></div>
+      <div class="go"><span>دخول ←</span></div>
     </a>
     <a class="card c4" id="paCard" href="#" hidden>
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M8 18h8"/></svg></div>
       <h2>تحليل أسعار</h2>
-      <div class="go"><span>فتح ←</span><small>للأدمن فقط</small></div>
+      <div class="go"><span>فتح ←</span></div>
     </a>
     <a class="card c5" id="qtCard" href="#" hidden>
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V8l4-3 4 3v13"/><path d="M13 21V12h6v9"/><path d="M8 11h2M8 14h2M8 17h2M15.5 15h1M15.5 18h1"/></svg></div>
       <h2>حصر الكميات</h2>
-      <div class="go"><span>فتح ←</span><small>للأدمن فقط</small></div>
+      <div class="go"><span>فتح ←</span></div>
     </a>
   </div>
 </main>
@@ -2975,6 +2975,63 @@ function pjExport() {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'موازنة ' + PJ.cur.name + '.xlsx'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   return blob;
 }
+// ===== حفظ PDF: المتصفح نفسه بيرسم الجدول (العربي مظبوط) جوه صورة، والصفحات بتتقسم عند آخر صف كامل =====
+function pjPdfBytes(pages, W, H, mg) { // pages: [{jpg: Uint8Array, w, h}] — PDF بصفحات A3 فيها صور
+  const enc = new TextEncoder(), parts = [], offs = []; let len = 0;
+  const add = (x) => { const u = typeof x === 'string' ? enc.encode(x) : x; parts.push(u); len += u.length; };
+  const obj = (n, body) => { offs[n] = len; add(n + ' 0 obj\n'); body(); add('\nendobj\n'); };
+  add('%PDF-1.4\n');
+  const np = pages.length, kids = pages.map((_, i) => (3 + i * 3) + ' 0 R').join(' ');
+  obj(1, () => add('<< /Type /Catalog /Pages 2 0 R >>'));
+  obj(2, () => add('<< /Type /Pages /Kids [' + kids + '] /Count ' + np + ' >>'));
+  pages.forEach((pg, i) => {
+    const po = 3 + i * 3, im = po + 1, ct = po + 2;
+    const sw = W - 2 * mg, sh = pg.h * (sw / pg.w); // الصورة بعرض الصفحة جوه الهوامش
+    const cs = 'q ' + sw.toFixed(2) + ' 0 0 ' + sh.toFixed(2) + ' ' + mg + ' ' + (H - mg - sh).toFixed(2) + ' cm /Im0 Do Q';
+    obj(po, () => add('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Resources << /XObject << /Im0 ' + im + ' 0 R >> >> /Contents ' + ct + ' 0 R >>'));
+    obj(im, () => { add('<< /Type /XObject /Subtype /Image /Width ' + pg.w + ' /Height ' + pg.h + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + pg.jpg.length + ' >>\nstream\n'); add(pg.jpg); add('\nendstream'); });
+    obj(ct, () => { add('<< /Length ' + cs.length + ' >>\nstream\n' + cs + '\nendstream'); });
+  });
+  const xo = len, n = 3 + np * 3;
+  add('xref\n0 ' + n + '\n0000000000 65535 f \n'); for (let i = 1; i < n; i++) add(String(offs[i]).padStart(10, '0') + ' 00000 n \n');
+  add('trailer\n<< /Size ' + n + ' /Root 1 0 R >>\nstartxref\n' + xo + '\n%%EOF');
+  return new Blob(parts, { type: 'application/pdf' });
+}
+async function pjPdf() {
+  const pp = $('pjPaper'); if (!pp) return;
+  pjToast('جاري تجهيز ملف PDF…');
+  const PW = 1100, A3 = [841.89, 1190.55], MG = 24; // عرض الرسم بالبكسل + هوامش الصفحة بالنقطة
+  const css = PJ_FORM_CSS + '.pjpaper{max-width:none;width:' + PW + 'px;padding:0;margin:0;background:#fff}table.pjform th,table.pjform td{font-size:14.5px;padding:6px 8px}table.pjform td.d{font-size:13.5px}.pjtitle{font-size:22px}.pv{display:inline!important}*{font-family:Arial,Tahoma,"Segoe UI",sans-serif!important}';
+  const c = pp.cloneNode(true); c.querySelectorAll('.noexp,input,textarea,select').forEach((x) => x.remove());
+  // قياس أماكن الصفوف عشان الصفحة متقطعش صف
+  const host = document.createElement('div'); host.style.cssText = 'position:fixed;left:-20000px;top:0;width:' + PW + 'px;direction:rtl;background:#fff';
+  const st = document.createElement('style'); st.textContent = css.replace(/body\{[^}]*\}/, ''); host.append(st, c); document.body.appendChild(host);
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const H = Math.ceil(c.getBoundingClientRect().height * 1.2) + 200; // مساحة زيادة، والفاضي في الآخر بيتشال
+  const xhtml = new XMLSerializer().serializeToString(c); host.remove();
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + PW + '" height="' + H + '"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" dir="rtl" style="background:#fff"><style>' + css.replace(/body\{[^}]*\}/, '').replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</style>' + xhtml + '</div></foreignObject></svg>';
+  const img = new Image(); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  try { await img.decode(); } catch (e) { return alert('تعذّر تجهيز الـ PDF'); }
+  // أماكن القطع: سطور فاضية بين الجداول أو خطوط الحدود الأفقية (عشان الصفحة متقطعش صف)
+  const full = document.createElement('canvas'); full.width = PW; full.height = H; const fg = full.getContext('2d'); fg.fillStyle = '#fff'; fg.fillRect(0, 0, PW, H); fg.drawImage(img, 0, 0);
+  let data; try { data = fg.getImageData(0, 0, PW, H).data; } catch (e) { return alert('المتصفح ده مش بيسمح بحفظ PDF — استخدم «طباعة»'); }
+  const kind = new Uint8Array(H); let last = 0; // 1 = سطر أبيض، 2 = خط حد
+  for (let yy = 0; yy < H; yy++) { let dark = 0, ink = 0, n = 0; for (let x = 4; x < PW - 4; x++) { const i = (yy * PW + x) * 4, v = data[i] + data[i + 1] + data[i + 2]; n++; if (v < 200) dark++; if (v < 740) ink++; } if (!ink) kind[yy] = 1; else if (dark > n * 0.85) kind[yy] = 2; if (ink) last = yy; }
+  const HH = Math.min(H, last + 12);
+  const S = 2, pageH = Math.floor(PW * (A3[1] - 2 * MG) / (A3[0] - 2 * MG));
+  const pages = []; let y = 0;
+  while (y < HH - 2) {
+    let end = Math.min(HH, y + pageH);
+    if (end < HH) { let k = end; while (k > y + 200 && !kind[k]) k--; if (k > y + 200) end = kind[k] === 2 ? k + 2 : k; }
+    const cv = document.createElement('canvas'); cv.width = PW * S; cv.height = (end - y) * S; const g = cv.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, y, PW, end - y, 0, 0, cv.width, cv.height);
+    let url; try { url = cv.toDataURL('image/jpeg', 0.95); } catch (e) { return alert('المتصفح ده مش بيسمح بحفظ PDF — استخدم «طباعة»'); }
+    const bin = atob(url.split(',')[1]), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    pages.push({ jpg: u, w: cv.width, h: cv.height }); y = end;
+  }
+  const blob = pjPdfBytes(pages, A3[0], A3[1], MG);
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'موازنة ' + PJ.cur.name + '.pdf'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
 // طباعة من غير نافذة منبثقة (iframe مخفي) — بتشتغل حتى لو المتصفح قافل الـ popups
 function pjPrint() {
   const h = pjBoqHtml(); if (!h) return;
@@ -3950,8 +4007,9 @@ function pjCmdMenu(btn) {
   const add = (t, f, dis, ttl) => { const x = pjEl('button', '', t); x.type = 'button'; if (dis) { x.disabled = true; x.style.opacity = '.45'; x.title = ttl || ''; } x.onclick = () => { mn.remove(); f(); }; mn.appendChild(x); };
   const linked = p && p.qt_id && typeof IS_QT !== 'undefined' && IS_QT;
   add('🔄 تحديث الكميات من الحصر', pjSyncFromQT, !linked, 'المشروع ده مش مربوط بحصر كميات — اربطه من «التسعير والموازنة» في حصر الكميات');
-  add('📊 تصدير Excel (بالمعادلات)', () => pjExport());
-  add('🖨 طباعة / حفظ PDF (A3)', () => pjPrint());
+  add('🖨 طباعة', () => pjPrint());
+  add('💾 حفظ Excel (بالمعادلات)', () => pjExport());
+  add('💾 حفظ PDF (A3)', () => pjPdf());
   document.body.appendChild(mn);
   setTimeout(() => document.addEventListener('click', function f(ev) { if (!mn.contains(ev.target)) { mn.remove(); document.removeEventListener('click', f); } }), 0);
 }
