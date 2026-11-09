@@ -2719,7 +2719,7 @@ function pjBOQ() {
             const rn = pjEl('button', 'noexp pjop', '✎ الاسم'); rn.type = 'button'; rn.title = 'تغيير وصف البند في الموازنة دي بس';
             rn.onclick = async () => { const cur = b.desc[si] || (it.std ? it.desc : (PAnames[si] || it.desc)); const v = await qtForm('وصف البند في الموازنة', 'بيتغير في موازنة المشروع ده بس — التحليل نفسه زي ما هو. سيبه فاضي يرجع للأصلي.', [{ k: 'd', label: 'الوصف', type: 'area', value: cur, req: false }], 'حفظ'); if (!v) return; if (v.d && v.d !== (it.std ? it.desc : (PAnames[si] || it.desc))) b.desc[si] = v.d; else delete b.desc[si]; paSave(); draw(); };
             const tools = pjEl('div', 'noexp pjitools'); tools.append(sel, op, rn);
-            if (it.cus) { const dl = pjEl('button', 'noexp pjop red', 'حذف'); dl.type = 'button'; dl.onclick = () => { if (!confirm('حذف البند ده من الموازنة؟')) return; b.custom = b.custom.filter((c) => c.k !== si); delete qm[si]; delete b.desc[si]; paSave(); draw(); }; tools.appendChild(dl); }
+            { const dl = pjEl('button', 'noexp pjop red', '🗑 حذف'); dl.type = 'button'; dl.title = 'حذف البند من موازنة المشروع ده'; dl.onclick = () => pjDelItem(si, it.cus); tools.appendChild(dl); }
             dt.appendChild(tools);
           }
           tr.appendChild(dt);
@@ -2775,6 +2775,22 @@ table.pjform tr.ptot td{background:#ffe08a;font-weight:800;font-size:14px}
 table.pjform tr.ptot td.e{background:#fff}
 .pjsign{margin-top:22px;font-weight:800;font-size:14px;line-height:1.8}
 .noexp,.pjq,.pjn{display:none}`;
+// حذف بند من الموازنة (من المشروع ده بس — التحليل العام زي ما هو)
+async function pjDelItem(si, cus, after) {
+  const p = PJ.cur; if (!p) return; const b = p.basics;
+  if (!confirm('حذف «' + pjItemName(si).slice(0, 60) + '» من الموازنة؟\n(تحليل الأسعار نفسه مش هيتأثر، وتقدر ترجّعه من «البنود»)')) return;
+  if (cus) b.custom = (b.custom || []).filter((c) => c.k !== si);
+  else p.items = p.items.filter((x) => x !== si);
+  delete p.qty[si]; if (b.desc) delete b.desc[si]; if (b.note) delete b.note[si]; if (b.sec) delete b.sec[si];
+  if (!cus) { const { error } = await sb.from('pa_projects').update({ items: p.items, updated_at: new Date().toISOString() }).eq('id', p.id); if (error) return alert('تعذّر الحذف'); }
+  // لو البند جاي من حصر الكميات: نفك ربطه عشان «تحديث الكميات» ميرجعهوش
+  if (p.qt_id && typeof IS_QT !== 'undefined' && IS_QT) {
+    const { data: qp } = await sb.from('qt_projects').select('pa_map').eq('id', p.qt_id).single();
+    const mp = (qp && qp.pa_map) || {}; let ch = false; Object.values(mp).forEach((m) => { if (m && m.si === si) { m.si = null; ch = true; } });
+    if (ch) await sb.from('qt_projects').update({ pa_map: mp }).eq('id', p.qt_id);
+  }
+  paSave(); paNav($('paQ').value); after ? after() : pjBOQ();
+}
 async function pjCusDlg(c, after) {
   const p = PJ.cur; if (!p) return; const b = p.basics = p.basics || {}; b.custom = b.custom || [];
   const v = await qtForm(c ? 'تعديل بند' : 'بند جديد مش في التحليل', 'بيتضاف لموازنة المشروع ده بس، بالفئة اللي تكتبها.', [
