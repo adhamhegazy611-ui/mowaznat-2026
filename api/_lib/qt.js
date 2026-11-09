@@ -144,10 +144,24 @@ function mtextClean(t) {
 }
 const TNAME = { LINE: 'خط', LWPOLYLINE: 'بولي لاين', POLYLINE: 'بولي لاين 2D/3D', ARC: 'قوس', CIRCLE: 'دائرة', ELLIPSE: 'قطع ناقص', SPLINE: 'Spline', HATCH: 'هاتش', INSERT: 'بلوك', TEXT: 'نص', MTEXT: 'نص', ATTRIB: 'نص بلوك', DIMENSION: 'أبعاد', MULTILEADER: 'Leader', LEADER: 'Leader', ACAD_TABLE: 'جدول', POINT: 'نقطة', SOLID: 'Solid', '3DFACE': '3D Face', ACAD_PROXY_ENTITY: 'عنصر Civil 3D', IMAGE: 'صورة', VIEWPORT: 'Viewport', WIPEOUT: 'Wipeout', MLINE: 'Mline' };
 
+// رسومات عناصر Civil 3D المحفوظة جوه الملف (Proxy graphics): بنطلع منها اسم النوع والمستطيل اللي حواليه
+function proxyGfx(g) {
+  const hex = g.filter((x) => x[0] === '310').map((x) => x[1].trim()).join(''); if (hex.length < 16) return null;
+  const b = Buffer.from(hex, 'hex'); let o = 8, cls = '', n; try { n = b.readInt32LE(4); } catch (e) { return null; }
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let i = 0; i < n && o + 8 <= b.length; i++) {
+    const sz = b.readInt32LE(o), t = b.readInt32LE(o + 4), d = o + 8; if (sz < 8) break;
+    if ((t === 6 || t === 7) && d + 4 <= b.length) { const m = b.readInt32LE(d); for (let k = 0; k < m && d + 4 + k * 24 + 16 <= b.length; k++) { const x = b.readDoubleLE(d + 4 + k * 24), y = b.readDoubleLE(d + 12 + k * 24); if (isFinite(x) && isFinite(y)) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } } }
+    else if (t === 36 && !cls) { let k = d + 96, str = ''; while (k + 1 < o + sz) { const c = b.readUInt16LE(k); if (!c) break; str += String.fromCharCode(c); k += 2; } cls = str.replace(/\s*\(.*\)\s*$/, '').replace(/^AeccDb/, '').trim(); }
+    o += sz;
+  }
+  return isFinite(x0) ? { cls, box: [x0, y0, x1, y1] } : null;
+}
+
 function analyze(text) {
   const { ents, layers, ltypes, header, blocks } = parseDXF(text);
   const groups = new Map(); const warn = new Set(); let proxy = 0;
-  const inv = new Map(), types = {}, texts = [], dims = [];
+  const inv = new Map(), types = {}, texts = [], dims = [], civ = [];
   const LY = (n) => { if (!inv.has(n)) { const l = layers[n] || {}; inv.set(n, { name: n, color: l.color || 7, hid: !!(l.off || l.frozen), hatch: 0, harea: 0, line: 0, len: 0, block: 0, text: 0, other: 0 }); } return inv.get(n); };
   const G = (key, base) => { if (!groups.has(key)) groups.set(key, { key, ...base, n: 0, area: 0, length: 0, paint: 0, items: [], geom: [] }); return groups.get(key); };
   const layerOf = (d, ctx) => { const l = d['8'] || '0'; return l === '0' && ctx.layer ? ctx.layer : l; };
@@ -167,7 +181,7 @@ function analyze(text) {
       const ocs = (+d['230'] || 1) < 0, Te = ocs ? mul(T, MIRX) : T, dt = Math.abs(det(Te)), sc = Math.sqrt(dt);
       const uni = Math.abs(Math.hypot(Te[0], Te[1]) - Math.hypot(Te[2], Te[3])) < 1e-9 * Math.max(1, Math.hypot(Te[0], Te[1]));
       const sfx = ctx.blk ? '|@' + ctx.blk : '', extra = ctx.blk ? { blk: ctx.blk } : {}, hid = hidOf(layer) || !!ctx.hid;
-      if (e.t === 'ACAD_PROXY_ENTITY') { proxy++; lv.other++; continue; }
+      if (e.t === 'ACAD_PROXY_ENTITY') { proxy++; lv.other++; const pg = proxyGfx(e.g); if (pg && civ.length < 3000) civ.push({ cls: pg.cls, l: layer, box: [app(T, [pg.box[0], pg.box[1]]), app(T, [pg.box[2], pg.box[3]])] }); continue; }
       if (e.t === 'HATCH') {
         const pat = d['2'] || 'SOLID';
         const paths = hatchPaths(e.g); if (!paths.length) { lv.other++; continue; }
@@ -251,12 +265,13 @@ function analyze(text) {
   out.forEach((gr) => { gr.geom = gr.geom.map((g) => g.t === 'h' ? { t: 'h', polys: g.polys.map((p) => p.map((q) => [R(q[0], x0), R(q[1], y0)])) } : g.t === 'l' ? { t: 'l', closed: g.closed, pts: g.pts.map((q) => [R(q[0], x0), R(q[1], y0)]) } : { t: 'p', at: [R(g.at[0], x0), R(g.at[1], y0)] }); });
   out.sort((a, b) => (a.hid ? 1 : 0) - (b.hid ? 1 : 0) || (a.blk ? 1 : 0) - (b.blk ? 1 : 0) || (a.kind === 'hatch' ? 0 : a.kind === 'line' ? 1 : 2) - (b.kind === 'hatch' ? 0 : b.kind === 'line' ? 1 : 2) || b.area - a.area || b.length - a.length);
   const lys = [...inv.values()].filter((l) => l.hatch || l.line || l.block || l.text || l.other).map((l) => ({ ...l, harea: +l.harea.toFixed(3), len: +l.len.toFixed(3), hex: aciHex(l.color) })).sort((a, b) => b.harea - a.harea || b.len - a.len || b.block - a.block);
+  const cv = civ.map((c) => ({ cls: c.cls, l: c.l, box: [R(Math.min(c.box[0][0], c.box[1][0]), x0), R(Math.min(c.box[0][1], c.box[1][1]), y0), R(Math.max(c.box[0][0], c.box[1][0]), x0), R(Math.max(c.box[0][1], c.box[1][1]), y0)] }));
   const tx = texts.slice(0, 4000).map((t) => ({ ...t, at: [R(t.at[0], x0), R(t.at[1], y0)] }));
   if (texts.length > 4000) warn.add('اللوحة فيها نصوص كتير — اتعرض أول 4000');
   const usedBlocks = new Set(out.filter((g) => g.kind === 'block').map((g) => g.block));
   return {
     groups: out, bbox: [0, 0, R(x1, x0), R(y1, y0)], origin: [x0, y0], warnings: [...warn], entities: ents.length,
-    inv: { layers: lys, types, texts: tx, dims: dims.slice(0, 2000), blocks: { defined: Object.keys(blocks).length, used: usedBlocks.size }, layerCount: Object.keys(layers).length, hiddenLayers: Object.keys(layers).filter((k) => layers[k].off || layers[k].frozen) },
+    inv: { layers: lys, types, texts: tx, civ: cv, dims: dims.slice(0, 2000), blocks: { defined: Object.keys(blocks).length, used: usedBlocks.size }, layerCount: Object.keys(layers).length, hiddenLayers: Object.keys(layers).filter((k) => layers[k].off || layers[k].frozen) },
   };
 }
 

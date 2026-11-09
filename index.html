@@ -377,6 +377,15 @@ body.in footer{color:#7f94b8}
 #qt .qgrp{background:rgba(10,24,45,.5);border-color:var(--bd)}
 #qt .qgrph{background:rgba(5,14,28,.7)}
 #qt .qsvg{background:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px) 0 0/24px 24px,linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px) 0 0/24px 24px,#071224;border-color:var(--bd)}
+#qt .qcard.upd .qsvgw::after{content:'بيقرا تفاصيل اللوحة كاملة…';position:absolute;bottom:10px;inset-inline-start:10px;background:rgba(5,14,28,.85);color:var(--ac2);font-size:12px;font-weight:700;border-radius:8px;padding:4px 10px}
+#qt .qsvgw{position:relative}
+#qt .qsvgw .qsvg{display:block;width:100%;height:clamp(320px,58vh,640px);max-height:none;cursor:grab;touch-action:none;user-select:none}
+#qt .qsvgw .qsvg.drag{cursor:grabbing}
+#qt .qsvgw .qsvg path.on,#qt .qsvgw .qsvg polyline.on,#qt .qsvgw .qsvg polygon.on{filter:drop-shadow(0 0 3px rgba(245,179,1,.7))}
+#qt .qsvgt{position:absolute;top:10px;inset-inline-start:10px;display:flex;gap:4px;flex-wrap:wrap}
+#qt .qsvgt button{background:rgba(5,14,28,.82);border:1px solid rgba(148,173,212,.25);color:#e6edf7;border-radius:8px;padding:4px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;backdrop-filter:blur(4px)}
+#qt .qsvgt button:hover{border-color:var(--ac);color:var(--ac2)}#qt .qsvgt button.off{opacity:.45}
+#qt .qsvg text{font-family:"Cairo",system-ui,sans-serif;pointer-events:none}
 #qt table.qt th{background:#0e2342;color:#dbe6f5;border-color:var(--bd)}#qt table.qt td{border-color:rgba(148,173,212,.1)}
 
 .card[hidden]{display:none}
@@ -2954,13 +2963,35 @@ async function qtDetails(m) {
     G.rows.forEach((y, i) => sec.appendChild(qtDetailCard(y, det[y.id], i + 1)));
     box.appendChild(sec);
   });
+  // اللوح اللي اترفعت قبل القراءة الكاملة: نعيد قراءتها في الخلفية (الكمية والحسبة زي ما هي)
+  for (const x of QT.items.filter((y) => y.file_path && det[y.id] && det[y.id].groups && !det[y.id].inv)) {
+    if (QT.tab !== 'det') break;
+    const card = document.getElementById('qti-' + x.id); if (card) card.classList.add('upd');
+    const d2 = await qtRefresh(x, det[x.id]);
+    const card2 = document.getElementById('qti-' + x.id);
+    if (d2 && card2) { det[x.id] = d2; const no = card2.dataset.no ? +card2.dataset.no : undefined; card2.replaceWith(qtDetailCard(x, d2, no)); } else if (card2) card2.classList.remove('upd');
+  }
+}
+async function qtRefresh(x, d) {
+  try {
+    const { data: { session: s } } = await sb.auth.getSession();
+    const r = await fetch('/api/qt', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.access_token }, body: JSON.stringify({ path: x.file_path }) });
+    const R = await r.json(); if (!r.ok || !R.groups) return null;
+    const sel = (x.sel || []).filter((k) => !QT_XK.test(k)); const keys = new Set(R.groups.map(qtKey));
+    if (!sel.every((k) => keys.has(k))) return null; // الحسبة القديمة مش موجودة بنفس الشكل — نسيبها
+    const keepK = new Set(sel);
+    const groups = R.groups.map((g) => keepK.has(qtKey(g)) ? g : { ...g, items: g.kind === 'line' ? g.items.map((it) => ({ closed: it.closed, len: it.len })) : g.items, geom: (g.geom || []).map((e) => e.t === 'l' ? { ...e, pts: e.pts.filter((_, i, ar) => i % 3 === 0 || i === ar.length - 1) } : e) });
+    const nd = { ...d, groups, bbox: R.bbox, warnings: R.warnings || [], inv: R.inv || null };
+    const { error } = await sb.from('qt_items').update({ detail: nd }).eq('id', x.id);
+    return error ? null : nd;
+  } catch (e) { return null; }
 }
 async function qtShowItem(id) {
   QT.tab = 'det'; qtProject();
   setTimeout(() => { const el = document.getElementById('qti-' + id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 600);
 }
 function qtDetailCard(x, d, no) {
-  const c = pjEl('div', 'qcard'); c.id = 'qti-' + x.id;
+  const c = pjEl('div', 'qcard'); c.id = 'qti-' + x.id; if (no) c.dataset.no = no;
   if (x.mode === 'formula') {
     const h = pjEl('div', 'qdh'); h.append(pjEl('h3', '', 'ƒ ' + x.item), pjEl('span', 'qq', qtN(x.qty) + ' ' + x.unit));
     const eb = pjEl('button', 'qbtn sm', '✎ تعديل الحسبة'); eb.type = 'button'; eb.onclick = () => qtFxDlg(x); h.appendChild(eb);
@@ -2977,7 +3008,7 @@ function qtDetailCard(x, d, no) {
   c.appendChild(pjEl('div', 'qsub', (x.file_name || '') + ' — ' + new Date(x.created_at).toLocaleString('ar-EG')));
   if (!d) { c.appendChild(pjEl('div', 'qempty', 'مفيش تفاصيل.')); return c; }
   const wrap = pjEl('div', 'qdet');
-  wrap.appendChild(qtSvg(d.groups || [], new Set(x.sel || []), d.bbox));
+  wrap.appendChild(qtSvg(d.groups || [], new Set(x.sel || []), d.bbox, d.inv));
   const side = pjEl('div');
   (d.groups || []).filter((g) => (x.sel || []).includes(qtKey(g))).forEach((g) => side.appendChild(qtGroupDetail(g, x.mode, x.thickness)));
   const fp = qtFillParts(x);
@@ -3090,52 +3121,82 @@ function qtFormula(x, d) {
   if (x.mode === 'volume') s += ' م² × ' + qtN(x.thickness, 3) + ' م';
   return s + ' = ' + qtN(x.qty) + ' ' + x.unit;
 }
-function qtSvg(groups, sel, bbox) {
-  const NS = 'http://www.w3.org/2000/svg';
-  let X0 = 0, Y0 = 0, X1 = bbox ? bbox[2] : 1, Y1 = bbox ? bbox[3] : 1;
-  const sfs = groups.filter((g) => g.kind === 'surface' && g.ext), sfOn = sfs.filter((g) => sel.has(qtKey(g)));
-  if (sfOn.length) { X0 = Math.min(...sfOn.map((g) => g.ext[0])); Y0 = Math.min(...sfOn.map((g) => g.ext[1])); X1 = Math.max(...sfOn.map((g) => g.ext[2])); Y1 = Math.max(...sfOn.map((g) => g.ext[3])); }
-  else { // الرسمة تتركز على الحاجة المحسوبة (عشان لو في عناصر بعيدة في اللوحة)
-    let a0 = Infinity, b0 = Infinity, a1 = -Infinity, b1 = -Infinity; const ex = (v) => { if (v[0] < a0) a0 = v[0]; if (v[0] > a1) a1 = v[0]; if (v[1] < b0) b0 = v[1]; if (v[1] > b1) b1 = v[1]; };
-    groups.filter((g) => sel.has(qtKey(g))).forEach((g) => (g.geom || []).forEach((e) => { if (e.t === 'h') e.polys.forEach((q) => q.forEach(ex)); else if (e.t === 'l') e.pts.forEach(ex); else if (e.at) ex(e.at); }));
-    if (a1 > a0 || b1 > b0) { const m = Math.max(a1 - a0, b1 - b0) * 0.04; X0 = a0 - m; Y0 = b0 - m; X1 = a1 + m; Y1 = b1 + m; }
-  }
-  const W = X1 - X0 || 1, H = Y1 - Y0 || 1, pad = Math.max(W, H) * 0.03;
-  const s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', `${X0 - pad} ${-pad} ${W + 2 * pad} ${H + 2 * pad}`); s.setAttribute('class', 'qsvg');
-  const g0 = document.createElementNS(NS, 'g'); g0.setAttribute('transform', `translate(0 ${Y1}) scale(1 -1)`); s.appendChild(g0);
+// ألوان AutoCAD (ACI) على خلفية غامقة
+const QT_ACI = { 1: '#ff3b30', 2: '#ffd60a', 3: '#34c759', 4: '#32d4f5', 5: '#3b82f6', 6: '#ff4fd8', 7: '#e8eef6', 8: '#8a94a3', 9: '#c3cad4', 250: '#4b5563', 251: '#6b7280', 252: '#9ca3af', 253: '#b8bec8', 254: '#d4d8de', 255: '#eef1f5' };
+const qtCad = (c) => QT_ACI[c] || (c >= 10 && c < 250 ? `hsl(${Math.round(((c - 10) / 240) * 360)},80%,${[62, 72, 52, 66, 46][Math.floor((c % 10) / 2)] || 60}%)` : '#e8eef6');
+const QT_CIVN = { Alignment: 'محور', Corridor: 'كوريدور', SurfaceTin: 'سطح', CogoPoint: 'نقطة', Assembly: 'Assembly', Subassembly: 'Subassembly', GraphProfile: 'شاشة بروفيل', VAlignment: 'بروفيل', SampleLine: 'خط قطاع', SectionView: 'شاشة قطاع', FeatureLine: 'Feature line', Parcel: 'قطعة', Pipe: 'ماسورة', Structure: 'غرفة' };
+// رسم اللوحة: كل العناصر بألوان طبقاتها زي الأوتوكاد، والمحسوب بالذهبي، مع تكبير وتحريك
+function qtSvg(groups, sel, bbox, inv) {
+  const NS = 'http://www.w3.org/2000/svg', E = (t, at) => { const e = document.createElementNS(NS, t); for (const k in at) e.setAttribute(k, at[k]); return e; };
+  const Hb = bbox ? bbox[3] : 1;
+  // حدود: المحسوب، واللوحة كلها (من غير العناصر الشاردة)
+  const ext = (pts) => { if (!pts.length) return null; return [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))]; };
+  const ptsOf = (g, every) => { const o = []; if (g.ext) { o.push([g.ext[0], g.ext[1]], [g.ext[2], g.ext[3]]); return o; } (g.geom || []).forEach((e) => { if (e.t === 'h') e.polys.forEach((q) => q.forEach((v, i) => { if (i % every === 0) o.push(v); })); else if (e.t === 'l') e.pts.forEach((v, i) => { if (i % every === 0 || i === e.pts.length - 1) o.push(v); }); else if (e.at) o.push(e.at); }); return o; };
+  const selPts = []; groups.filter((g) => sel.has(qtKey(g))).forEach((g) => selPts.push(...ptsOf(g, 1)));
+  const allPts = []; groups.forEach((g) => allPts.push(...ptsOf(g, 4)));
+  const robust = (P) => { if (P.length < 8) return ext(P); const xs = P.map((p) => p[0]).sort((a, b) => a - b), ys = P.map((p) => p[1]).sort((a, b) => a - b), q = (A, f) => A[Math.min(A.length - 1, Math.max(0, Math.round(f * (A.length - 1))))]; const r = [q(xs, .01), q(ys, .01), q(xs, .99), q(ys, .99)]; const m = Math.max(r[2] - r[0], r[3] - r[1]) * .08; return [r[0] - m, r[1] - m, r[2] + m, r[3] + m]; };
+  const fullB = robust(allPts) || [0, 0, bbox ? bbox[2] : 1, Hb];
+  let selB = ext(selPts); if (selB) { const m = Math.max(selB[2] - selB[0], selB[3] - selB[1]) * .05 || 5; selB = [selB[0] - m, selB[1] - m, selB[2] + m, selB[3] + m]; }
+  const inB = (p, B) => p[0] >= B[0] && p[0] <= B[2] && p[1] >= B[1] && p[1] <= B[3];
+  const big = [Math.min(fullB[0], selB ? selB[0] : Infinity), Math.min(fullB[1], selB ? selB[1] : Infinity), Math.max(fullB[2], selB ? selB[2] : -Infinity), Math.max(fullB[3], selB ? selB[3] : -Infinity)];
+  const bw = big[2] - big[0], bh = big[3] - big[1], BIG = [big[0] - bw * 2, big[1] - bh * 2, big[2] + bw * 2, big[3] + bh * 2];
+  const svg = E('svg', { class: 'qsvg', preserveAspectRatio: 'xMidYMid meet' });
+  const g0 = E('g', { transform: `translate(0 ${Hb}) scale(1 -1)` }); svg.appendChild(g0);
+  const layerCol = {}; ((inv && inv.layers) || []).forEach((l) => { layerCol[l.name] = l.color; });
   const order = groups.slice().sort((a, b) => (sel.has(qtKey(a)) ? 1 : 0) - (sel.has(qtKey(b)) ? 1 : 0));
   order.forEach((g) => {
-    const on = sel.has(qtKey(g));
+    const on = sel.has(qtKey(g)), col = on ? '#f5b301' : qtCad(g.color), op = g.hid ? .3 : 1;
     (g.geom || []).forEach((e) => {
-      if (e.t === 'g') { // شبكة سطح الفرق: أصفر/برتقاني ردم، أزرق حفر
-        const zs = e.z.filter((v) => v != null), mx = Math.max(1, ...zs.map(Math.abs));
-        const path = {};
-        e.z.forEach((v, k) => {
-          if (v == null) return;
-          const lv = Math.min(4, Math.ceil(Math.abs(v) / mx * 4.0001)), key = (v >= 0 ? 'f' : 'c') + lv;
-          const x = e.x0 + (k % e.nx) * e.cs, y = e.y0 + Math.floor(k / e.nx) * e.cs;
-          path[key] = (path[key] || '') + 'M' + x.toFixed(2) + ' ' + y.toFixed(2) + 'h' + e.cs + 'v' + e.cs + 'h' + (-e.cs) + 'Z';
-        });
+      if (e.t === 'g') {
+        const zs = e.z.filter((v) => v != null), mx = Math.max(1, ...zs.map(Math.abs)); const path = {};
+        e.z.forEach((v, k) => { if (v == null) return; const lv = Math.min(4, Math.ceil(Math.abs(v) / mx * 4.0001)), key = (v >= 0 ? 'f' : 'c') + lv; const x = e.x0 + (k % e.nx) * e.cs, y = e.y0 + Math.floor(k / e.nx) * e.cs; path[key] = (path[key] || '') + 'M' + x.toFixed(2) + ' ' + y.toFixed(2) + 'h' + e.cs + 'v' + e.cs + 'h' + (-e.cs) + 'Z'; });
         const F = ['#fff3c4', '#ffd75e', '#f5b301', '#e07b00'], C = ['#cfe6ff', '#8cc4ff', '#3d8bfd', '#1f5fd1'];
-        Object.entries(path).forEach(([k, d]) => { const p = document.createElementNS(NS, 'path'); p.setAttribute('d', d); p.setAttribute('fill', (k[0] === 'f' ? F : C)[+k[1] - 1]); p.setAttribute('fill-opacity', on ? '.9' : '.35'); g0.appendChild(p); });
+        Object.entries(path).forEach(([k, d]) => g0.appendChild(E('path', { d, fill: (k[0] === 'f' ? F : C)[+k[1] - 1], 'fill-opacity': on ? '.9' : '.35' })));
       } else if (e.t === 'h') {
-        const p = document.createElementNS(NS, 'path');
-        p.setAttribute('d', e.polys.map((q) => 'M' + q.map((v) => v[0] + ' ' + v[1]).join('L') + 'Z').join(''));
-        p.setAttribute('fill-rule', 'evenodd'); p.setAttribute('fill', on ? '#f5b301' : '#3a4757'); p.setAttribute('fill-opacity', on ? '.6' : '.5');
-        p.setAttribute('stroke', on ? '#ffcf3f' : '#556377'); p.setAttribute('stroke-width', on ? '1.2' : '.5'); p.setAttribute('vector-effect', 'non-scaling-stroke');
-        g0.appendChild(p);
+        g0.appendChild(E('path', { d: e.polys.map((q) => 'M' + q.map((v) => v[0] + ' ' + v[1]).join('L') + 'Z').join(''), 'fill-rule': 'evenodd', fill: col, 'fill-opacity': on ? .55 : .16 * op, stroke: col, 'stroke-opacity': on ? 1 : .7 * op, 'stroke-width': on ? 1.6 : .7, 'vector-effect': 'non-scaling-stroke', class: on ? 'on' : '' }));
       } else if (e.t === 'l') {
-        const p = document.createElementNS(NS, e.closed ? 'polygon' : 'polyline');
-        p.setAttribute('points', e.pts.map((v) => v[0] + ',' + v[1]).join(' '));
-        p.setAttribute('fill', 'none'); p.setAttribute('stroke', on ? '#f5b301' : '#6b7a8d'); p.setAttribute('stroke-width', on ? '2.4' : '.7'); p.setAttribute('vector-effect', 'non-scaling-stroke');
-        g0.appendChild(p);
-      } else {
-        const c = document.createElementNS(NS, 'circle'); c.setAttribute('cx', e.at[0]); c.setAttribute('cy', e.at[1]); c.setAttribute('r', Math.max(W, H) * (on ? 0.006 : 0.003));
-        c.setAttribute('fill', on ? '#f5b301' : '#6b7a8d'); g0.appendChild(c);
+        g0.appendChild(E(e.closed ? 'polygon' : 'polyline', { points: e.pts.map((v) => v[0] + ',' + v[1]).join(' '), fill: 'none', stroke: col, 'stroke-opacity': on ? 1 : .85 * op, 'stroke-width': on ? 2.6 : .8, 'vector-effect': 'non-scaling-stroke', class: on ? 'on' : '' }));
+      } else if (e.at && !g.blk) {
+        g0.appendChild(E('circle', { cx: e.at[0], cy: e.at[1], r: Math.max(bw, bh) * (on ? .005 : .0025), fill: col, 'fill-opacity': op }));
       }
     });
   });
-  return s;
+  // عناصر Civil 3D (مكانها والمستطيل اللي حواليها)
+  const civ = ((inv && inv.civ) || []).filter((c) => { const w = c.box[2] - c.box[0], h = c.box[3] - c.box[1]; return w * h > 1 && inB([c.box[0], c.box[1]], BIG) && inB([c.box[2], c.box[3]], BIG); });
+  const fsz = Math.max(bw, bh) / 110;
+  civ.forEach((c) => {
+    const w = c.box[2] - c.box[0], h = c.box[3] - c.box[1];
+    if (c.cls === 'CogoPoint') { g0.appendChild(E('circle', { cx: (c.box[0] + c.box[2]) / 2, cy: (c.box[1] + c.box[3]) / 2, r: fsz * .25, fill: '#7dd3fc', 'fill-opacity': .8 })); return; }
+    g0.appendChild(E('rect', { x: c.box[0], y: c.box[1], width: w, height: h, fill: 'none', stroke: '#7dd3fc', 'stroke-opacity': .55, 'stroke-dasharray': '6 5', 'stroke-width': 1, 'vector-effect': 'non-scaling-stroke' }));
+    const t = E('text', { transform: `translate(${c.box[0] + w / 2} ${c.box[3] + fsz * .4}) scale(1 -1)`, 'font-size': fsz, fill: '#7dd3fc', 'text-anchor': 'middle', 'fill-opacity': .9 }); t.textContent = (QT_CIVN[c.cls] || c.cls) + ' · Civil 3D'; g0.appendChild(t);
+  });
+  // النصوص المكتوبة في اللوحة
+  const tg = E('g', { class: 'qtx' }); g0.appendChild(tg);
+  ((inv && inv.texts) || []).filter((t) => inB(t.at, BIG)).slice(0, 2500).forEach((t) => {
+    const h = t.h && t.h > 0 ? t.h : fsz * .8, el = E('text', { transform: `translate(${t.at[0]} ${t.at[1]}) scale(1 -1)`, 'font-size': h, fill: qtCad(layerCol[t.l] || 7), 'fill-opacity': .95 });
+    el.textContent = t.t.length > 80 ? t.t.slice(0, 80) + '…' : t.t; tg.appendChild(el);
+  });
+  // التكبير والتحريك
+  let vb;
+  const setVB = (B) => { const pad = Math.max(B[2] - B[0], B[3] - B[1]) * .02; vb = [B[0] - pad, Hb - B[3] - pad, B[2] - B[0] + 2 * pad, B[3] - B[1] + 2 * pad]; svg.setAttribute('viewBox', vb.join(' ')); };
+  setVB(selB || fullB);
+  const wrap = pjEl('div', 'qsvgw'); wrap.appendChild(svg);
+  const tb = pjEl('div', 'qsvgt');
+  const btn = (t, ttl, f) => { const b = pjEl('button', '', t); b.type = 'button'; b.title = ttl; b.onclick = (ev) => { ev.stopPropagation(); f(); }; tb.appendChild(b); return b; };
+  const zoom = (k, cx, cy) => { if (cx == null) { cx = vb[0] + vb[2] / 2; cy = vb[1] + vb[3] / 2; } vb = [cx - (cx - vb[0]) * k, cy - (cy - vb[1]) * k, vb[2] * k, vb[3] * k]; svg.setAttribute('viewBox', vb.join(' ')); };
+  if (selB) btn('◎ المحسوب', 'تكبير على الحاجة المحسوبة', () => setVB(selB));
+  btn('⤢ اللوحة كلها', 'عرض اللوحة كلها', () => setVB(fullB));
+  btn('+', 'تكبير', () => zoom(.7)); btn('−', 'تصغير', () => zoom(1 / .7));
+  const tt = btn('Aa', 'إظهار/إخفاء النصوص', () => { tg.style.display = tg.style.display === 'none' ? '' : 'none'; tt.classList.toggle('off'); });
+  wrap.appendChild(tb);
+  const toSvg = (ev) => { const r = svg.getBoundingClientRect(), sc = Math.max(vb[2] / r.width, vb[3] / r.height), ox = (r.width * sc - vb[2]) / 2, oy = (r.height * sc - vb[3]) / 2; return [vb[0] + (ev.clientX - r.left) * sc - ox, vb[1] + (ev.clientY - r.top) * sc - oy, sc]; };
+  svg.addEventListener('wheel', (ev) => { ev.preventDefault(); const [x, y] = toSvg(ev); zoom(ev.deltaY > 0 ? 1.18 : 1 / 1.18, x, y); }, { passive: false });
+  let drag = null;
+  svg.addEventListener('pointerdown', (ev) => { drag = { x: ev.clientX, y: ev.clientY, vb: vb.slice(), sc: toSvg(ev)[2] }; svg.setPointerCapture(ev.pointerId); svg.classList.add('drag'); });
+  svg.addEventListener('pointermove', (ev) => { if (!drag) return; vb = [drag.vb[0] - (ev.clientX - drag.x) * drag.sc, drag.vb[1] - (ev.clientY - drag.y) * drag.sc, drag.vb[2], drag.vb[3]]; svg.setAttribute('viewBox', vb.join(' ')); });
+  const end = () => { drag = null; svg.classList.remove('drag'); }; svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
+  svg.addEventListener('dblclick', () => setVB(selB || fullB));
+  return wrap;
 }
 
 /* ---------- إضافة لوحة ---------- */
@@ -3227,7 +3288,7 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
   wrap.append(svgBox, side); c.appendChild(wrap); box.appendChild(c);
   const tot = pjEl('div', 'qtotal');
   const draw = () => {
-    svgBox.textContent = ''; svgBox.appendChild(qtSvg(groups, sel, R.bbox));
+    svgBox.textContent = ''; svgBox.appendChild(qtSvg(groups, sel, R.bbox, R.inv));
     side.textContent = '';
     side.appendChild(pjEl('div', 'qhint', isNew ? 'مقدرتش أحدد «' + item + '» لوحدي في اللوحة دي. علّم على الحاجة اللي تتحسب، وهفتكرها للبند ده بعد كده.' : 'علّم على الحاجة اللي تتحسب واختار نوع الكمية.'));
     const ml = pjEl('div', 'qmodes');
