@@ -2777,7 +2777,7 @@ function pjBOQ() {
     // أعمال الشركات وأعمال الذاتي: كل واحدة بأقسامها وبنودها لوحدها
     const parts = ['co', 'self'].filter((kd) => order.some((si) => pjKindOf(si) === kd)).map((kd) => [kd, PJ_KINDS[kd]]);
     if (!parts.length) parts.push([b.works === 'self' ? 'self' : 'co', PJ_KINDS[b.works === 'self' ? 'self' : 'co']]);
-    let grand = 0; const ptots = [];
+    let grand = 0; const ptots = [], secTots = [];
     parts.forEach(([pk, plabel], pi) => {
       const qm = p.qty, nm = b.note;
       const secs = []; order.filter((si) => pjKindOf(si) === pk).forEach((si) => { const s = b.sec[si] || pjAutoSec(si); let g = secs.find((x) => x.n === s); if (!g) secs.push(g = { n: s, l: [] }); g.l.push(si); });
@@ -2795,7 +2795,7 @@ function pjBOQ() {
           k++;
           const it = si >= PJ_CUS ? { desc: pjItemName(si), std: true, unit: (pjCus(si) || {}).unit || '', cus: true } : si >= PJ_SAF ? { desc: pjItemName(si), std: true, unit: (PA.items[pjSafIdx(si)] || {}).unit || '' } : X.item[si], pr = priceOf(si), q = qm[si];
           const sp = isSup(si), tq = sp && typeof b.tq[si] === 'number' ? b.tq[si] : null;
-          const tot = q != null && pr != null ? q * pr : null;   // الإشراف زي أي بند: الكمية (الشهور) × الفئة sub += tot || 0;
+          const tot = q != null && pr != null ? q * pr : null; sub += tot || 0;   // الإجمالي = الكمية × الفئة (الإشراف: الفئة = الأطقم × سعر المنطقة)
           D.push({ t: 'it', k, desc: sp && tq != null ? descOf(si, it) + ' — عدد الأطقم: ' + tq : descOf(si, it), unit: it.unit || '', q: q == null ? null : q, pr: pr == null ? null : pr, note: nm[si] || '', sup: sp, tq });
           const tr = pjEl('tr', 'ir');
           tr.appendChild(pjEl('td', 'c', pjAr(k, 0)));
@@ -2856,7 +2856,7 @@ function pjBOQ() {
           nt.appendChild(ni); nt.appendChild(pjEl('span', 'pv', nm[si] || '')); tr.appendChild(nt);
           t.appendChild(tr);
         });
-        ptot += sub;
+        ptot += sub; secTots.push([(parts.length > 1 ? plabel + ' — ' : '') + g.n, sub]);
         D.push({ t: 'sub' }); const st = pjEl('tr', 'sub'), sl = pjEl('td', 'c', 'الاجمالى ( جنيه )'); sl.colSpan = NC; st.append(sl, pjEl('td', 'c b', pjAr(sub, 0)), pjEl('td', 'e', ''));
         t.appendChild(st);
         const sp = pjEl('tr', 'sp'), spd = pjEl('td'); spd.colSpan = NC + 2; sp.appendChild(spd); t.appendChild(sp);
@@ -2867,7 +2867,9 @@ function pjBOQ() {
         const sp = pjEl('tr', 'sp'), spd = pjEl('td'); spd.colSpan = NC + 2; sp.appendChild(spd); t.appendChild(sp);
       }
     });
-    if (parts.length > 1) ptots.forEach(([l0, v]) => { const tr = pjEl('tr', 'sub'), l = pjEl('td', 'c', 'إجمالي ' + l0 + ' ( جنيه )'); l.colSpan = NC; tr.append(l, pjEl('td', 'c b', pjAr(v, 0)), pjEl('td', 'e', '')); t.appendChild(tr); });
+    // ملخص: إجمالي كل قسم، والإجمالي العام = مجموعهم
+    grand = secTots.reduce((a, [, v]) => a + v, 0);
+    secTots.forEach(([l0, v], i) => { D.push({ t: 'sum', label: 'إجمالي ' + l0, i }); const tr = pjEl('tr', 'sub'), l = pjEl('td', 'c', 'إجمالي ' + l0 + ' ( جنيه )'); l.colSpan = NC; tr.append(l, pjEl('td', 'c b', pjAr(v, 0)), pjEl('td', 'e', '')); t.appendChild(tr); });
     D.push({ t: 'grand' }); const gt = pjEl('tr', 'grand'), gl = pjEl('td', 'c', 'الاجمالى العام'); gl.colSpan = NC; gt.append(gl, pjEl('td', 'c b', pjAr(grand, 0)), pjEl('td', 'e', ''));
     t.appendChild(gt);
     paper.appendChild(t);
@@ -3009,7 +3011,7 @@ function pjExport() {
   const boxRow = (r, c1, c2, st) => { for (let c = c1; c <= c2; c++) put(r, c, st, null); }; // حدود الخلايا المدموجة
   let r = 1;
   put(r, 1, 1, B.title); boxRow(r, 2, cN, 0); merges.push('A1:' + L + '1'); heights[r] = 34; r += 2;
-  let subStart = 0, partSubs = [], partTots = [], allSubs = [];
+  let subStart = 0, partSubs = [], partTots = [], allSubs = [], sumRows = [];
   for (const x of B.rows) {
     if (x.t === 'part') { put(r, 1, 2, x.label); boxRow(r, 2, cN, 2); merges.push('A' + r + ':' + L + r); heights[r] = 26; r++; partSubs = []; continue; }
     if (x.t === 'sec') {
@@ -3024,7 +3026,8 @@ function pjExport() {
     }
     if (x.t === 'sub') { put(r, 1, 10, 'الاجمالى ( جنيه )'); boxRow(r, 2, cP, 10); merges.push('A' + r + ':' + LP + r); put(r, cT, 11, null, subStart < r ? 'SUM(' + LT + subStart + ':' + LT + (r - 1) + ')' : '0'); put(r, cN, 16, null); partSubs.push(LT + r); allSubs.push(LT + r); heights[r] = 24; r += 2; continue; }
     if (x.t === 'ptot') { put(r, 1, 12, x.label); boxRow(r, 2, cP, 12); merges.push('A' + r + ':' + LP + r); put(r, cT, 13, null, partSubs.join('+') || '0'); put(r, cN, 16, null); partTots.push(LT + r); heights[r] = 24; r += 2; continue; }
-    if (x.t === 'grand') { put(r, 1, 14, 'الاجمالى العام'); boxRow(r, 2, cP, 14); merges.push('A' + r + ':' + LP + r); put(r, cT, 15, null, (partTots.length ? partTots : allSubs).join('+') || '0'); put(r, cN, 16, null); heights[r] = 28; r++; }
+    if (x.t === 'sum') { put(r, 1, 10, x.label + ' ( جنيه )'); boxRow(r, 2, cP, 10); merges.push('A' + r + ':' + LP + r); put(r, cT, 11, null, allSubs[x.i] || '0'); put(r, cN, 16, null); sumRows.push(LT + r); heights[r] = 24; r++; continue; }
+    if (x.t === 'grand') { put(r, 1, 14, 'الاجمالى العام'); boxRow(r, 2, cP, 14); merges.push('A' + r + ':' + LP + r); put(r, cT, 15, null, sumRows.length ? 'SUM(' + sumRows[0] + ':' + sumRows[sumRows.length - 1] + ')' : (partTots.length ? partTots : allSubs).join('+') || '0'); put(r, cN, 16, null); heights[r] = 28; r++; }
   }
   const cell = (rr, o) => {
     const ref = col(o.c) + rr;
