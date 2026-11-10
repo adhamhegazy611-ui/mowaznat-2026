@@ -3725,6 +3725,7 @@ function qtGroupDetail(g, mode, th) {
     b.appendChild(ul); return b;
   }
   if (g.kind === 'hatch') {
+    if (g.overlap) li('فيه هاتشات فوق بعض: الجزء المتداخل (' + qtN(g.overlap) + ' م²) اتحسب مرة واحدة بس', 'minus');
     g.items.forEach((it, i) => {
       const pos = it.parts.filter((p) => !p.hole), neg = it.parts.filter((p) => p.hole);
       if (g.items.length > 1) li('هاتش ' + (i + 1) + ' = ' + qtN(it.net) + ' م²', 'hd');

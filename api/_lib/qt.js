@@ -118,6 +118,34 @@ function hatchPaths(g) {
   }
   return paths;
 }
+// مساحة even-odd لمجموعة حلقات (بالـ sweep على x) — لكل هاتش لوحده، وللاتحاد بين الهاتشات
+function sweepArea(edges, nH) {
+  const xs = [...new Set(edges.flatMap((e) => [e[0], e[2]]))].sort((p, q) => p - q); edges.sort((p, q) => p[0] - q[0]);
+  let act = [], k = 0, eo = 0, un = 0; const par = new Uint8Array(nH);
+  for (let i = 0; i + 1 < xs.length; i++) {
+    const x0 = xs[i], x1 = xs[i + 1], xm = (x0 + x1) / 2; while (k < edges.length && edges[k][0] <= xm) { act.push(edges[k]); k++; } act = act.filter((e) => e[2] > xm);
+    const cr = act.map((e) => [e[1] + (e[3] - e[1]) * (xm - e[0]) / (e[2] - e[0]), e[4]]).sort((p, q) => p[0] - q[0]);
+    par.fill(0); let c = 0, prev = 0, Le = 0, Lu = 0;
+    for (const [y, h] of cr) { if (c > 0) { Lu += y - prev; Le += (y - prev) * c; } c += par[h] ? -1 : 1; par[h] ^= 1; prev = y; }
+    eo += Le * (x1 - x0); un += Lu * (x1 - x0);
+  }
+  return { eo, un };   // eo = مجموع مساحات الهاتشات، un = الاتحاد
+}
+function hatchOverlap(hatches) {
+  // بس الهاتشات اللي حدودها الخارجية متداخلة
+  const bb = hatches.map((ps, i) => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; ps.forEach((p) => p.forEach((q) => { if (q[0] < x0) x0 = q[0]; if (q[0] > x1) x1 = q[0]; if (q[1] < y0) y0 = q[1]; if (q[1] > y1) y1 = q[1]; })); return { i, x0, y0, x1, y1 }; }).sort((a, b) => a.x0 - b.x0);
+  const par = bb.map((_, i) => i), f = (i) => (par[i] === i ? i : (par[i] = f(par[i])));
+  for (let a = 0; a < bb.length; a++) for (let b = a + 1; b < bb.length && bb[b].x0 <= bb[a].x1; b++) if (bb[b].y0 <= bb[a].y1 && bb[b].y1 >= bb[a].y0) par[f(b)] = f(a);
+  const comp = new Map(); bb.forEach((x, k) => { const r = f(k); if (!comp.has(r)) comp.set(r, []); comp.get(r).push(x.i); });
+  let ov = 0;
+  for (const ids of comp.values()) {
+    if (ids.length < 2) continue;
+    const E = []; ids.forEach((hi, h) => hatches[hi].forEach((L) => { for (let i = 0; i < L.length; i++) { const a = L[i], b = L[(i + 1) % L.length]; if (a[0] === b[0]) continue; E.push(a[0] < b[0] ? [a[0], a[1], b[0], b[1], h] : [b[0], b[1], a[0], a[1], h]); } }));
+    if (E.length > 400000) continue;
+    const r = sweepArea(E, ids.length); ov += Math.max(0, r.eo - r.un);
+  }
+  return ov;
+}
 function hatchArea(paths) {
   const areas = paths.map((p) => (p.exact != null && isFinite(p.exact) ? p.exact : Math.abs(sarea(p.pts))));
   const depth = paths.map((p, j) => { const probe = p.pts.filter((_, i) => i % Math.max(1, Math.floor(p.pts.length / 12)) === 0); return paths.reduce((s, q, m) => { if (m === j) return s; const inn = probe.filter((pt) => inside(pt, q.pts)).length; return s + (inn > probe.length / 2 ? 1 : 0); }, 0); });
@@ -257,6 +285,8 @@ function analyze(text) {
   const ext = (p) => { if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; };
   const out = [...groups.values()].map((gr) => {
     gr.geom.forEach((g) => { if (g.t === 'h') g.polys.forEach((p) => p.forEach(ext)); else if (g.t === 'l') g.pts.forEach(ext); else ext(g.at); });
+    // هاتشات فوق بعض في نفس المجموعة: الجزء المتداخل يتحسب مرة واحدة بس (زي مساحة المنطقة المتهشرة فعلاً)
+    if (gr.kind === 'hatch' && gr.geom.length > 1) { try { const ov = hatchOverlap(gr.geom.map((g) => g.polys)); if (ov > 0.5 && ov > 1e-4 * gr.area) { gr.overlap = +ov.toFixed(3); gr.area -= ov; } } catch (e) { /* */ } }
     return { ...gr, lt: gr.lt ? [...gr.lt] : undefined, area: +gr.area.toFixed(3), length: +gr.length.toFixed(3), paint: +gr.paint.toFixed(3) };
   });
   if (!isFinite(x0)) { x0 = 0; y0 = 0; x1 = 1; y1 = 1; texts.forEach((t) => ext(t.at)); }
