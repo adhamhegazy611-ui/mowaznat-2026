@@ -547,6 +547,8 @@ body.in footer{color:#7f94b8}
 #pa .pjsign{margin-top:22px;font-weight:800;font-size:14px;line-height:1.8}
 #pa .pjpaper .pv{display:none}
 #pa input.pjq{width:100%;border:1px solid #e0b100;background:#fffbe6;border-radius:6px;padding:5px 2px;font:inherit;font-size:12.5px;text-align:center;direction:rtl}
+#pa .pjtq{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:13px;font-weight:700}
+#pa .pjtq input.pjq{width:70px}
 #pa input.pjq.man{border-color:#dc2626;background:#fff1f1;color:#b91c1c;font-weight:700}
 #pa textarea.pjn{width:100%;border:1px dashed #cbd2db;border-radius:6px;padding:4px;font:inherit;font-size:11.5px;resize:vertical;background:#fafbfc}
 #pa .pjitools{display:flex;gap:6px;margin-top:6px;align-items:center}
@@ -2755,7 +2757,7 @@ function pjBOQ() {
   const order = paItems().filter((it) => !it.safety || it.ss != null).map((it) => (it.ss != null ? it.ss : it.i)).concat(b.custom.map((c) => c.k));
   b.pr = b.pr || {}; b.tq = b.tq || {}; b.rg = b.rg || {};
   const isSup = (si) => si < PJ_SAF && !!(X.item[si] && X.item[si].sup);
-  const hasSup = order.some(isSup); const NC = hasSup ? 6 : 5;
+  const NC = 5;
   const autoPrice = (si) => {
     if (si >= PJ_CUS) { const c = pjCus(si); return c && typeof c.price === 'number' ? c.price : null; }
     if (si >= PJ_SAF) { const x = PA.items[pjSafIdx(si)]; return x && typeof x.price === 'number' ? Math.round(x.price + 1e-9) : null; }
@@ -2784,7 +2786,7 @@ function pjBOQ() {
       secs.forEach((g, gi) => {
         const h1 = pjEl('tr', 'yh'), h2 = pjEl('tr');
         const th = (x, rs, cls) => { const c = pjEl('th', cls || '', x); if (rs) c.rowSpan = rs; return c; };
-        h1.append(th('م', 2), th('البند'), th('الوحدة', 2), th('الكمية', 2)); if (hasSup) h1.appendChild(th('الطقم', 2)); h1.append(th('الفئة', 2), th('الاجمالي\n( جنيه )', 2), th('ملاحظات', 2));
+        h1.append(th('م', 2), th('البند'), th('الوحدة', 2), th('الكمية', 2), th('الفئة', 2), th('الاجمالي\n( جنيه )', 2), th('ملاحظات', 2));
         h2.appendChild(pjEl('th', 'sec', (PJ_ORD[gi] || '') + ': ' + g.n)); D.push({ t: 'sec', name: (PJ_ORD[gi] || '') + ': ' + g.n });
         t.append(h1, h2);
         let sub = 0;
@@ -2829,14 +2831,12 @@ function pjBOQ() {
           qi.onchange = () => { const v = pjParse(qi.value); if (v == null || isNaN(v)) delete qm[si]; else qm[si] = v; paSave(); draw(); };
           qi.onfocus = () => { qi.select(); };
           qt.appendChild(qi); qt.appendChild(pjEl('span', 'pv', q == null ? '' : pjAr(q, 0, 3))); tr.appendChild(qt);
-          if (hasSup) {
-            const tc = pjEl('td', 'c');
-            if (sp) {
-              const ti = pjEl('input', 'pjq'); ti.type = 'text'; ti.inputMode = 'decimal'; ti.value = tq == null ? '' : pjAr(tq, 0, 3); ti.placeholder = 'الطقم';
-              ti.onchange = () => { const v = pjParse(ti.value); if (v == null || isNaN(v)) delete b.tq[si]; else b.tq[si] = v; paSave(); draw(); };
-              ti.onfocus = () => ti.select(); tc.append(ti, pjEl('span', 'pv', tq == null ? '' : pjAr(tq, 0, 3)));
-            }
-            tr.appendChild(tc);
+          if (sp) {   // الطقم جوه بند الإشراف بس (من غير عمود في الموازنة)
+            const tw = pjEl('div', 'pjtq'), ti = pjEl('input', 'pjq'); ti.type = 'text'; ti.inputMode = 'decimal'; ti.value = tq == null ? '' : pjAr(tq, 0, 3); ti.placeholder = '٠';
+            ti.onchange = () => { const v = pjParse(ti.value); if (v == null || isNaN(v)) delete b.tq[si]; else b.tq[si] = v; paSave(); draw(); };
+            ti.onfocus = () => ti.select();
+            tw.append(pjEl('span', '', 'الطقم: '), ti, pjEl('span', 'pv', tq == null ? '' : pjAr(tq, 0, 3)));
+            dt.appendChild(tw);
           }
           if (it.cus) { const pc = pjEl('td', 'c'), pi = pjEl('input', 'pjq'); pi.type = 'text'; pi.inputMode = 'decimal'; pi.value = pr == null ? '' : pjAr(pr, 0, 2); pi.placeholder = 'الفئة'; pi.onchange = () => { const v = pjParse(pi.value), c = pjCus(si); if (c) { c.price = v == null || isNaN(v) ? null : v; paSave(); draw(); } }; pi.onfocus = () => pi.select(); pc.append(pi, pjEl('span', 'pv', pr == null ? '' : pjAr(pr, 0, 2))); tr.appendChild(pc); }
           else {
@@ -3002,7 +3002,7 @@ function pjExport() {
   const B = PJ.boqD; if (!B) return;
   const X = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const col = (c) => 'ABCDEFGH'[c - 1];
-  const W = B.rows.some((x) => x.sup), cP = W ? 6 : 5, cT = W ? 7 : 6, cN = W ? 8 : 7, L = col(cN), LP = col(cP), LT = col(cT);
+  const W = false, cP = W ? 6 : 5, cT = W ? 7 : 6, cN = W ? 8 : 7, L = col(cN), LP = col(cP), LT = col(cT);
   const rows = new Map(), merges = [], heights = {};
   const put = (r, c, st, v, f) => { if (!rows.has(r)) rows.set(r, []); rows.get(r).push({ c, st, v, f }); };
   const boxRow = (r, c1, c2, st) => { for (let c = c1; c <= c2; c++) put(r, c, st, null); }; // حدود الخلايا المدموجة
@@ -3017,9 +3017,9 @@ function pjExport() {
       heights[r] = 34; put(r + 1, 2, 4, x.name); heights[r + 1] = 22; r += 2; subStart = r; continue;
     }
     if (x.t === 'it') {
-      put(r, 1, 5, x.k); put(r, 2, 6, x.desc); put(r, 3, 5, x.unit); put(r, 4, 7, x.q); if (W) put(r, 5, 7, x.sup ? x.tq : null); put(r, cP, 8, x.pr);
-      const QC = x.sup ? 'E' : 'D', qv = x.sup ? x.tq : x.q;   // الإشراف: الإجمالي = الطقم × الفئة
-      put(r, cT, 9, qv != null && x.pr != null ? qv * x.pr : null, 'IF(OR(' + QC + r + '="",' + LP + r + '=""),"",' + QC + r + '*' + LP + r + ')');
+      put(r, 1, 5, x.k); put(r, 2, 6, x.sup && x.tq != null ? x.desc + ' — الطقم: ' + x.tq : x.desc); put(r, 3, 5, x.unit); put(r, 4, 7, x.q); put(r, cP, 8, x.pr);
+      if (x.sup) put(r, cT, 9, x.tq != null && x.pr != null ? x.tq * x.pr : null, x.tq != null ? 'IF(' + LP + r + '="","",' + x.tq + '*' + LP + r + ')' : null);   // الإشراف: الإجمالي = الطقم × الفئة
+      else put(r, cT, 9, x.q != null && x.pr != null ? x.q * x.pr : null, 'IF(OR(D' + r + '="",' + LP + r + '=""),"",D' + r + '*' + LP + r + ')');
       put(r, cN, 5, x.note || null); heights[r] = Math.max(30, Math.ceil(String(x.desc || '').length / 62) * 17 + 8); r++; continue;
     }
     if (x.t === 'sub') { put(r, 1, 10, 'الاجمالى ( جنيه )'); boxRow(r, 2, cP, 10); merges.push('A' + r + ':' + LP + r); put(r, cT, 11, null, subStart < r ? 'SUM(' + LT + subStart + ':' + LT + (r - 1) + ')' : '0'); put(r, cN, 16, null); partSubs.push(LT + r); allSubs.push(LT + r); heights[r] = 24; r += 2; continue; }
