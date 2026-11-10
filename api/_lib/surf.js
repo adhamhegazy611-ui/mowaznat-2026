@@ -225,9 +225,9 @@ function surfaceGroups(src, origin) {
   const tins = ss.filter((s) => !s.volume && s.exact && s.tin && s.tin.T.length).sort((a, b) => b.area - a.area);
   const pairs = [];
   for (let i = 0; i < tins.length; i++) for (let j = i + 1; j < tins.length; j++) {
-    const A = tins[i], B = tins[j]; if (A.area < 1.5 * B.area) continue; if (A.zmax < B.zmin - 50 || B.zmax < A.zmin - 50) continue;
+    const A = tins[i], B = tins[j]; if (A.area < 1.5 * B.area || A.area < 0.8 * tins[0].area) continue; if (A.zmax < B.zmin - 50 || B.zmax < A.zmin - 50) continue;
     let r; try { r = s2s(A.tin, B.tin); } catch (e) { continue; }
-    if (r.area < 0.02 * B.area || r.area < 50) continue;
+    if (r.area < 0.02 * B.area || r.area < 50 || r.fill + r.cut < 1) continue;
     pairs.push({ A, B, r, ia: i + 1, ib: j + 1 });
   }
   const lab = (s, n) => 'سطح ' + n + ' (منسوب ' + s.zmin.toFixed(1) + '–' + s.zmax.toFixed(1) + '، ' + Math.round(s.area).toLocaleString('en') + ' م²)';
@@ -235,7 +235,7 @@ function surfaceGroups(src, origin) {
     const BT = B.tin, t = flat3(BT.T);
     const g = grid(BT.V, t);
     out.push({
-      key: 'SS|' + A.handle + '|' + B.handle, kind: 'surface', src: 's2s', layer: 'من ' + lab(A, ia) + ' لـ ' + lab(B, ib), base: lab(A, ia), comp: lab(B, ib), handle: B.handle, color: 0, hex: '#22c55e', exact: true,
+      key: 'SS|' + A.handle + '|' + B.handle, kind: 'surface', src: 's2s', layer: 'سطح ' + ia + ' ← سطح ' + ib, base: lab(A, ia), comp: lab(B, ib), handle: B.handle, color: 0, hex: '#22c55e', exact: true,
       n: B.points, tris: BT.T.length, area: +r.area.toFixed(3), fill: +r.fill.toFixed(3), cut: +r.cut.toFixed(3), length: 0, paint: 0,
       zmin: +B.zmin.toFixed(3), zmax: +B.zmax.toFixed(3), items: [], ext: g.ext, geom: g.geom,
     });

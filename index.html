@@ -3589,12 +3589,12 @@ async function qtRefresh(x, d) {
   try {
     const { data: { session: s } } = await sb.auth.getSession();
     const r = await fetch('/api/qt', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.access_token }, body: JSON.stringify({ path: x.file_path }) });
-    const R = await r.json(); if (!r.ok || !R.groups) return null;
+    const R = await r.json(); if (!r.ok || !R.groups) return null; qtCF(R);
     const sel = (x.sel || []).filter((k) => !QT_XK.test(k)); const keys = new Set(R.groups.map(qtKey));
     if (!sel.every((k) => keys.has(k))) return null; // الحسبة القديمة مش موجودة بنفس الشكل — نسيبها
     const keepK = new Set(sel);
-    const groups = R.groups.map((g) => keepK.has(qtKey(g)) ? g : { ...g, items: g.kind === 'line' ? g.items.map((it) => ({ closed: it.closed, len: it.len })) : g.items, geom: (g.geom || []).map((e) => e.t === 'l' ? { ...e, pts: e.pts.filter((_, i, ar) => i % 3 === 0 || i === ar.length - 1) } : e) });
-    const nd = { ...d, groups, bbox: R.bbox, warnings: R.warnings || [], inv: R.inv || null };
+    const sl = qtSlim(R.groups, keepK, R.inv), groups = sl.keep;
+    const nd = { ...d, groups, bbox: R.bbox, warnings: R.warnings || [], inv: sl.inv, _cf: 1 };
     const { error } = await sb.from('qt_items').update({ detail: nd }).eq('id', x.id);
     return error ? null : nd;
   } catch (e) { return null; }
@@ -3702,35 +3702,11 @@ function qtGroupDetail(g, mode, th) {
   b.appendChild(hd);
   const ul = pjEl('ul');
   const li = (t, c) => { const e = pjEl('li', c || ''); e.textContent = t; ul.appendChild(e); };
-  if (g.kind === 'surface' && g.src === 'table') {
-    li('الأرقام دي مقروءة من جدول «Cut/Fill Summary» اللي Civil 3D حاطه في اللوحة — نفس أرقام Volume Dashboard بالظبط');
-    if (g.area) li('المساحة 2D = ' + qtN(g.area) + ' م²');
-    li((mode === 'cut' ? '◀ ' : '') + 'Cut (حفر) = ' + qtN(g.cut) + ' م³');
-    li((mode === 'fill' ? '◀ ' : '') + 'Fill (ردم) = ' + qtN(g.fill) + ' م³');
-    if (g.total) li('ده سطر Totals = مجموع كل أسطح الفرق في الجدول');
-    b.appendChild(ul); return b;
-  }
-  if (g.kind === 'surface' && g.src === 's2s') {
-    li('Surface to Surface: الحجم بين السطحين بالظبط — كل مثلث من السطح الأول اتقاطع مع مثلثات السطح التاني، والفرق بينهم اتحسب على كل جزء');
-    li('السطح الأساسي (الأرض الطبيعية): ' + g.base); li('سطح المقارنة (التصميم): ' + g.comp);
-    li('المساحة المشتركة ' + qtN(g.area) + ' م²');
-    li((mode === 'cut' ? '◀ ' : '') + 'Cut (حفر) = ' + qtN(g.cut) + ' م³'); li((mode === 'fill' ? '◀ ' : '') + 'Fill (ردم) = ' + qtN(g.fill) + ' م³');
-    b.appendChild(ul); return b;
-  }
-  if (g.kind === 'surface' && g.exact) {
-    li('سطح الفرق مقروء من اللوحة بمثلثاته نفسها اللي Civil 3D عاملها: ' + qtN(g.n, 0) + ' نقطة و' + qtN(g.tris, 0) + ' مثلث ظاهر (المثلثات المخفية برا حدود السطح مش محسوبة)');
-    li('المساحة ' + qtN(g.area) + ' م² — الفرق بين المنسوبين من ' + qtN(g.zmin, 3) + ' لحد +' + qtN(g.zmax, 3) + ' م');
-    li((mode === 'cut' ? '◀ ' : '') + 'Cut (حفر) = ' + qtN(g.cut) + ' م³ — نفس رقم Volume Dashboard');
-    li((mode === 'fill' ? '◀ ' : '') + 'Fill (ردم) = ' + qtN(g.fill) + ' م³ — نفس رقم Volume Dashboard');
-    b.appendChild(ul); return b;
-  }
-  if (g.kind === 'surface') {
-    li('عدد النقط ' + qtN(g.n, 0) + ' نقطة، اتعمل منها ' + qtN(g.tris, 0) + ' مثلث (شبكة TIN)');
-    li('المساحة المغطاة ' + qtN(g.area) + ' م² — الفرق بين المنسوبين من ' + qtN(g.zmin, 3) + ' لحد +' + qtN(g.zmax, 3) + ' م');
-    if (mode === 'cut') li('◀ الحفر Cut (الفرق سالب) = ' + qtN(g.cut) + ' م³ — نفس رقم Cut في Volume Dashboard');
-    else if (mode === 'fill') li('◀ الردم Fill (الفرق موجب) = ' + qtN(g.fill) + ' م³ — نفس رقم Fill في Volume Dashboard');
-    else { li('الردم Fill = ' + qtN(g.fill) + ' م³'); li('الحفر Cut = ' + qtN(g.cut) + ' م³'); }
-    li('الطريقة: كل مثلث حجمه = مساحته × متوسط الفرق في رؤوسه، والمثلث اللي فيه موجب وسالب بيتقسم عند خط الصفر. المثلثات اللي ضلعها أطول من ' + g.maxEdge + ' م بتتشال (برا حدود السطح).', 'muted');
+  if (g.kind === 'surface') {   // الطريقة والكمية بس
+    const how = g.src === 'table' ? 'من جدول Cut/Fill Summary في اللوحة' + (g.total ? ' (سطر Totals)' : '') : g.src === 's2s' ? 'Surface to Surface (' + g.layer + ')' : 'من سطح الفرق (Volume Surface) في اللوحة';
+    li('الطريقة: ' + how);
+    if (mode === 'cut' || mode === 'fill') li('الكمية: ' + (mode === 'cut' ? 'حفر' : 'ردم') + ' = ' + qtN(g[mode]) + ' م³', 'net');
+    else { li('حفر = ' + qtN(g.cut) + ' م³'); li('ردم = ' + qtN(g.fill) + ' م³'); }
     b.appendChild(ul); return b;
   }
   if (g.kind === 'hatch') {
@@ -3918,12 +3894,18 @@ async function qtAdd(pre) {
   it.onkeydown = (e) => { if (e.key === 'Enter' && fi.files[0]) go(); };
   it.onchange = () => { if (fi.files[0] && it.value.trim() && !busy && !ran) go(); };
 }
+// اللي بيتحفظ: رسمة البند المحسوب كاملة، وباقي عناصر اللوحة أرقامها بس (عشان اللوح الكبيرة تتحفظ بسرعة)
+function qtSlim(groups, sel, inv) {
+  const keep = groups.map((g) => sel.has(qtKey(g)) ? g : { ...g, items: g.kind === 'line' ? (g.items || []).map((it) => ({ closed: it.closed, len: it.len })) : g.kind === 'hatch' ? (g.items || []).map((it) => ({ net: it.net, parts: (it.parts || []).map((p) => ({ a: p.a, hole: p.hole })) })) : g.items, geom: [] });
+  const iv = inv ? { ...inv, texts: (inv.texts || []).slice(0, 400), dims: (inv.dims || []).slice(0, 200), civ: (inv.civ || []).slice(0, 300) } : null;
+  return { keep, inv: iv };
+}
 async function qtSave(item, fname, path, R, a, q, existing) {
   const groups = R.groups || [], sel = new Set(a.sel.filter((k) => !QT_XK.test(k)));
-  const keep = groups.map((g) => sel.has(qtKey(g)) ? g : { ...g, items: g.kind === 'line' ? g.items.map((it) => ({ closed: it.closed, len: it.len })) : g.items, geom: (g.geom || []).map((e) => e.t === 'l' ? { ...e, pts: e.pts.filter((_, i, ar) => i % 3 === 0 || i === ar.length - 1) } : e) });
+  const sl = qtSlim(groups, sel, R.inv), keep = sl.keep;
   let extra = [];
   if (a.mode === 'fill') { const old = existing && (existing.sel || []).find((k) => /^A\|/.test(k)); extra = ['B|' + (+q.toFixed(3))].concat(old ? [old] : []); }
-  const row = { item, unit: QT_MODES[a.mode][1], mode: a.mode, thickness: a.mode === 'volume' ? a.th : null, qty: +q.toFixed(3), sel: [...sel, ...extra], detail: { groups: keep, bbox: R.bbox, warnings: R.warnings || [], only: a.only || null, inv: R.inv || null } };
+  const row = { item, unit: QT_MODES[a.mode][1], mode: a.mode, thickness: a.mode === 'volume' ? a.th : null, qty: +q.toFixed(3), sel: [...sel, ...extra], detail: { groups: keep, bbox: R.bbox, warnings: R.warnings || [], only: a.only || null, inv: sl.inv, _cf: 1 } };
   const cols = 'id,item,unit,mode,thickness,qty,file_name,file_path,sel,note,sort,created_at';
   let res;
   if (existing) res = await sb.from('qt_items').update(row).eq('id', existing.id).select(cols).single();
