@@ -3157,13 +3157,21 @@ const QT_RULES = [
   [/غرف|غرفة|بلاع|منهول|عمود|أعمدة|اعمدة|شجر|عدد/, 'count', 'closed'],
   [/بردور|حرف|سور|سياج|كانستين|نيوجيرسي|نيوجرسي|نيوجرسى|نبوجرسى|قدمة|دكة/, 'length'],
   [/دبش|عش النحل|خرسانة|تطهير|تسوية|FDR|تكسير|ازالة|إزالة|سن ?\d|مطب|كيستون/i, 'area'],
-  [/كشط|تشريب|MC|RC|لاصق|رابط|سطحي|أسفلت|اسفلت|انترلوك|إنترلوك|بلاط|رصف|أساس|اساس|تسوية|زراعة/i, 'area'],
+  [/كشط|تشريب|MC|RC|لاصق|رابط|سطحي|أسفلت|اسفلت|انترلوك|إنترلوك|بلاط|رصف|تسوية|زراعة/i, 'area'],
 ];
 const QT_XK = /^[AB]\|/; // مفاتيح إضافية في sel: B|حجم ردم السطح، A|معامل ردم الإحلال
 const QT_DIG = /حفر|إحلال|احلال/;
 // الحفر بكل أنواعه (عادي/متماسك/صخر/إحلال) والردم: الكمية من سطح الفرق زي Volume Dashboard في Civil 3D
 const QT_EW = /حفر|ردم|ترابي|تراب/;
 const qtEwMode = (item) => (/ردم/.test(item) ? 'fill' : 'cut');
+// بند الأساس وحدته م³: مساحة الهاتش × سمك الطبقة. السمك من اسم البند لو مكتوب (زي «أساس 25 سم» أو «سمك 0.30 م»)
+const QT_BASE = /أساس|اساس|إساس|سن\s*6|base\s*course/i;
+function qtThick(item) {
+  const t = String(item).replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/٫/g, '.');
+  let m = /(\d+(?:\.\d+)?)\s*(سم|سنتي|cm)/i.exec(t); if (m) return +m[1] / 100;
+  m = /(?:سمك|بسمك|سُمك)\s*(\d+(?:\.\d+)?)\s*(م|متر|m)?(?![\d²³])/i.exec(t); if (m) { const v = +m[1]; return v > 2 ? v / 100 : v; }
+  return null;
+}
 // بند الردم من السطح بيضيف لوحده ردم الإحلال = مسطح الحفر × المعامل
 // البند الواحد ممكن يتحسب من كذا لوحة: كل لوحة صف، والبند = مجموع لوحه (بنفس الاسم والوحدة)
 const qtGKey = (x) => x.item.trim() + '|' + x.unit;
@@ -3203,6 +3211,13 @@ function qtAuto0(item, groups, mem) {
     if (vols.length) return { mode: em, sel: vols.map(qtKey) };
     if (s2.length === 1) return { mode: em, sel: [qtKey(s2[0])] };
     return null;   // أكتر من اختيار Surface to Surface: المستخدم يحدد الأرض الطبيعية والتصميم
+  }
+  if (QT_BASE.test(item)) {   // أساس: دايماً حجم = مساحة الهاتش × السمك
+    const th0 = qtThick(item) || (mem && mem.thickness ? +mem.thickness : null);
+    if (mem && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: 'volume', sel: mem.sel.slice(), th: th0, how: 'mem' };
+    const hb = groups.filter((g) => g.kind === 'hatch' && g.area > 0 && !g.blk && !g.hid).sort((a, b) => b.area - a.area);
+    const h0 = hb[0] || groups.filter((g) => g.kind === 'hatch' && g.area > 0).sort((a, b) => b.area - a.area)[0];
+    return h0 ? { mode: 'volume', sel: [qtKey(h0)], th: th0 } : { mode: 'volume', sel: [], th: th0 };
   }
   if (mem && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: mem.mode, sel: mem.sel.slice(), th: mem.thickness ? +mem.thickness : null, how: 'mem', only: mem.mode === 'count' ? ((QT_RULES.find(([re]) => re.test(item)) || [])[2] || null) : null };
   const rule = QT_RULES.find(([re]) => re.test(item)) || [null, null];
@@ -3929,7 +3944,7 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
   const draw = () => {
     svgBox.textContent = ''; svgBox.appendChild(qtSvg(groups, sel, R.bbox, R.inv));
     side.textContent = '';
-    side.appendChild(pjEl('div', 'qhint', isNew ? 'مقدرتش أحدد «' + item + '» لوحدي في اللوحة دي. علّم على الحاجة اللي تتحسب، وهفتكرها للبند ده بعد كده.' : 'علّم على الحاجة اللي تتحسب واختار نوع الكمية.'));
+    side.appendChild(pjEl('div', 'qhint', QT_BASE.test(item) && mode === 'volume' ? 'بند الأساس وحدته م³ = مساحة الهاتش × سمك الطبقة. ' + (th ? 'السمك ' + qtN(th, 2) + ' م' : 'اكتب سمك الطبقة بالمتر (مثلاً 0.25)') + (sel.size ? '' : ' وعلّم على الهاتش.') : isNew ? 'مقدرتش أحدد «' + item + '» لوحدي في اللوحة دي. علّم على الحاجة اللي تتحسب، وهفتكرها للبند ده بعد كده.' : 'علّم على الحاجة اللي تتحسب واختار نوع الكمية.'));
     const ml = pjEl('div', 'qmodes');
     Object.entries(QT_MODES).forEach(([k, [t]]) => { const b = pjEl('button', mode === k ? 'on' : '', t); b.type = 'button'; b.onclick = () => { mode = k; if (k !== 'count') only = null; draw(); }; ml.appendChild(b); });
     side.appendChild(ml);
