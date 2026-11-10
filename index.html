@@ -1015,11 +1015,16 @@ function show(session) {
 let IS_ADMIN = false, IS_QT = false;
 const batOf = (u) => (String(u).match(/\d+/) || [null])[0];
 async function loadAdmin(uid) {
-  try {
-    const { data } = await sb.from('app_users').select('role,username').eq('user_id', uid).maybeSingle();
-    IS_ADMIN = !!(data && data.role === 'admin');
-    IS_QT = !!(IS_ADMIN && data.username === 'adham_hegazy33'); // حصر الكميات لحساب أدهم حجازي بس
-  } catch (e) { IS_ADMIN = false; IS_QT = false; }
+  // لو الجلسة خلصت (الجهاز نام أو التاب فضل مفتوح كتير) بنجدد التوكن ونحاول تاني — ومش بنخفي التابات بسبب خطأ مؤقت
+  let data = null, err = null;
+  for (let k = 0; k < 2; k++) {
+    try { const r = await sb.from('app_users').select('role,username').eq('user_id', uid).maybeSingle(); data = r.data; err = r.error; } catch (e) { err = e; }
+    if (!err) break;
+    if (k === 0) { try { await sb.auth.refreshSession(); } catch (e) { /* */ } }
+  }
+  if (err) { setTimeout(() => sb.auth.getSession().then(({ data: d }) => d.session && loadAdmin(d.session.user.id)), 5000); return; }
+  IS_ADMIN = !!(data && data.role === 'admin');
+  IS_QT = !!(IS_ADMIN && data.username === 'adham_hegazy33'); // حصر الكميات لحساب أدهم حجازي بس
   $('reqBtn').classList.toggle('hidden', !IS_ADMIN);
   $('paCard').hidden = !IS_ADMIN;
   $('qtCard').hidden = !IS_QT; if (!IS_QT) closeQT();
@@ -3134,6 +3139,8 @@ function pjPrint() {
 
 sb.auth.getSession().then(({ data }) => show(data.session));
 sb.auth.onAuthStateChange((_ev, session) => setTimeout(() => show(session), 0));
+// رجوع للتاب بعد فترة: نتأكد إن الجلسة متجددة
+document.addEventListener('visibilitychange', () => { if (!document.hidden) sb.auth.getSession().then(({ data }) => { if (data.session) loadAdmin(data.session.user.id); }).catch(() => {}); });
 
 /* ===== حصر الكميات =====
    مشروع ← لوح DWG ← كل لوحة بند (كشط، حفر، ...). السيرفر بيقرا اللوحة ويرجّع المجموعات (هاتش/خطوط/بلوكات)
