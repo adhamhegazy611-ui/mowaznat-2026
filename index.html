@@ -2794,7 +2794,7 @@ function pjBOQ() {
           k++;
           const it = si >= PJ_CUS ? { desc: pjItemName(si), std: true, unit: (pjCus(si) || {}).unit || '', cus: true } : si >= PJ_SAF ? { desc: pjItemName(si), std: true, unit: (PA.items[pjSafIdx(si)] || {}).unit || '' } : X.item[si], pr = priceOf(si), q = qm[si];
           const sp = isSup(si), tq = sp && typeof b.tq[si] === 'number' ? b.tq[si] : null;
-          const tot = sp ? (tq != null && pr != null ? tq * pr : null) : q != null && pr != null ? q * pr : null; sub += tot || 0;
+          const tot = sp ? (q != null && tq != null && pr != null ? q * pr * tq : null) : q != null && pr != null ? q * pr : null;   // الإشراف: الكمية × الفئة × الأطقم sub += tot || 0;
           D.push({ t: 'it', k, desc: descOf(si, it), unit: it.unit || '', q: q == null ? null : q, pr: pr == null ? null : pr, note: nm[si] || '', sup: sp, tq });
           const tr = pjEl('tr', 'ir');
           tr.appendChild(pjEl('td', 'c', pjAr(k, 0)));
@@ -3018,7 +3018,7 @@ function pjExport() {
     }
     if (x.t === 'it') {
       put(r, 1, 5, x.k); put(r, 2, 6, x.sup && x.tq != null ? x.desc + ' — الطقم: ' + x.tq : x.desc); put(r, 3, 5, x.unit); put(r, 4, 7, x.q); put(r, cP, 8, x.pr);
-      if (x.sup) put(r, cT, 9, x.tq != null && x.pr != null ? x.tq * x.pr : null, x.tq != null ? 'IF(' + LP + r + '="","",' + x.tq + '*' + LP + r + ')' : null);   // الإشراف: الإجمالي = الطقم × الفئة
+      if (x.sup) put(r, cT, 9, x.q != null && x.tq != null && x.pr != null ? x.q * x.pr * x.tq : null, x.tq != null ? 'IF(OR(D' + r + '="",' + LP + r + '=""),"",D' + r + '*' + LP + r + '*' + x.tq + ')' : null);   // الإشراف: الكمية × الفئة × الأطقم
       else put(r, cT, 9, x.q != null && x.pr != null ? x.q * x.pr : null, 'IF(OR(D' + r + '="",' + LP + r + '=""),"",D' + r + '*' + LP + r + ')');
       put(r, cN, 5, x.note || null); heights[r] = Math.max(30, Math.ceil(String(x.desc || '').length / 62) * 17 + 8); r++; continue;
     }
