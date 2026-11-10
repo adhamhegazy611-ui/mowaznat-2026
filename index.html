@@ -2867,9 +2867,8 @@ function pjBOQ() {
         const sp = pjEl('tr', 'sp'), spd = pjEl('td'); spd.colSpan = NC + 2; sp.appendChild(spd); t.appendChild(sp);
       }
     });
-    // ملخص: إجمالي كل قسم، والإجمالي العام = مجموعهم
+    // الإجمالي العام = مجموع إجماليات الأقسام
     grand = secTots.reduce((a, [, v]) => a + v, 0);
-    secTots.forEach(([l0, v], i) => { D.push({ t: 'sum', label: 'إجمالي ' + l0, i }); const tr = pjEl('tr', 'sub'), l = pjEl('td', 'c', 'إجمالي ' + l0 + ' ( جنيه )'); l.colSpan = NC; tr.append(l, pjEl('td', 'c b', pjAr(v, 0)), pjEl('td', 'e', '')); t.appendChild(tr); });
     D.push({ t: 'grand' }); const gt = pjEl('tr', 'grand'), gl = pjEl('td', 'c', 'الاجمالى العام'); gl.colSpan = NC; gt.append(gl, pjEl('td', 'c b', pjAr(grand, 0)), pjEl('td', 'e', ''));
     t.appendChild(gt);
     paper.appendChild(t);
