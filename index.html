@@ -2509,7 +2509,7 @@ function pjScan() {
     const rk = [...rows.keys()].sort((a, b) => a - b);
     // عمود «علاوة المنطقة / بالمنطقة»: الحساب والإدخال بيبقوا عليه بدل عمود القيمة
     let regC = null; rows.forEach((cs) => cs.forEach((c) => { if (regC == null && typeof c[0] === 'string' && !c[6] && /علاوه المنطقه|بالمنطقه/.test(pjNorm(c[0])) && !/^سعر البند/.test(pjNorm(c[0]))) regC = c[5]; }));
-    let desc = null, price1 = null, price2 = null, unit0 = '', alltxt = '';
+    let desc = null, price1 = null, price2 = null, unit0 = '', alltxt = '', foot = null;
     rk.forEach((r, ri) => {
       const cs = rows.get(r).sort((a, b) => a[5] - b[5]);
       const lab = cs.find((c) => typeof c[0] === 'string' && !c[6]);
@@ -2552,6 +2552,12 @@ function pjScan() {
           if (!regionRow && ncs && nr === r + 1 && !ncs.some((c) => typeof c[0] === 'string' && pjNorm(c[0]).length > 3 && !c[6])) {
             const same = ncs.find((c) => c[6] && c[5] === pc[1]); if (same) pc = [nr, same[5]];
           }
+          // بند ليه سعرين: «فورمة» لوحدها، و«بإجمالي … + قدمة» = السعر + سعر شيت القدمة (زي النيوجيرسي)
+          if (!gs && foot == null) {
+            const qn = cs.find((c) => typeof c[0] === 'string' && !c[6] && /قدم/.test(c[0]) && c[5] > pc[1]);
+            const qf = qn && cs.find((c) => c[6] && c[5] > qn[5] && /\+\s*'([^']+)'!/.test(c[6]));
+            if (qf) { const nm = /\+\s*'([^']+)'!/.exec(qf[6])[1].trim(); const fi = PA.sheets.findIndex((x, k) => k < PJ_COPY0 && !x.pad && String(x.name || x.title || '').trim() === nm); if (fi >= 0) foot = fi; }
+          }
           // سطر إجمالي من غير معامل (زي الرابطة: سعر الطن + النقل) بيبقى هو السعر النهائي
           if (gs) { if (!price2 || !fc) price2 = pc; } else if (!price1 || !fc) price1 = pc;
         }
@@ -2565,13 +2571,36 @@ function pjScan() {
     let u2 = unit0 || unit;
     if (!u2 && !std) u2 = /المتر الطول/.test(d) ? 'م.ط' : /المتر (المسطح|المربع)|\/م2/.test(d) ? 'م2' : /المتر المكعب|\/م3/.test(d) ? 'م3' : '';
     if (sh.pj) { if (sh.pj.unit) u2 = sh.pj.unit; if (sh.pj.p1) price1 = sh.pj.p1; if (sh.pj.p2) price2 = sh.pj.p2; }
-    item[si] = { desc, std, unit: u2, p1: price1, p2: price2 };
+    item[si] = { desc, std, unit: u2, p1: price1, p2: price2, foot };
   });
   Object.values(eq).forEach((e) => { e.def = +Object.entries(e.vals).sort((a, b) => b[1] - a[1])[0][0]; });
   PJX = { eq, dist, tr, f1, f2, item };
   return PJX;
 }
 const pjInScope = (si) => PJ.cur && PJ.cur.items.includes(si);
+// سعر البند من شيته (بالجنيه الصحيح زي الفورمة) — من غير القدمة
+function pjSheetPrice(si, mode) {
+  const it = pjScan().item[si]; if (!it) return null; const pp = mode === 'excl' ? it.p2 : it.p1; if (!pp) return null;
+  let v = PAE.get(si, pp[0], pp[1]); if (typeof v !== 'number' && pp[2]) v = PAE.get(si, pp[2][0], pp[2][1]);
+  return typeof v === 'number' ? Math.ceil(v - 1e-9) : null;
+}
+// بنود بقدمة أو من غيرها (النيوجيرسي): شيت القدمة بتاعها، وسعر القدمة لوحدها
+const pjFoot = (si) => { const it = si < PJ_SAF && pjScan().item[si]; return it && it.foot != null ? it.foot : null; };
+function pjFootPrice(si, mode) {
+  const f = pjFoot(si); if (f == null) return null; const it = pjScan().item[f], pp = it && (mode === 'excl' ? it.p2 : it.p1); if (!pp) return null;
+  const v = PAE.get(f, pp[0], pp[1]); return typeof v === 'number' ? Math.round(v) : null;
+}
+const pjWithFoot = (si) => !!(PJ.cur && PJ.cur.basics && PJ.cur.basics.qd && PJ.cur.basics.qd[si] && pjFoot(si) != null);
+// أول ما بند زي النيوجيرسي يدخل الموازنة: نسأل هو بقدمة ولا لا
+async function pjAskFoot(list, mode) {
+  const b = PJ.cur.basics; b.qd = b.qd || {};
+  const fs = list.filter((si) => pjFoot(si) != null); if (!fs.length) return false;
+  const lab = (si, w) => (w ? 'بقدمة — ' : 'من غير قدمة — ') + pjNum((pjSheetPrice(si, mode) || 0) + (w ? pjFootPrice(si, mode) || 0 : 0), 0) + ' ج';
+  const v = await qtForm(fs.length > 1 ? 'البنود دي بقدمة ولا لا؟' : 'البند ده بقدمة ولا لا؟', 'السعر بيتحدد على حسب اختيارك، وتقدر تغيّره بعدين من سطر البند في الموازنة.',
+    fs.map((si, i) => ({ k: 'f' + i, label: pjItemName(si), options: [lab(si, true), lab(si, false)], value: lab(si, true) })), 'تمام');
+  fs.forEach((si, i) => { b.qd[si] = !!(v && /^بقدمة/.test(v['f' + i])); });
+  paSave(); return true;
+}
 // قسم البند في المشروع: [ترتيبه، «أولاً: اسمه»]
 function pjKindOf(si) { const b = (PJ.cur && PJ.cur.basics) || {}; return (b.kind && b.kind[si]) || (b.works === 'self' ? 'self' : 'co'); }
 function pjSecOf(si) {
@@ -2718,10 +2747,10 @@ function pjBOQ() {
   const priceOf = (si) => {
     if (si >= PJ_CUS) { const c = pjCus(si); return c && typeof c.price === 'number' ? c.price : null; }
     if (si >= PJ_SAF) { const x = PA.items[pjSafIdx(si)]; return x && typeof x.price === 'number' ? Math.ceil(x.price - 1e-9) : null; }
-    const it = X.item[si], pp = mode === 'excl' ? it.p2 : it.p1; if (!pp) return null;
-    let v = PAE.get(si, pp[0], pp[1]); if (typeof v !== 'number' && pp[2]) v = PAE.get(si, pp[2][0], pp[2][1]);
-    return typeof v === 'number' ? Math.ceil(v - 1e-9) : null;   // الفئة بالجنيه الصحيح زي الفورمة
+    const v = pjSheetPrice(si, mode); if (v == null) return null;   // الفئة بالجنيه الصحيح زي الفورمة
+    return pjWithFoot(si) ? v + (pjFootPrice(si, mode) || 0) : v;   // بقدمة: سعر البند + سعر القدمة
   };
+  const descOf = (si, it) => b.desc[si] || ((it.std ? it.desc : (PAnames[si] || it.desc)) + (pjWithFoot(si) ? ' (بالقدمة)' : ''));
   function draw() {
     paper.textContent = '';
     const D = []; PJ.boqD = { title: 'موازنة مشروع ' + p.name, rows: D };
@@ -2749,10 +2778,10 @@ function pjBOQ() {
           k++;
           const it = si >= PJ_CUS ? { desc: pjItemName(si), std: true, unit: (pjCus(si) || {}).unit || '', cus: true } : si >= PJ_SAF ? { desc: pjItemName(si), std: true, unit: (PA.items[pjSafIdx(si)] || {}).unit || '' } : X.item[si], pr = priceOf(si), q = qm[si];
           const tot = q != null && pr != null ? (q * pr) / 1e6 : null; sub += tot || 0;
-          D.push({ t: 'it', k, desc: b.desc[si] || (it.std ? it.desc : (PAnames[si] || it.desc)), unit: it.unit || '', q: q == null ? null : q, pr: pr == null ? null : pr, note: nm[si] || '' });
+          D.push({ t: 'it', k, desc: descOf(si, it), unit: it.unit || '', q: q == null ? null : q, pr: pr == null ? null : pr, note: nm[si] || '' });
           const tr = pjEl('tr', 'ir');
           tr.appendChild(pjEl('td', 'c', pjAr(k, 0)));
-          const dt = pjEl('td', 'd'); dt.appendChild(pjEl('div', 'dx', pjD(b.desc[si] || (it.std ? it.desc : (PAnames[si] || it.desc)))));
+          const dt = pjEl('td', 'd'); dt.appendChild(pjEl('div', 'dx', pjD(descOf(si, it))));
           {
             const sel = pjEl('select', 'noexp pjsec'); [...new Set([...PJ_SECS, b.sec[si] || pjAutoSec(si)])].forEach((s) => { const o = pjEl('option', '', s); o.value = s; if (s === (b.sec[si] || pjAutoSec(si))) o.selected = true; sel.appendChild(o); });
             sel.title = 'القسم'; sel.onchange = () => { b.sec[si] = sel.value; paSave(); draw(); };
@@ -2761,6 +2790,12 @@ function pjBOQ() {
             const rn = pjEl('button', 'noexp pjop', '✎ الاسم'); rn.type = 'button'; rn.title = 'تغيير وصف البند في الموازنة دي بس';
             rn.onclick = async () => { const cur = b.desc[si] || (it.std ? it.desc : (PAnames[si] || it.desc)); const v = await qtForm('وصف البند في الموازنة', 'بيتغير في موازنة المشروع ده بس — التحليل نفسه زي ما هو. سيبه فاضي يرجع للأصلي.', [{ k: 'd', label: 'الوصف', type: 'area', value: cur, req: false }], 'حفظ'); if (!v) return; if (v.d && v.d !== (it.std ? it.desc : (PAnames[si] || it.desc))) b.desc[si] = v.d; else delete b.desc[si]; paSave(); draw(); };
             const tools = pjEl('div', 'noexp pjitools'); tools.append(sel, op, rn);
+            if (!it.cus && pjFoot(si) != null) {
+              const fq = pjEl('select', 'noexp pjsec'); fq.title = 'البند بقدمة ولا لا';
+              [[1, 'بقدمة — ' + pjNum((pjSheetPrice(si, mode) || 0) + (pjFootPrice(si, mode) || 0), 0)], [0, 'من غير قدمة — ' + pjNum(pjSheetPrice(si, mode) || 0, 0)]].forEach(([v, l]) => { const o = pjEl('option', '', l); o.value = v; if (!!v === pjWithFoot(si)) o.selected = true; fq.appendChild(o); });
+              fq.onchange = () => { b.qd = b.qd || {}; b.qd[si] = fq.value === '1'; paSave(); draw(); };
+              tools.appendChild(fq);
+            }
             if (!it.cus && si < PJ_SAF) { const dp = pjEl('button', 'noexp pjop', '⧉ مرة تانية'); dp.type = 'button'; dp.title = 'ضيف نفس البند مرة تانية بكمية لوحدها'; dp.onclick = async () => { await pjDupItem(si); paNav($('paQ').value); pjBOQ(); }; tools.appendChild(dp); }
             else if (si >= PJ_SAF && si < PJ_CUS) { const dp = pjEl('button', 'noexp pjop', '⧉ مرة تانية'); dp.type = 'button'; dp.onclick = async () => { let k = PJ_SAF + pjSafIdx(si), m2 = 0; while (p.items.includes(k)) { m2++; k = PJ_SAF + pjSafIdx(si) + 100 * m2; } p.items.splice(p.items.indexOf(si) + 1, 0, k); await sb.from('pa_projects').update({ items: p.items, updated_at: new Date().toISOString() }).eq('id', p.id); paNav($('paQ').value); pjBOQ(); }; tools.appendChild(dp); }
             else if (it.cus) { const dp = pjEl('button', 'noexp pjop', '⧉ مرة تانية'); dp.type = 'button'; dp.onclick = () => { const c0 = pjCus(si); const k = b.custom.reduce((m2, x) => Math.max(m2, x.k), PJ_CUS) + 1; b.custom.splice(b.custom.indexOf(c0) + 1, 0, { ...c0, k }); b.sec[k] = c0.sec; paSave(); pjBOQ(); }; tools.appendChild(dp); }
@@ -2798,6 +2833,9 @@ function pjBOQ() {
     if (!order.length) paper.appendChild(pjEl('div', 'pjnote noexp', 'المشروع لسه مفيهوش بنود. اختار البنود الأول.'));
   }
   draw();
+  // بند زي النيوجيرسي لسه ماتحددش هو بقدمة ولا لا → نسأل مرة واحدة
+  const pend = order.filter((si) => si < PJ_SAF && pjFoot(si) != null && (!b.qd || b.qd[si] === undefined));
+  if (pend.length) pjAskFoot(pend, mode).then((ch) => { if (ch && PJ.cur === p && PJ.view === 'boq') draw(); });
 }
 const PJ_FORM_CSS = `body{font-family:"Cairo","Arial",sans-serif;direction:rtl;margin:0;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .pjpaper{background:#fff;padding:18px 22px;max-width:1100px;margin:0 auto}
@@ -2865,7 +2903,7 @@ async function pjDelItem(si, cus, after) {
   if (!confirm('حذف «' + pjItemName(si).slice(0, 60) + '» من الموازنة؟\n(تحليل الأسعار نفسه مش هيتأثر، وتقدر ترجّعه من «البنود»)')) return;
   if (cus) b.custom = (b.custom || []).filter((c) => c.k !== si);
   else p.items = p.items.filter((x) => x !== si);
-  delete p.qty[si]; if (b.desc) delete b.desc[si]; if (b.note) delete b.note[si]; if (b.sec) delete b.sec[si];
+  delete p.qty[si]; if (b.qd) delete b.qd[si]; if (b.desc) delete b.desc[si]; if (b.note) delete b.note[si]; if (b.sec) delete b.sec[si];
   if (!cus) { const { error } = await sb.from('pa_projects').update({ items: p.items, updated_at: new Date().toISOString() }).eq('id', p.id); if (error) return alert('تعذّر الحذف'); }
   // لو البند جاي من حصر الكميات: نفك ربطه عشان «تحديث الكميات» ميرجعهوش
   if (p.qt_id && typeof IS_QT !== 'undefined' && IS_QT) {
