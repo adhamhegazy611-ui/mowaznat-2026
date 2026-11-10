@@ -3188,9 +3188,14 @@ function qtAuto0(item, groups, mem) {
   if (mem && mem.sel) mem = { ...mem, sel: mem.sel.filter((k) => !QT_XK.test(k)) };
   if (QT_EW.test(item)) {
     const em = qtEwMode(item), cft = groups.filter((g) => g.src === 'table'), cfT = cft.filter((g) => g.total);
-    const sfs = (cfT.length ? cfT : cft.length ? cft : groups.filter((g) => g.kind === 'surface')).slice().sort((a, b) => b.area - a.area);
+    // الأولوية: جدول Cut/Fill (سطر Totals) ← أسطح الفرق كلها (مجموعها = Totals في Volume Dashboard) ← Surface to Surface لو اختيار واحد بس
+    const vols = groups.filter((g) => g.kind === 'surface' && !g.src), s2 = groups.filter((g) => g.src === 's2s' && g[em] > 0);
     if (mem && mem.mode === em && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: em, sel: mem.sel.slice(), how: 'mem' };
-    return sfs.length ? { mode: em, sel: [qtKey(sfs[0])] } : null;
+    if (cfT.length) return { mode: em, sel: [qtKey(cfT[0])] };
+    if (cft.length) return { mode: em, sel: cft.map(qtKey) };
+    if (vols.length) return { mode: em, sel: vols.map(qtKey) };
+    if (s2.length === 1) return { mode: em, sel: [qtKey(s2[0])] };
+    return null;   // أكتر من اختيار Surface to Surface: المستخدم يحدد الأرض الطبيعية والتصميم
   }
   if (mem && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: mem.mode, sel: mem.sel.slice(), th: mem.thickness ? +mem.thickness : null, how: 'mem', only: mem.mode === 'count' ? ((QT_RULES.find(([re]) => re.test(item)) || [])[2] || null) : null };
   const rule = QT_RULES.find(([re]) => re.test(item)) || [null, null];
@@ -3276,7 +3281,7 @@ function qtQty(groups, a) {
 const qtN = (v, d = 0) => (v == null || !isFinite(v) ? '—' : (Math.round(Number(v) * 10 ** d + 1e-7) / 10 ** d).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: d }));
 const qtKey = (g) => g.kind + '|' + g.layer + '|' + (g.pat || g.block || '') + '|' + (g.kind === 'block' ? '' : g.color) + (g.blk ? '|@' + g.blk : '');
 const qtTag = (g) => (g.blk ? ' · جوه بلوك «' + g.blk + '»' : '') + (g.hid ? ' · طبقة مقفولة/مجمّدة' : '');
-const qtKind = (g) => g.kind === 'surface' ? 'سطح فرق Civil 3D' : g.kind === 'hatch' ? 'هاتش ' + (/SOLID/i.test(g.pat) ? 'مصمت' : g.pat) : g.kind === 'line' ? 'خطوط' + (g.lt && g.lt.some((x) => x !== 'CONTINUOUS') ? ' متقطعة' : '') : 'بلوك «' + g.block + '»';
+const qtKind = (g) => g.kind === 'surface' ? (g.src === 's2s' ? 'Surface to Surface' : g.src === 'table' ? 'جدول Cut/Fill من Civil' : 'سطح فرق Civil 3D') : g.kind === 'hatch' ? 'هاتش ' + (/SOLID/i.test(g.pat) ? 'مصمت' : g.pat) : g.kind === 'line' ? 'خطوط' + (g.lt && g.lt.some((x) => x !== 'CONTINUOUS') ? ' متقطعة' : '') : 'بلوك «' + g.block + '»';
 function qtClip() {
   const c = $('qtCard'), r = c.getBoundingClientRect(), W = innerWidth, H = innerHeight;
   if (!r.width) return 'inset(45% 35% 45% 35% round 14px)';
@@ -3698,6 +3703,20 @@ function qtGroupDetail(g, mode, th) {
     if (g.total) li('ده سطر Totals = مجموع كل أسطح الفرق في الجدول');
     b.appendChild(ul); return b;
   }
+  if (g.kind === 'surface' && g.src === 's2s') {
+    li('Surface to Surface: الحجم بين السطحين بالظبط — كل مثلث من السطح الأول اتقاطع مع مثلثات السطح التاني، والفرق بينهم اتحسب على كل جزء');
+    li('السطح الأساسي (الأرض الطبيعية): ' + g.base); li('سطح المقارنة (التصميم): ' + g.comp);
+    li('المساحة المشتركة ' + qtN(g.area) + ' م²');
+    li((mode === 'cut' ? '◀ ' : '') + 'Cut (حفر) = ' + qtN(g.cut) + ' م³'); li((mode === 'fill' ? '◀ ' : '') + 'Fill (ردم) = ' + qtN(g.fill) + ' م³');
+    b.appendChild(ul); return b;
+  }
+  if (g.kind === 'surface' && g.exact) {
+    li('سطح الفرق مقروء من اللوحة بمثلثاته نفسها اللي Civil 3D عاملها: ' + qtN(g.n, 0) + ' نقطة و' + qtN(g.tris, 0) + ' مثلث ظاهر (المثلثات المخفية برا حدود السطح مش محسوبة)');
+    li('المساحة ' + qtN(g.area) + ' م² — الفرق بين المنسوبين من ' + qtN(g.zmin, 3) + ' لحد +' + qtN(g.zmax, 3) + ' م');
+    li((mode === 'cut' ? '◀ ' : '') + 'Cut (حفر) = ' + qtN(g.cut) + ' م³ — نفس رقم Volume Dashboard');
+    li((mode === 'fill' ? '◀ ' : '') + 'Fill (ردم) = ' + qtN(g.fill) + ' م³ — نفس رقم Volume Dashboard');
+    b.appendChild(ul); return b;
+  }
   if (g.kind === 'surface') {
     li('عدد النقط ' + qtN(g.n, 0) + ' نقطة، اتعمل منها ' + qtN(g.tris, 0) + ' مثلث (شبكة TIN)');
     li('المساحة المغطاة ' + qtN(g.area) + ' م² — الفرق بين المنسوبين من ' + qtN(g.zmin, 3) + ' لحد +' + qtN(g.zmax, 3) + ' م');
@@ -3937,7 +3956,7 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
       const cb = pjEl('input'); cb.type = 'checkbox'; cb.checked = sel.has(k);
       cb.onchange = () => { if (cb.checked) sel.add(k); else sel.delete(k); draw(); };
       const sw = pjEl('i'); sw.style.background = g.hex;
-      const v = pjEl('span', 'v', g.kind === 'surface' ? 'ردم ' + qtN(g.fill) + ' · حفر ' + qtN(g.cut) + ' م³' : g.kind === 'hatch' ? qtN(g.area) + ' م²' : g.kind === 'line' ? qtN(g.length) + ' م.ط' : g.n + ' عدد');
+      const v = pjEl('span', 'v', g.kind === 'surface' ? (g.src === 's2s' ? 'S2S · ' : '') + 'ردم ' + qtN(g.fill) + ' · حفر ' + qtN(g.cut) + ' م³' : g.kind === 'hatch' ? qtN(g.area) + ' م²' : g.kind === 'line' ? qtN(g.length) + ' م.ط' : g.n + ' عدد');
       if (g.kind === 'line') v.appendChild(pjEl('small', '', g.n + ' خط' + (g.area ? ' · مقفول ' + qtN(g.area) + ' م²' : '') + (g.paint < g.length - 0.01 ? ' · مدهون ' + qtN(g.paint) : '')));
       row.append(cb, sw, pjEl('b', '', qtKind(g)), pjEl('span', 'ly', g.layer + qtTag(g)), v);
       if (g.hid) row.classList.add('hid');

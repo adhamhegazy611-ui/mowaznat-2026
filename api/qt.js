@@ -4,7 +4,7 @@ const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');
 const { analyze } = require('./_lib/qt');
-const { surfaceGroups, civilCounts } = require('./_lib/surf');
+const { surfaceGroups, civilCounts, scanDwgJson } = require('./_lib/surf');
 
 const URL_ = 'https://qadrtqtydtgzachfzpqw.supabase.co';
 const ANON = 'sb_publishable_YWBHuhE3Eb3Qs9VkOP1jEA_335B_9SB';
@@ -54,9 +54,10 @@ module.exports = async (req, res) => {
     // سطوح Civil 3D: بتتقرا من بيانات الـ DWG الخام (dwg2dxf بيسيبها كعناصر Proxy)
     if (fs.existsSync(tmpIn) && result.warnings.some((w) => /Civil 3D/.test(w))) {
       try {
-        spawnSync(bin('dwgread'), ['-O', 'JSON', '-o', tmpJ, tmpIn], { timeout: 40000, encoding: 'utf8', maxBuffer: 1 << 24 });
+        spawnSync(bin('dwgread'), ['-O', 'JSON', '-o', tmpJ, tmpIn], { timeout: 45000, encoding: 'utf8', maxBuffer: 1 << 24 });
         if (fs.existsSync(tmpJ)) {
-          const J = JSON.parse(fs.readFileSync(tmpJ, 'latin1'));
+          // قراءة خفيفة (من غير JSON.parse للملف كله) — وبتتحمل nan اللي dwgread بيكتبها
+          const J = scanDwgJson(fs.readFileSync(tmpJ, 'latin1'));
           if (result.inv) result.inv.civil = civilCounts(J);
           const sg = surfaceGroups(J, result.groups.length ? result.origin : null);
           if (sg.groups.length) {
