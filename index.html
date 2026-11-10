@@ -2762,6 +2762,7 @@ function pjBOQ() {
     if (si >= PJ_CUS) { const c = pjCus(si); return c && typeof c.price === 'number' ? c.price : null; }
     if (si >= PJ_SAF) { const x = PA.items[pjSafIdx(si)]; return x && typeof x.price === 'number' ? Math.round(x.price + 1e-9) : null; }
     const v = pjSheetPrice(si, mode); if (v == null) return null;   // الفئة بالجنيه الصحيح زي الفورمة
+    if (isSup(si)) return v * (typeof b.tq[si] === 'number' ? b.tq[si] : 1);   // الإشراف: الفئة = الأطقم × سعر المنطقة
     return pjWithFoot(si) ? v + (pjFootPrice(si, mode) || 0) : v;   // بقدمة: سعر البند + سعر القدمة
   };
   // فئة متعدلة يدوي في الموازنة دي (التحليل نفسه زي ما هو)
@@ -2795,7 +2796,7 @@ function pjBOQ() {
           const it = si >= PJ_CUS ? { desc: pjItemName(si), std: true, unit: (pjCus(si) || {}).unit || '', cus: true } : si >= PJ_SAF ? { desc: pjItemName(si), std: true, unit: (PA.items[pjSafIdx(si)] || {}).unit || '' } : X.item[si], pr = priceOf(si), q = qm[si];
           const sp = isSup(si), tq = sp && typeof b.tq[si] === 'number' ? b.tq[si] : null;
           const tot = q != null && pr != null ? q * pr : null;   // الإشراف زي أي بند: الكمية (الشهور) × الفئة sub += tot || 0;
-          D.push({ t: 'it', k, desc: descOf(si, it), unit: it.unit || '', q: q == null ? null : q, pr: pr == null ? null : pr, note: nm[si] || '', sup: sp, tq });
+          D.push({ t: 'it', k, desc: sp && tq != null ? descOf(si, it) + ' — عدد الأطقم: ' + tq : descOf(si, it), unit: it.unit || '', q: q == null ? null : q, pr: pr == null ? null : pr, note: nm[si] || '', sup: sp, tq });
           const tr = pjEl('tr', 'ir');
           tr.appendChild(pjEl('td', 'c', pjAr(k, 0)));
           const dt = pjEl('td', 'd'); dt.appendChild(pjEl('div', 'dx', pjD(descOf(si, it))));
@@ -2807,6 +2808,13 @@ function pjBOQ() {
             const rn = pjEl('button', 'noexp pjop', '✎ الاسم'); rn.type = 'button'; rn.title = 'تغيير وصف البند في الموازنة دي بس';
             rn.onclick = async () => { const cur = b.desc[si] || (it.std ? it.desc : (PAnames[si] || it.desc)); const v = await qtForm('وصف البند في الموازنة', 'بيتغير في موازنة المشروع ده بس — التحليل نفسه زي ما هو. سيبه فاضي يرجع للأصلي.', [{ k: 'd', label: 'الوصف', type: 'area', value: cur, req: false }], 'حفظ'); if (!v) return; if (v.d && v.d !== (it.std ? it.desc : (PAnames[si] || it.desc))) b.desc[si] = v.d; else delete b.desc[si]; paSave(); draw(); };
             const tools = pjEl('div', 'noexp pjitools'); tools.append(sel, op, rn);
+            if (sp) {   // الأطقم جوه بند الإشراف بس
+              const tw = pjEl('div', 'pjtq'), ti = pjEl('input', 'pjq'); ti.type = 'text'; ti.inputMode = 'decimal'; ti.value = tq == null ? '' : pjAr(tq, 0, 3); ti.placeholder = '١';
+              ti.onchange = () => { const v = pjParse(ti.value); if (v == null || isNaN(v)) delete b.tq[si]; else b.tq[si] = v; delete b.pr[si]; paSave(); draw(); };
+              ti.onfocus = () => ti.select();
+              tw.append(pjEl('span', '', 'الأطقم: '), ti, pjEl('span', 'pv', tq == null ? '' : pjAr(tq, 0, 3)));
+              dt.appendChild(tw);
+            }
             if (sp && it.sup) {
               const rgS = pjEl('select', 'noexp pjsec'); rgS.title = 'المنطقة (فئة الطقم في الشهر)';
               it.sup.forEach((g, i) => { const v = PAE.get(si, g[1], g[2]); const o = pjEl('option', '', g[0] + ' — ' + (typeof v === 'number' ? pjNum(v, 0) : '')); o.value = i; if (i === (b.rg[si] || 0)) o.selected = true; rgS.appendChild(o); });
