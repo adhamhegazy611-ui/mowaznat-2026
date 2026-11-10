@@ -2869,7 +2869,13 @@ function pjBOQ() {
     });
     // الإجمالي العام = مجموع إجماليات الأقسام
     grand = secTots.reduce((a, [, v]) => a + v, 0);
-    D.push({ t: 'grand' }); const gt = pjEl('tr', 'grand'), gl = pjEl('td', 'c', 'الاجمالى العام'); gl.colSpan = NC; gt.append(gl, pjEl('td', 'c b', pjAr(grand, 0)), pjEl('td', 'e', ''));
+    // شامل هيئة الشئون المالية: الإجمالي العام ÷ 0.85
+    const hfa = !!b.hfa, gLab = hfa ? 'الاجمالى العام شامل هيئة الشئون المالية' : 'الاجمالى العام غير شامل هيئة الشئون المالية', gVal = hfa ? grand / 0.85 : grand;
+    D.push({ t: 'grand', label: gLab, hfa }); const gt = pjEl('tr', 'grand'), gl = pjEl('td', 'c', gLab); gl.colSpan = NC;
+    const ge = pjEl('td', 'e'), hs = pjEl('select', 'noexp pjsec'); hs.title = 'هيئة الشئون المالية'; hs.style.width = '100%';
+    [[0, 'غير شامل'], [1, 'شامل (÷ 0.85)']].forEach(([v, l]) => { const o = pjEl('option', '', l); o.value = v; if (!!v === hfa) o.selected = true; hs.appendChild(o); });
+    hs.onchange = () => { if (hs.value === '1') b.hfa = true; else delete b.hfa; paSave(); draw(); }; ge.appendChild(hs);
+    gt.append(gl, pjEl('td', 'c b', pjAr(gVal, 0)), ge);
     t.appendChild(gt);
     paper.appendChild(t);
     if (!order.length) paper.appendChild(pjEl('div', 'pjnote noexp', 'المشروع لسه مفيهوش بنود. اختار البنود الأول.'));
@@ -3026,7 +3032,7 @@ function pjExport() {
     if (x.t === 'sub') { put(r, 1, 10, 'الاجمالى ( جنيه )'); boxRow(r, 2, cP, 10); merges.push('A' + r + ':' + LP + r); put(r, cT, 11, null, subStart < r ? 'SUM(' + LT + subStart + ':' + LT + (r - 1) + ')' : '0'); put(r, cN, 16, null); partSubs.push(LT + r); allSubs.push(LT + r); heights[r] = 24; r += 2; continue; }
     if (x.t === 'ptot') { put(r, 1, 12, x.label); boxRow(r, 2, cP, 12); merges.push('A' + r + ':' + LP + r); put(r, cT, 13, null, partSubs.join('+') || '0'); put(r, cN, 16, null); partTots.push(LT + r); heights[r] = 24; r += 2; continue; }
     if (x.t === 'sum') { put(r, 1, 10, x.label + ' ( جنيه )'); boxRow(r, 2, cP, 10); merges.push('A' + r + ':' + LP + r); put(r, cT, 11, null, allSubs[x.i] || '0'); put(r, cN, 16, null); sumRows.push(LT + r); heights[r] = 24; r++; continue; }
-    if (x.t === 'grand') { put(r, 1, 14, 'الاجمالى العام'); boxRow(r, 2, cP, 14); merges.push('A' + r + ':' + LP + r); put(r, cT, 15, null, sumRows.length ? 'SUM(' + sumRows[0] + ':' + sumRows[sumRows.length - 1] + ')' : (partTots.length ? partTots : allSubs).join('+') || '0'); put(r, cN, 16, null); heights[r] = 28; r++; }
+    if (x.t === 'grand') { const gs = sumRows.length ? 'SUM(' + sumRows[0] + ':' + sumRows[sumRows.length - 1] + ')' : (partTots.length ? partTots : allSubs).join('+') || '0'; put(r, 1, 14, x.label || 'الاجمالى العام'); boxRow(r, 2, cP, 14); merges.push('A' + r + ':' + LP + r); put(r, cT, 15, null, x.hfa ? '(' + gs + ')/0.85' : gs); put(r, cN, 16, null); heights[r] = 28; r++; }
   }
   const cell = (rr, o) => {
     const ref = col(o.c) + rr;
