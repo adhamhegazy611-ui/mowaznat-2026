@@ -2794,7 +2794,7 @@ function pjBOQ() {
           k++;
           const it = si >= PJ_CUS ? { desc: pjItemName(si), std: true, unit: (pjCus(si) || {}).unit || '', cus: true } : si >= PJ_SAF ? { desc: pjItemName(si), std: true, unit: (PA.items[pjSafIdx(si)] || {}).unit || '' } : X.item[si], pr = priceOf(si), q = qm[si];
           const sp = isSup(si), tq = sp && typeof b.tq[si] === 'number' ? b.tq[si] : null;
-          const tot = sp ? (q != null && tq != null && pr != null ? q * pr * tq : null) : q != null && pr != null ? q * pr : null;   // الإشراف: الكمية × الفئة × الأطقم sub += tot || 0;
+          const tot = q != null && pr != null ? q * pr : null;   // الإشراف زي أي بند: الكمية (الشهور) × الفئة sub += tot || 0;
           D.push({ t: 'it', k, desc: descOf(si, it), unit: it.unit || '', q: q == null ? null : q, pr: pr == null ? null : pr, note: nm[si] || '', sup: sp, tq });
           const tr = pjEl('tr', 'ir');
           tr.appendChild(pjEl('td', 'c', pjAr(k, 0)));
@@ -2831,13 +2831,6 @@ function pjBOQ() {
           qi.onchange = () => { const v = pjParse(qi.value); if (v == null || isNaN(v)) delete qm[si]; else qm[si] = v; paSave(); draw(); };
           qi.onfocus = () => { qi.select(); };
           qt.appendChild(qi); qt.appendChild(pjEl('span', 'pv', q == null ? '' : pjAr(q, 0, 3))); tr.appendChild(qt);
-          if (sp) {   // الطقم جوه بند الإشراف بس (من غير عمود في الموازنة)
-            const tw = pjEl('div', 'pjtq'), ti = pjEl('input', 'pjq'); ti.type = 'text'; ti.inputMode = 'decimal'; ti.value = tq == null ? '' : pjAr(tq, 0, 3); ti.placeholder = '٠';
-            ti.onchange = () => { const v = pjParse(ti.value); if (v == null || isNaN(v)) delete b.tq[si]; else b.tq[si] = v; paSave(); draw(); };
-            ti.onfocus = () => ti.select();
-            tw.append(pjEl('span', '', 'الطقم: '), ti, pjEl('span', 'pv', tq == null ? '' : pjAr(tq, 0, 3)));
-            dt.appendChild(tw);
-          }
           if (it.cus) { const pc = pjEl('td', 'c'), pi = pjEl('input', 'pjq'); pi.type = 'text'; pi.inputMode = 'decimal'; pi.value = pr == null ? '' : pjAr(pr, 0, 2); pi.placeholder = 'الفئة'; pi.onchange = () => { const v = pjParse(pi.value), c = pjCus(si); if (c) { c.price = v == null || isNaN(v) ? null : v; paSave(); draw(); } }; pi.onfocus = () => pi.select(); pc.append(pi, pjEl('span', 'pv', pr == null ? '' : pjAr(pr, 0, 2))); tr.appendChild(pc); }
           else {
             const pc = pjEl('td', 'c'), pi = pjEl('input', 'pjq'), ap = autoPrice(si), man = typeof b.pr[si] === 'number';
@@ -3017,9 +3010,8 @@ function pjExport() {
       heights[r] = 34; put(r + 1, 2, 4, x.name); heights[r + 1] = 22; r += 2; subStart = r; continue;
     }
     if (x.t === 'it') {
-      put(r, 1, 5, x.k); put(r, 2, 6, x.sup && x.tq != null ? x.desc + ' — الطقم: ' + x.tq : x.desc); put(r, 3, 5, x.unit); put(r, 4, 7, x.q); put(r, cP, 8, x.pr);
-      if (x.sup) put(r, cT, 9, x.q != null && x.tq != null && x.pr != null ? x.q * x.pr * x.tq : null, x.tq != null ? 'IF(OR(D' + r + '="",' + LP + r + '=""),"",D' + r + '*' + LP + r + '*' + x.tq + ')' : null);   // الإشراف: الكمية × الفئة × الأطقم
-      else put(r, cT, 9, x.q != null && x.pr != null ? x.q * x.pr : null, 'IF(OR(D' + r + '="",' + LP + r + '=""),"",D' + r + '*' + LP + r + ')');
+      put(r, 1, 5, x.k); put(r, 2, 6, x.desc); put(r, 3, 5, x.unit); put(r, 4, 7, x.q); put(r, cP, 8, x.pr);
+      put(r, cT, 9, x.q != null && x.pr != null ? x.q * x.pr : null, 'IF(OR(D' + r + '="",' + LP + r + '=""),"",D' + r + '*' + LP + r + ')');
       put(r, cN, 5, x.note || null); heights[r] = Math.max(30, Math.ceil(String(x.desc || '').length / 62) * 17 + 8); r++; continue;
     }
     if (x.t === 'sub') { put(r, 1, 10, 'الاجمالى ( جنيه )'); boxRow(r, 2, cP, 10); merges.push('A' + r + ':' + LP + r); put(r, cT, 11, null, subStart < r ? 'SUM(' + LT + subStart + ':' + LT + (r - 1) + ')' : '0'); put(r, cN, 16, null); partSubs.push(LT + r); allSubs.push(LT + r); heights[r] = 24; r += 2; continue; }
