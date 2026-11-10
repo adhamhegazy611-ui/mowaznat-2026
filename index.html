@@ -547,6 +547,7 @@ body.in footer{color:#7f94b8}
 #pa .pjsign{margin-top:22px;font-weight:800;font-size:14px;line-height:1.8}
 #pa .pjpaper .pv{display:none}
 #pa input.pjq{width:100%;border:1px solid #e0b100;background:#fffbe6;border-radius:6px;padding:5px 2px;font:inherit;font-size:12.5px;text-align:center;direction:rtl}
+#pa input.pjq.man{border-color:#dc2626;background:#fff1f1;color:#b91c1c;font-weight:700}
 #pa textarea.pjn{width:100%;border:1px dashed #cbd2db;border-radius:6px;padding:4px;font:inherit;font-size:11.5px;resize:vertical;background:#fafbfc}
 #pa .pjitools{display:flex;gap:6px;margin-top:6px;align-items:center}
 #pa select.pjsec{border:1px solid #d7deea;border-radius:7px;font:inherit;font-size:11.5px;padding:2px 4px;background:#f6f8fc;color:#334155;max-width:180px}
@@ -2744,12 +2745,15 @@ function pjBOQ() {
   const paper = pjEl('div', 'pjpaper'); paper.id = 'pjPaper'; m.appendChild(paper);
   b.custom = b.custom || []; b.desc = b.desc || {};
   const order = paItems().filter((it) => !it.safety || it.ss != null).map((it) => (it.ss != null ? it.ss : it.i)).concat(b.custom.map((c) => c.k));
-  const priceOf = (si) => {
+  b.pr = b.pr || {};
+  const autoPrice = (si) => {
     if (si >= PJ_CUS) { const c = pjCus(si); return c && typeof c.price === 'number' ? c.price : null; }
     if (si >= PJ_SAF) { const x = PA.items[pjSafIdx(si)]; return x && typeof x.price === 'number' ? Math.round(x.price + 1e-9) : null; }
     const v = pjSheetPrice(si, mode); if (v == null) return null;   // الفئة بالجنيه الصحيح زي الفورمة
     return pjWithFoot(si) ? v + (pjFootPrice(si, mode) || 0) : v;   // بقدمة: سعر البند + سعر القدمة
   };
+  // فئة متعدلة يدوي في الموازنة دي (التحليل نفسه زي ما هو)
+  const priceOf = (si) => (si < PJ_CUS && typeof b.pr[si] === 'number' ? b.pr[si] : autoPrice(si));
   const descOf = (si, it) => b.desc[si] || ((it.std ? it.desc : (PAnames[si] || it.desc)) + (pjWithFoot(si) ? ' (بالقدمة)' : ''));
   function draw() {
     paper.textContent = '';
@@ -2809,7 +2813,17 @@ function pjBOQ() {
           qi.onfocus = () => { qi.select(); };
           qt.appendChild(qi); qt.appendChild(pjEl('span', 'pv', q == null ? '' : pjAr(q, 0, 3))); tr.appendChild(qt);
           if (it.cus) { const pc = pjEl('td', 'c'), pi = pjEl('input', 'pjq'); pi.type = 'text'; pi.inputMode = 'decimal'; pi.value = pr == null ? '' : pjAr(pr, 0, 2); pi.placeholder = 'الفئة'; pi.onchange = () => { const v = pjParse(pi.value), c = pjCus(si); if (c) { c.price = v == null || isNaN(v) ? null : v; paSave(); draw(); } }; pi.onfocus = () => pi.select(); pc.append(pi, pjEl('span', 'pv', pr == null ? '' : pjAr(pr, 0, 2))); tr.appendChild(pc); }
-          else tr.appendChild(pjEl('td', 'c', pr == null ? '—' : pjAr(pr, 0)));
+          else {
+            const pc = pjEl('td', 'c'), pi = pjEl('input', 'pjq'), ap = autoPrice(si), man = typeof b.pr[si] === 'number';
+            pi.type = 'text'; pi.inputMode = 'decimal'; pi.value = pr == null ? '' : pjAr(pr, 0, 2); pi.placeholder = 'الفئة';
+            pi.title = man ? 'فئة متعدلة يدوي — سعر التحليل ' + (ap == null ? '—' : pjNum(ap, 0)) : 'سعر التحليل — تقدر تكتب فئة تانية';
+            if (man) pi.classList.add('man');
+            pi.onchange = () => { const v = pjParse(pi.value); if (v == null || isNaN(v) || v === ap) delete b.pr[si]; else b.pr[si] = v; paSave(); draw(); };
+            pi.onfocus = () => pi.select();
+            pc.append(pi, pjEl('span', 'pv', pr == null ? '' : pjAr(pr, 0, 2)));
+            if (man) { const rs = pjEl('button', 'noexp pjop', '↺ سعر التحليل ' + (ap == null ? '' : pjNum(ap, 0))); rs.type = 'button'; rs.onclick = () => { delete b.pr[si]; paSave(); draw(); }; pc.appendChild(rs); }
+            tr.appendChild(pc);
+          }
           tr.appendChild(pjEl('td', 'c b', tot == null ? '' : pjAr(tot, 0)));
           const nt = pjEl('td', 'c'), ni = pjEl('textarea', 'pjn'); ni.rows = 2; ni.value = nm[si] || ''; ni.oninput = () => { if (ni.value.trim()) nm[si] = ni.value; else delete nm[si]; paSave(); nt.querySelector('.pv').textContent = ni.value; };
           nt.appendChild(ni); nt.appendChild(pjEl('span', 'pv', nm[si] || '')); tr.appendChild(nt);
@@ -2903,7 +2917,7 @@ async function pjDelItem(si, cus, after) {
   if (!confirm('حذف «' + pjItemName(si).slice(0, 60) + '» من الموازنة؟\n(تحليل الأسعار نفسه مش هيتأثر، وتقدر ترجّعه من «البنود»)')) return;
   if (cus) b.custom = (b.custom || []).filter((c) => c.k !== si);
   else p.items = p.items.filter((x) => x !== si);
-  delete p.qty[si]; if (b.qd) delete b.qd[si]; if (b.desc) delete b.desc[si]; if (b.note) delete b.note[si]; if (b.sec) delete b.sec[si];
+  delete p.qty[si]; if (b.qd) delete b.qd[si]; if (b.pr) delete b.pr[si]; if (b.desc) delete b.desc[si]; if (b.note) delete b.note[si]; if (b.sec) delete b.sec[si];
   if (!cus) { const { error } = await sb.from('pa_projects').update({ items: p.items, updated_at: new Date().toISOString() }).eq('id', p.id); if (error) return alert('تعذّر الحذف'); }
   // لو البند جاي من حصر الكميات: نفك ربطه عشان «تحديث الكميات» ميرجعهوش
   if (p.qt_id && typeof IS_QT !== 'undefined' && IS_QT) {
