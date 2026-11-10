@@ -2576,7 +2576,7 @@ function pjScan() {
     let sup = null;
     if (/اشراف|إشراف/.test(String(sh.title || sh.name || '')) && /اطقم|أطقم/.test(alltxt + ' ' + String(sh.title || ''))) {
       rk.forEach((r) => { const cs = rows.get(r); const lb = cs.find((c) => typeof c[0] === 'string' && /^\s*(مشاريع|المشروعات|مشروعات)/.test(c[0]) && c[0].length < 70); const nm = cs.filter((c) => typeof c[0] === 'number' && c[0] >= 1000).pop(); if (lb && nm) (sup = sup || []).push([lb[0].replace(/\s+/g, ' ').trim(), r, nm[5]]); });
-      if (sup) { desc = 'الإشراف المساحي والمعملي'; u2 = 'شهر'; if (!price1) price1 = [sup[0][1], sup[0][2]]; }
+      if (sup) { u2 = 'شهر'; if (!price1) price1 = [sup[0][1], sup[0][2]]; }
     }
     item[si] = { desc, std, unit: u2, p1: price1, p2: price2, foot, sup };
   });
