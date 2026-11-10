@@ -3187,7 +3187,8 @@ function qtAuto0(item, groups, mem) {
   const keys = new Set(groups.map(qtKey));
   if (mem && mem.sel) mem = { ...mem, sel: mem.sel.filter((k) => !QT_XK.test(k)) };
   if (QT_EW.test(item)) {
-    const em = qtEwMode(item), sfs = groups.filter((g) => g.kind === 'surface').sort((a, b) => b.area - a.area);
+    const em = qtEwMode(item), cft = groups.filter((g) => g.src === 'table'), cfT = cft.filter((g) => g.total);
+    const sfs = (cfT.length ? cfT : cft.length ? cft : groups.filter((g) => g.kind === 'surface')).slice().sort((a, b) => b.area - a.area);
     if (mem && mem.mode === em && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: em, sel: mem.sel.slice(), how: 'mem' };
     return sfs.length ? { mode: em, sel: [qtKey(sfs[0])] } : null;
   }
@@ -3213,6 +3214,52 @@ function qtAuto0(item, groups, mem) {
     return c ? { mode: 'count', sel: [qtKey(c)], only: hint } : null;
   }
   return null;
+}
+// جدول Cut/Fill Summary اللي Civil 3D بيطلّعه من Volume Dashboard (أو Volumes report) جوه اللوحة:
+// كل سطر فيه (اسم سطح الفرق، المساحة، Cut، Fill، Net) + سطر Totals — دي نفس أرقام Civil بالظبط
+function qtCF(d) {
+  if (!d || d._cf || !d.inv || !Array.isArray(d.inv.texts)) return d; d._cf = 1;
+  const T = d.inv.texts.filter((t) => t && typeof t.t === 'string' && t.at);
+  const num = (t) => { const m = /-?[\d,]*\.?\d+/.exec(String(t).replace(/,/g, '')); return m ? +m[0] : null; };
+  const isH = (t, re) => re.test(String(t.t).trim());
+  const heads = T.filter((t) => isH(t, /^name$/i));
+  const out = [];
+  heads.forEach((hn, hi) => {
+    const same = (t) => (hn.blk ? t.blk === hn.blk : Math.hypot(t.at[0] - hn.at[0], t.at[1] - hn.at[1]) < 60 * (hn.h || 1));
+    const grp = T.filter(same), y0 = hn.at[1], tol = Math.max(1, (hn.h || 1) * 1.5);
+    const hdr = grp.filter((t) => Math.abs(t.at[1] - y0) < tol);
+    const col = (re) => { const h = hdr.find((t) => isH(t, re)); return h ? h.at[0] : null; };
+    const xc = col(/^cut$/i), xf = col(/^fill$/i), xa = col(/^(2d|3d)?\s*area$/i), xn = col(/^net$/i);
+    if (xc == null || xf == null) return;
+    const xs = hdr.map((t) => t.at[0]).sort((a, b) => a - b), gap = Math.min(...xs.slice(1).map((x, i) => x - xs[i]).filter((v) => v > 0)) || 10 * tol, ct = gap / 2;
+    const ys = [...new Set(grp.filter((t) => t.at[1] < y0 - tol / 2).map((t) => Math.round(t.at[1] / tol)))];
+    const cell = (y, x) => grp.find((t) => Math.abs(t.at[1] - y) < tol && Math.abs(t.at[0] - x) < ct);
+    ys.forEach((yk) => {
+      const y = grp.find((t) => Math.round(t.at[1] / tol) === yk).at[1];
+      const nm = cell(y, hn.at[0]), c = cell(y, xc), fl = cell(y, xf); if (!nm || !c || !fl) return;
+      const cut = num(c.t), fill = num(fl.t); if (cut == null || fill == null) return;
+      const a = xa != null && cell(y, xa) ? num(cell(y, xa).t) : 0;
+      const tot = /^totals?$/i.test(nm.t.trim());
+      out.push({ key: 'CF|' + hi + '|' + nm.t.trim(), kind: 'surface', src: 'table', total: tot, layer: (tot ? 'إجمالي جدول Cut/Fill' : 'سطح الفرق «' + nm.t.trim() + '»') + ' (جدول Civil)', color: 0, hex: tot ? '#f5b301' : '#3d8bfd',
+        n: 0, tris: 0, area: a || 0, cut, fill, length: 0, paint: 0, items: [], geom: [], ext: [c.at[0], c.at[1], c.at[0], c.at[1]] });
+    });
+  });
+  // نفس الجدول لو متخزن كـ ACAD_TABLE (الخلايا ورا بعض: عناوين الأعمدة وبعدين الصفوف)
+  if (!out.length) T.filter((t) => t.table && /\bCut\b/i.test(t.t) && /\bFill\b/i.test(t.t)).forEach((t, ti) => {
+    const cs = t.t.split(' | ').map((x) => x.trim()), i0 = cs.findIndex((x) => /^name$/i.test(x)); if (i0 < 0) return;
+    // كل صف: اسم، وبعده قيم (المعاملات أرقام، المساحة sq.m، والأحجام Cu. M. بالترتيب Cut ثم Fill ثم Net)
+    const isV = (x) => /^-?[\d,.]+\s*(sq\.?\s*m\.?|cu\.?\s*m\.?|m2|m3|م2|م3)?\s*(<\s*(cut|fill)\s*>)?$/i.test(x);
+    let cur = null; const rows = [];
+    cs.slice(i0 + 1).forEach((x) => { if (!x) return; if (isV(x)) { if (cur) cur.v.push(x); } else if (!/^(type|cut factor|fill factor|(2d|3d)?\s*area|cut|fill|net|net graph)$/i.test(x)) rows.push(cur = { n: x, v: [] }); });
+    rows.forEach((rw) => {
+      const vol = rw.v.filter((x) => /cu\.?\s*m|m3|م3/i.test(x)).map(num), ar = rw.v.find((x) => /sq\.?\s*m|m2|م2/i.test(x));
+      if (vol.length < 2) return; const tot = /^totals?$/i.test(rw.n);
+      out.push({ key: 'CFT|' + ti + '|' + rw.n, kind: 'surface', src: 'table', total: tot, layer: (tot ? 'إجمالي جدول Cut/Fill' : 'سطح الفرق «' + rw.n + '»') + ' (جدول Civil)', color: 0, hex: tot ? '#f5b301' : '#3d8bfd',
+        n: 0, tris: 0, area: ar ? num(ar) || 0 : 0, cut: vol[0], fill: vol[1], length: 0, paint: 0, items: [], geom: [], ext: [t.at[0], t.at[1], t.at[0], t.at[1]] });
+    });
+  });
+  if (out.length) d.groups = out.concat((d.groups || []).filter((g) => !(g.src === 'table')));
+  return d;
 }
 function qtQty(groups, a) {
   const gs = groups.filter((g) => a.sel.includes(qtKey(g))); if (!gs.length) return null;
@@ -3545,6 +3592,7 @@ async function qtShowItem(id) {
   setTimeout(() => { const el = document.getElementById('qti-' + id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 600);
 }
 function qtDetailCard(x, d, no) {
+  qtCF(d);
   const c = pjEl('div', 'qcard'); c.id = 'qti-' + x.id; if (no) c.dataset.no = no;
   if (x.mode === 'manual') {
     const h = pjEl('div', 'qdh'); h.append(pjEl('h3', '', (no ? 'جزء ' + no + ': ' : '') + '✎ ' + x.item), pjEl('span', 'qq', qtN(x.qty) + ' ' + x.unit));
@@ -3642,6 +3690,14 @@ function qtGroupDetail(g, mode, th) {
   b.appendChild(hd);
   const ul = pjEl('ul');
   const li = (t, c) => { const e = pjEl('li', c || ''); e.textContent = t; ul.appendChild(e); };
+  if (g.kind === 'surface' && g.src === 'table') {
+    li('الأرقام دي مقروءة من جدول «Cut/Fill Summary» اللي Civil 3D حاطه في اللوحة — نفس أرقام Volume Dashboard بالظبط');
+    if (g.area) li('المساحة 2D = ' + qtN(g.area) + ' م²');
+    li((mode === 'cut' ? '◀ ' : '') + 'Cut (حفر) = ' + qtN(g.cut) + ' م³');
+    li((mode === 'fill' ? '◀ ' : '') + 'Fill (ردم) = ' + qtN(g.fill) + ' م³');
+    if (g.total) li('ده سطر Totals = مجموع كل أسطح الفرق في الجدول');
+    b.appendChild(ul); return b;
+  }
   if (g.kind === 'surface') {
     li('عدد النقط ' + qtN(g.n, 0) + ' نقطة، اتعمل منها ' + qtN(g.tris, 0) + ' مثلث (شبكة TIN)');
     li('المساحة المغطاة ' + qtN(g.area) + ' م² — الفرق بين المنسوبين من ' + qtN(g.zmin, 3) + ' لحد +' + qtN(g.zmax, 3) + ' م');
@@ -3822,6 +3878,7 @@ async function qtAdd(pre) {
     } catch (e) { j = { error: 'تعذّر الاتصال' }; }
     fi.disabled = false;
     if (!r || !r.ok || !j.groups) { st.textContent = '⚠️ ' + (j.error || 'تعذّر قراءة اللوحة'); await sb.storage.from('qt').remove([path]); return; }
+    qtCF(j);
     const item = it.value.trim();
     let mem = null;
     try { const { data } = await sb.from('qt_items').select('mode,sel,thickness').eq('item', item).order('created_at', { ascending: false }).limit(1); mem = data && data[0]; } catch (e) { /* */ }
@@ -3853,6 +3910,7 @@ async function qtSave(item, fname, path, R, a, q, existing) {
 }
 // اختيار الحاجة اللي تتحسب يدوي (لو السيستم ماعرفش، أو من «تعديل الحسبة» في التفاصيل)
 function qtPick(box, item, fname, path, R, existing, start, isNew) {
+  qtCF(R);
   const groups = R.groups || [];
   let sel = new Set((start && start.sel) || (existing && existing.sel) || []), mode = (start && start.mode) || (existing && existing.mode) || 'area';
   let th = (start && start.th) || (existing && existing.thickness ? +existing.thickness : null), only = (R.only || (start && start.only)) || null;
