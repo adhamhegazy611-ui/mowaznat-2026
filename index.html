@@ -2578,11 +2578,11 @@ function pjScan() {
   return PJX;
 }
 const pjInScope = (si) => PJ.cur && PJ.cur.items.includes(si);
-// سعر البند من شيته (بالجنيه الصحيح زي الفورمة) — من غير القدمة
+// سعر البند من شيته (لأقرب جنيه) — من غير القدمة
 function pjSheetPrice(si, mode) {
   const it = pjScan().item[si]; if (!it) return null; const pp = mode === 'excl' ? it.p2 : it.p1; if (!pp) return null;
   let v = PAE.get(si, pp[0], pp[1]); if (typeof v !== 'number' && pp[2]) v = PAE.get(si, pp[2][0], pp[2][1]);
-  return typeof v === 'number' ? Math.ceil(v - 1e-9) : null;
+  return typeof v === 'number' ? Math.round(v + 1e-9) : null;   // لأقرب جنيه زي الشيت
 }
 // بنود بقدمة أو من غيرها (النيوجيرسي): شيت القدمة بتاعها، وسعر القدمة لوحدها
 const pjFoot = (si) => { const it = si < PJ_SAF && pjScan().item[si]; return it && it.foot != null ? it.foot : null; };
@@ -2746,7 +2746,7 @@ function pjBOQ() {
   const order = paItems().filter((it) => !it.safety || it.ss != null).map((it) => (it.ss != null ? it.ss : it.i)).concat(b.custom.map((c) => c.k));
   const priceOf = (si) => {
     if (si >= PJ_CUS) { const c = pjCus(si); return c && typeof c.price === 'number' ? c.price : null; }
-    if (si >= PJ_SAF) { const x = PA.items[pjSafIdx(si)]; return x && typeof x.price === 'number' ? Math.ceil(x.price - 1e-9) : null; }
+    if (si >= PJ_SAF) { const x = PA.items[pjSafIdx(si)]; return x && typeof x.price === 'number' ? Math.round(x.price + 1e-9) : null; }
     const v = pjSheetPrice(si, mode); if (v == null) return null;   // الفئة بالجنيه الصحيح زي الفورمة
     return pjWithFoot(si) ? v + (pjFootPrice(si, mode) || 0) : v;   // بقدمة: سعر البند + سعر القدمة
   };
