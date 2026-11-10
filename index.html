@@ -2572,7 +2572,13 @@ function pjScan() {
     let u2 = unit0 || unit;
     if (!u2 && !std) u2 = /المتر الطول/.test(d) ? 'م.ط' : /المتر (المسطح|المربع)|\/م2/.test(d) ? 'م2' : /المتر المكعب|\/م3/.test(d) ? 'م3' : '';
     if (sh.pj) { if (sh.pj.unit) u2 = sh.pj.unit; if (sh.pj.p1) price1 = sh.pj.p1; if (sh.pj.p2) price2 = sh.pj.p2; }
-    item[si] = { desc, std, unit: u2, p1: price1, p2: price2, foot };
+    // الإشراف المساحي والمعملي: فئة الطقم في الشهر حسب المنطقة
+    let sup = null;
+    if (/اشراف|إشراف/.test(String(sh.title || sh.name || '')) && /اطقم|أطقم/.test(alltxt + ' ' + String(sh.title || ''))) {
+      rk.forEach((r) => { const cs = rows.get(r); const lb = cs.find((c) => typeof c[0] === 'string' && /^\s*(مشاريع|المشروعات|مشروعات)/.test(c[0]) && c[0].length < 70); const nm = cs.filter((c) => typeof c[0] === 'number' && c[0] >= 1000).pop(); if (lb && nm) (sup = sup || []).push([lb[0].replace(/\s+/g, ' ').trim(), r, nm[5]]); });
+      if (sup) { desc = 'الإشراف المساحي والمعملي'; u2 = 'شهر'; if (!price1) price1 = [sup[0][1], sup[0][2]]; }
+    }
+    item[si] = { desc, std, unit: u2, p1: price1, p2: price2, foot, sup };
   });
   Object.values(eq).forEach((e) => { e.def = +Object.entries(e.vals).sort((a, b) => b[1] - a[1])[0][0]; });
   PJX = { eq, dist, tr, f1, f2, item };
@@ -2581,7 +2587,9 @@ function pjScan() {
 const pjInScope = (si) => PJ.cur && PJ.cur.items.includes(si);
 // سعر البند من شيته (لأقرب جنيه) — من غير القدمة
 function pjSheetPrice(si, mode) {
-  const it = pjScan().item[si]; if (!it) return null; const pp = mode === 'excl' ? it.p2 : it.p1; if (!pp) return null;
+  const it = pjScan().item[si]; if (!it) return null;
+  if (it.sup) { const g = it.sup[(PJ.cur && PJ.cur.basics.rg && PJ.cur.basics.rg[si]) || 0] || it.sup[0]; const v = PAE.get(si, g[1], g[2]); return typeof v === 'number' ? Math.round(v + 1e-9) : null; }
+  const pp = mode === 'excl' ? it.p2 : it.p1; if (!pp) return null;
   let v = PAE.get(si, pp[0], pp[1]); if (typeof v !== 'number' && pp[2]) v = PAE.get(si, pp[2][0], pp[2][1]);
   return typeof v === 'number' ? Math.round(v + 1e-9) : null;   // لأقرب جنيه زي الشيت
 }
@@ -2745,7 +2753,9 @@ function pjBOQ() {
   const paper = pjEl('div', 'pjpaper'); paper.id = 'pjPaper'; m.appendChild(paper);
   b.custom = b.custom || []; b.desc = b.desc || {};
   const order = paItems().filter((it) => !it.safety || it.ss != null).map((it) => (it.ss != null ? it.ss : it.i)).concat(b.custom.map((c) => c.k));
-  b.pr = b.pr || {};
+  b.pr = b.pr || {}; b.tq = b.tq || {}; b.rg = b.rg || {};
+  const isSup = (si) => si < PJ_SAF && !!(X.item[si] && X.item[si].sup);
+  const hasSup = order.some(isSup); const NC = hasSup ? 6 : 5;
   const autoPrice = (si) => {
     if (si >= PJ_CUS) { const c = pjCus(si); return c && typeof c.price === 'number' ? c.price : null; }
     if (si >= PJ_SAF) { const x = PA.items[pjSafIdx(si)]; return x && typeof x.price === 'number' ? Math.round(x.price + 1e-9) : null; }
@@ -2769,20 +2779,21 @@ function pjBOQ() {
       const qm = p.qty, nm = b.note;
       const secs = []; order.filter((si) => pjKindOf(si) === pk).forEach((si) => { const s = b.sec[si] || pjAutoSec(si); let g = secs.find((x) => x.n === s); if (!g) secs.push(g = { n: s, l: [] }); g.l.push(si); });
       const so = (b.secOrderT && b.secOrderT[pk]) || b.secOrder || []; secs.sort((a, c) => (so.length ? ((so.indexOf(a.n) + 1) || 99) - ((so.indexOf(c.n) + 1) || 99) : 0) || (PJ_SECS.indexOf(a.n) + 1 || 99) - (PJ_SECS.indexOf(c.n) + 1 || 99));
-      D.push({ t: 'part', label: plabel }); const pr0 = pjEl('tr', 'part'), pd = pjEl('td', 'pr', plabel); pd.colSpan = 7; pr0.appendChild(pd); t.appendChild(pr0);
+      D.push({ t: 'part', label: plabel }); const pr0 = pjEl('tr', 'part'), pd = pjEl('td', 'pr', plabel); pd.colSpan = NC + 2; pr0.appendChild(pd); t.appendChild(pr0);
       let k = 0, ptot = 0;
       secs.forEach((g, gi) => {
         const h1 = pjEl('tr', 'yh'), h2 = pjEl('tr');
         const th = (x, rs, cls) => { const c = pjEl('th', cls || '', x); if (rs) c.rowSpan = rs; return c; };
-        h1.append(th('م', 2), th('البند'), th('الوحدة', 2), th('الكمية', 2), th('الفئة', 2), th('الاجمالي\n( جنيه )', 2), th('ملاحظات', 2));
+        h1.append(th('م', 2), th('البند'), th('الوحدة', 2), th('الكمية', 2)); if (hasSup) h1.appendChild(th('الطقم', 2)); h1.append(th('الفئة', 2), th('الاجمالي\n( جنيه )', 2), th('ملاحظات', 2));
         h2.appendChild(pjEl('th', 'sec', (PJ_ORD[gi] || '') + ': ' + g.n)); D.push({ t: 'sec', name: (PJ_ORD[gi] || '') + ': ' + g.n });
         t.append(h1, h2);
         let sub = 0;
         g.l.forEach((si) => {
           k++;
           const it = si >= PJ_CUS ? { desc: pjItemName(si), std: true, unit: (pjCus(si) || {}).unit || '', cus: true } : si >= PJ_SAF ? { desc: pjItemName(si), std: true, unit: (PA.items[pjSafIdx(si)] || {}).unit || '' } : X.item[si], pr = priceOf(si), q = qm[si];
-          const tot = q != null && pr != null ? q * pr : null; sub += tot || 0;
-          D.push({ t: 'it', k, desc: descOf(si, it), unit: it.unit || '', q: q == null ? null : q, pr: pr == null ? null : pr, note: nm[si] || '' });
+          const sp = isSup(si), tq = sp && typeof b.tq[si] === 'number' ? b.tq[si] : null;
+          const tot = sp ? (tq != null && pr != null ? tq * pr : null) : q != null && pr != null ? q * pr : null; sub += tot || 0;
+          D.push({ t: 'it', k, desc: descOf(si, it), unit: it.unit || '', q: q == null ? null : q, pr: pr == null ? null : pr, note: nm[si] || '', sup: sp, tq });
           const tr = pjEl('tr', 'ir');
           tr.appendChild(pjEl('td', 'c', pjAr(k, 0)));
           const dt = pjEl('td', 'd'); dt.appendChild(pjEl('div', 'dx', pjD(descOf(si, it))));
@@ -2794,6 +2805,12 @@ function pjBOQ() {
             const rn = pjEl('button', 'noexp pjop', '✎ الاسم'); rn.type = 'button'; rn.title = 'تغيير وصف البند في الموازنة دي بس';
             rn.onclick = async () => { const cur = b.desc[si] || (it.std ? it.desc : (PAnames[si] || it.desc)); const v = await qtForm('وصف البند في الموازنة', 'بيتغير في موازنة المشروع ده بس — التحليل نفسه زي ما هو. سيبه فاضي يرجع للأصلي.', [{ k: 'd', label: 'الوصف', type: 'area', value: cur, req: false }], 'حفظ'); if (!v) return; if (v.d && v.d !== (it.std ? it.desc : (PAnames[si] || it.desc))) b.desc[si] = v.d; else delete b.desc[si]; paSave(); draw(); };
             const tools = pjEl('div', 'noexp pjitools'); tools.append(sel, op, rn);
+            if (sp && it.sup) {
+              const rgS = pjEl('select', 'noexp pjsec'); rgS.title = 'المنطقة (فئة الطقم في الشهر)';
+              it.sup.forEach((g, i) => { const v = PAE.get(si, g[1], g[2]); const o = pjEl('option', '', g[0] + ' — ' + (typeof v === 'number' ? pjNum(v, 0) : '')); o.value = i; if (i === (b.rg[si] || 0)) o.selected = true; rgS.appendChild(o); });
+              rgS.onchange = () => { b.rg[si] = +rgS.value; paSave(); draw(); };
+              tools.appendChild(rgS);
+            }
             if (!it.cus && pjFoot(si) != null) {
               const fq = pjEl('select', 'noexp pjsec'); fq.title = 'البند بقدمة ولا لا';
               [[1, 'بقدمة — ' + pjNum((pjSheetPrice(si, mode) || 0) + (pjFootPrice(si, mode) || 0), 0)], [0, 'من غير قدمة — ' + pjNum(pjSheetPrice(si, mode) || 0, 0)]].forEach(([v, l]) => { const o = pjEl('option', '', l); o.value = v; if (!!v === pjWithFoot(si)) o.selected = true; fq.appendChild(o); });
@@ -2812,6 +2829,15 @@ function pjBOQ() {
           qi.onchange = () => { const v = pjParse(qi.value); if (v == null || isNaN(v)) delete qm[si]; else qm[si] = v; paSave(); draw(); };
           qi.onfocus = () => { qi.select(); };
           qt.appendChild(qi); qt.appendChild(pjEl('span', 'pv', q == null ? '' : pjAr(q, 0, 3))); tr.appendChild(qt);
+          if (hasSup) {
+            const tc = pjEl('td', 'c');
+            if (sp) {
+              const ti = pjEl('input', 'pjq'); ti.type = 'text'; ti.inputMode = 'decimal'; ti.value = tq == null ? '' : pjAr(tq, 0, 3); ti.placeholder = 'الطقم';
+              ti.onchange = () => { const v = pjParse(ti.value); if (v == null || isNaN(v)) delete b.tq[si]; else b.tq[si] = v; paSave(); draw(); };
+              ti.onfocus = () => ti.select(); tc.append(ti, pjEl('span', 'pv', tq == null ? '' : pjAr(tq, 0, 3)));
+            }
+            tr.appendChild(tc);
+          }
           if (it.cus) { const pc = pjEl('td', 'c'), pi = pjEl('input', 'pjq'); pi.type = 'text'; pi.inputMode = 'decimal'; pi.value = pr == null ? '' : pjAr(pr, 0, 2); pi.placeholder = 'الفئة'; pi.onchange = () => { const v = pjParse(pi.value), c = pjCus(si); if (c) { c.price = v == null || isNaN(v) ? null : v; paSave(); draw(); } }; pi.onfocus = () => pi.select(); pc.append(pi, pjEl('span', 'pv', pr == null ? '' : pjAr(pr, 0, 2))); tr.appendChild(pc); }
           else {
             const pc = pjEl('td', 'c'), pi = pjEl('input', 'pjq'), ap = autoPrice(si), man = typeof b.pr[si] === 'number';
@@ -2830,18 +2856,18 @@ function pjBOQ() {
           t.appendChild(tr);
         });
         ptot += sub;
-        D.push({ t: 'sub' }); const st = pjEl('tr', 'sub'), sl = pjEl('td', 'c', 'الاجمالى ( جنيه )'); sl.colSpan = 5; st.append(sl, pjEl('td', 'c b', pjAr(sub, 0)), pjEl('td', 'e', ''));
+        D.push({ t: 'sub' }); const st = pjEl('tr', 'sub'), sl = pjEl('td', 'c', 'الاجمالى ( جنيه )'); sl.colSpan = NC; st.append(sl, pjEl('td', 'c b', pjAr(sub, 0)), pjEl('td', 'e', ''));
         t.appendChild(st);
-        const sp = pjEl('tr', 'sp'), spd = pjEl('td'); spd.colSpan = 7; sp.appendChild(spd); t.appendChild(sp);
+        const sp = pjEl('tr', 'sp'), spd = pjEl('td'); spd.colSpan = NC + 2; sp.appendChild(spd); t.appendChild(sp);
       });
       grand += ptot; ptots.push([plabel, ptot]);
       if (parts.length > 1) {
-        D.push({ t: 'ptot', label: 'إجمالي ' + plabel + ' ( جنيه )' }); const tr = pjEl('tr', 'ptot'), l = pjEl('td', 'c', 'إجمالي ' + plabel + ' ( جنيه )'); l.colSpan = 5; tr.append(l, pjEl('td', 'c b', pjAr(ptot, 0)), pjEl('td', 'e', '')); t.appendChild(tr);
-        const sp = pjEl('tr', 'sp'), spd = pjEl('td'); spd.colSpan = 7; sp.appendChild(spd); t.appendChild(sp);
+        D.push({ t: 'ptot', label: 'إجمالي ' + plabel + ' ( جنيه )' }); const tr = pjEl('tr', 'ptot'), l = pjEl('td', 'c', 'إجمالي ' + plabel + ' ( جنيه )'); l.colSpan = NC; tr.append(l, pjEl('td', 'c b', pjAr(ptot, 0)), pjEl('td', 'e', '')); t.appendChild(tr);
+        const sp = pjEl('tr', 'sp'), spd = pjEl('td'); spd.colSpan = NC + 2; sp.appendChild(spd); t.appendChild(sp);
       }
     });
-    if (parts.length > 1) ptots.forEach(([l0, v]) => { const tr = pjEl('tr', 'sub'), l = pjEl('td', 'c', 'إجمالي ' + l0 + ' ( جنيه )'); l.colSpan = 5; tr.append(l, pjEl('td', 'c b', pjAr(v, 0)), pjEl('td', 'e', '')); t.appendChild(tr); });
-    D.push({ t: 'grand' }); const gt = pjEl('tr', 'grand'), gl = pjEl('td', 'c', 'الاجمالى العام'); gl.colSpan = 5; gt.append(gl, pjEl('td', 'c b', pjAr(grand, 0)), pjEl('td', 'e', ''));
+    if (parts.length > 1) ptots.forEach(([l0, v]) => { const tr = pjEl('tr', 'sub'), l = pjEl('td', 'c', 'إجمالي ' + l0 + ' ( جنيه )'); l.colSpan = NC; tr.append(l, pjEl('td', 'c b', pjAr(v, 0)), pjEl('td', 'e', '')); t.appendChild(tr); });
+    D.push({ t: 'grand' }); const gt = pjEl('tr', 'grand'), gl = pjEl('td', 'c', 'الاجمالى العام'); gl.colSpan = NC; gt.append(gl, pjEl('td', 'c b', pjAr(grand, 0)), pjEl('td', 'e', ''));
     t.appendChild(gt);
     paper.appendChild(t);
     if (!order.length) paper.appendChild(pjEl('div', 'pjnote noexp', 'المشروع لسه مفيهوش بنود. اختار البنود الأول.'));
@@ -2917,7 +2943,7 @@ async function pjDelItem(si, cus, after) {
   if (!confirm('حذف «' + pjItemName(si).slice(0, 60) + '» من الموازنة؟\n(تحليل الأسعار نفسه مش هيتأثر، وتقدر ترجّعه من «البنود»)')) return;
   if (cus) b.custom = (b.custom || []).filter((c) => c.k !== si);
   else p.items = p.items.filter((x) => x !== si);
-  delete p.qty[si]; if (b.qd) delete b.qd[si]; if (b.pr) delete b.pr[si]; if (b.desc) delete b.desc[si]; if (b.note) delete b.note[si]; if (b.sec) delete b.sec[si];
+  delete p.qty[si]; if (b.qd) delete b.qd[si]; if (b.pr) delete b.pr[si]; if (b.tq) delete b.tq[si]; if (b.rg) delete b.rg[si]; if (b.desc) delete b.desc[si]; if (b.note) delete b.note[si]; if (b.sec) delete b.sec[si];
   if (!cus) { const { error } = await sb.from('pa_projects').update({ items: p.items, updated_at: new Date().toISOString() }).eq('id', p.id); if (error) return alert('تعذّر الحذف'); }
   // لو البند جاي من حصر الكميات: نفك ربطه عشان «تحديث الكميات» ميرجعهوش
   if (p.qt_id && typeof IS_QT !== 'undefined' && IS_QT) {
@@ -2975,28 +3001,30 @@ function pjZip(files) { // [[name, string]]
 function pjExport() {
   const B = PJ.boqD; if (!B) return;
   const X = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const col = (c) => 'ABCDEFG'[c - 1];
+  const col = (c) => 'ABCDEFGH'[c - 1];
+  const W = B.rows.some((x) => x.sup), cP = W ? 6 : 5, cT = W ? 7 : 6, cN = W ? 8 : 7, L = col(cN), LP = col(cP), LT = col(cT);
   const rows = new Map(), merges = [], heights = {};
   const put = (r, c, st, v, f) => { if (!rows.has(r)) rows.set(r, []); rows.get(r).push({ c, st, v, f }); };
   const boxRow = (r, c1, c2, st) => { for (let c = c1; c <= c2; c++) put(r, c, st, null); }; // حدود الخلايا المدموجة
   let r = 1;
-  put(r, 1, 1, B.title); boxRow(r, 2, 7, 0); merges.push('A1:G1'); heights[r] = 34; r += 2;
+  put(r, 1, 1, B.title); boxRow(r, 2, cN, 0); merges.push('A1:' + L + '1'); heights[r] = 34; r += 2;
   let subStart = 0, partSubs = [], partTots = [], allSubs = [];
   for (const x of B.rows) {
-    if (x.t === 'part') { put(r, 1, 2, x.label); boxRow(r, 2, 7, 2); merges.push('A' + r + ':G' + r); heights[r] = 26; r++; partSubs = []; continue; }
+    if (x.t === 'part') { put(r, 1, 2, x.label); boxRow(r, 2, cN, 2); merges.push('A' + r + ':' + L + r); heights[r] = 26; r++; partSubs = []; continue; }
     if (x.t === 'sec') {
-      ['م', 'البند', 'الوحدة', 'الكمية', 'الفئة', 'الاجمالي ( جنيه )', 'ملاحظات'].forEach((h, i) => put(r, i + 1, 3, h));
-      [1, 3, 4, 5, 6, 7].forEach((c) => { put(r + 1, c, 3, null); merges.push(col(c) + r + ':' + col(c) + (r + 1)); });
+      ['م', 'البند', 'الوحدة', 'الكمية'].concat(W ? ['الطقم'] : [], ['الفئة', 'الاجمالي ( جنيه )', 'ملاحظات']).forEach((h, i) => put(r, i + 1, 3, h));
+      [1, 3, 4, 5, 6, 7].concat(W ? [8] : []).forEach((c) => { put(r + 1, c, 3, null); merges.push(col(c) + r + ':' + col(c) + (r + 1)); });
       heights[r] = 34; put(r + 1, 2, 4, x.name); heights[r + 1] = 22; r += 2; subStart = r; continue;
     }
     if (x.t === 'it') {
-      put(r, 1, 5, x.k); put(r, 2, 6, x.desc); put(r, 3, 5, x.unit); put(r, 4, 7, x.q); put(r, 5, 8, x.pr);
-      put(r, 6, 9, x.q != null && x.pr != null ? x.q * x.pr : null, 'IF(OR(D' + r + '="",E' + r + '=""),"",D' + r + '*E' + r + ')');
-      put(r, 7, 5, x.note || null); heights[r] = Math.max(30, Math.ceil(String(x.desc || '').length / 62) * 17 + 8); r++; continue;
+      put(r, 1, 5, x.k); put(r, 2, 6, x.desc); put(r, 3, 5, x.unit); put(r, 4, 7, x.q); if (W) put(r, 5, 7, x.sup ? x.tq : null); put(r, cP, 8, x.pr);
+      const QC = x.sup ? 'E' : 'D', qv = x.sup ? x.tq : x.q;   // الإشراف: الإجمالي = الطقم × الفئة
+      put(r, cT, 9, qv != null && x.pr != null ? qv * x.pr : null, 'IF(OR(' + QC + r + '="",' + LP + r + '=""),"",' + QC + r + '*' + LP + r + ')');
+      put(r, cN, 5, x.note || null); heights[r] = Math.max(30, Math.ceil(String(x.desc || '').length / 62) * 17 + 8); r++; continue;
     }
-    if (x.t === 'sub') { put(r, 1, 10, 'الاجمالى ( جنيه )'); boxRow(r, 2, 5, 10); merges.push('A' + r + ':E' + r); put(r, 6, 11, null, subStart < r ? 'SUM(F' + subStart + ':F' + (r - 1) + ')' : '0'); put(r, 7, 16, null); partSubs.push('F' + r); allSubs.push('F' + r); heights[r] = 24; r += 2; continue; }
-    if (x.t === 'ptot') { put(r, 1, 12, x.label); boxRow(r, 2, 5, 12); merges.push('A' + r + ':E' + r); put(r, 6, 13, null, partSubs.join('+') || '0'); put(r, 7, 16, null); partTots.push('F' + r); heights[r] = 24; r += 2; continue; }
-    if (x.t === 'grand') { put(r, 1, 14, 'الاجمالى العام'); boxRow(r, 2, 5, 14); merges.push('A' + r + ':E' + r); put(r, 6, 15, null, (partTots.length ? partTots : allSubs).join('+') || '0'); put(r, 7, 16, null); heights[r] = 28; r++; }
+    if (x.t === 'sub') { put(r, 1, 10, 'الاجمالى ( جنيه )'); boxRow(r, 2, cP, 10); merges.push('A' + r + ':' + LP + r); put(r, cT, 11, null, subStart < r ? 'SUM(' + LT + subStart + ':' + LT + (r - 1) + ')' : '0'); put(r, cN, 16, null); partSubs.push(LT + r); allSubs.push(LT + r); heights[r] = 24; r += 2; continue; }
+    if (x.t === 'ptot') { put(r, 1, 12, x.label); boxRow(r, 2, cP, 12); merges.push('A' + r + ':' + LP + r); put(r, cT, 13, null, partSubs.join('+') || '0'); put(r, cN, 16, null); partTots.push(LT + r); heights[r] = 24; r += 2; continue; }
+    if (x.t === 'grand') { put(r, 1, 14, 'الاجمالى العام'); boxRow(r, 2, cP, 14); merges.push('A' + r + ':' + LP + r); put(r, cT, 15, null, (partTots.length ? partTots : allSubs).join('+') || '0'); put(r, cN, 16, null); heights[r] = 28; r++; }
   }
   const cell = (rr, o) => {
     const ref = col(o.c) + rr;
@@ -3006,7 +3034,7 @@ function pjExport() {
     return '<c r="' + ref + '" s="' + o.st + '" t="inlineStr"><is><t xml:space="preserve">' + X(o.v) + '</t></is></c>';
   };
   const sd = [...rows.keys()].sort((a2, b2) => a2 - b2).map((rr) => { const cs = rows.get(rr).sort((a2, b2) => a2.c - b2.c).filter((o, i, ar) => !i || ar[i - 1].c !== o.c); return '<row r="' + rr + '"' + (heights[rr] ? ' ht="' + heights[rr] + '" customHeight="1"' : '') + '>' + cs.map((o) => cell(rr, o)).join('') + '</row>'; }).join('');
-  const sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><sheetViews><sheetView rightToLeft="1" showGridLines="0" workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols><col min="1" max="1" width="6" customWidth="1"/><col min="2" max="2" width="62" customWidth="1"/><col min="3" max="3" width="10" customWidth="1"/><col min="4" max="4" width="15" customWidth="1"/><col min="5" max="5" width="12" customWidth="1"/><col min="6" max="6" width="17" customWidth="1"/><col min="7" max="7" width="26" customWidth="1"/></cols><sheetData>' + sd + '</sheetData>' + (merges.length ? '<mergeCells count="' + merges.length + '">' + merges.map((m) => '<mergeCell ref="' + m + '"/>').join('') + '</mergeCells>' : '') + '<printOptions horizontalCentered="1"/><pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.2" footer="0.2"/><pageSetup paperSize="8" orientation="portrait" fitToWidth="1" fitToHeight="0"/></worksheet>';
+  const sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><sheetViews><sheetView rightToLeft="1" showGridLines="0" workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols><col min="1" max="1" width="6" customWidth="1"/><col min="2" max="2" width="62" customWidth="1"/><col min="3" max="3" width="10" customWidth="1"/><col min="4" max="4" width="15" customWidth="1"/>' + (W ? '<col min="5" max="5" width="10" customWidth="1"/><col min="6" max="6" width="12" customWidth="1"/><col min="7" max="7" width="17" customWidth="1"/><col min="8" max="8" width="26" customWidth="1"/>' : '<col min="5" max="5" width="12" customWidth="1"/><col min="6" max="6" width="17" customWidth="1"/><col min="7" max="7" width="26" customWidth="1"/>') + '</cols><sheetData>' + sd + '</sheetData>' + (merges.length ? '<mergeCells count="' + merges.length + '">' + merges.map((m) => '<mergeCell ref="' + m + '"/>').join('') + '</mergeCells>' : '') + '<printOptions horizontalCentered="1"/><pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.2" footer="0.2"/><pageSetup paperSize="8" orientation="portrait" fitToWidth="1" fitToHeight="0"/></worksheet>';
   const bd = '<border><left style="medium"><color auto="1"/></left><right style="medium"><color auto="1"/></right><top style="medium"><color auto="1"/></top><bottom style="medium"><color auto="1"/></bottom><diagonal/></border>';
   const fill = (c) => '<fill><patternFill patternType="solid"><fgColor rgb="FF' + c + '"/><bgColor indexed="64"/></patternFill></fill>';
   const xf = (font, fl, brd, h, fmt, wrap) => '<xf numFmtId="' + (fmt || 0) + '" fontId="' + font + '" fillId="' + fl + '" borderId="' + brd + '" applyFont="1" applyFill="1" applyBorder="1"' + (fmt ? ' applyNumberFormat="1"' : '') + ' applyAlignment="1"><alignment horizontal="' + h + '" vertical="center"' + (wrap ? ' wrapText="1"' : '') + (h === 'right' ? ' readingOrder="2"' : '') + '/></xf>';
