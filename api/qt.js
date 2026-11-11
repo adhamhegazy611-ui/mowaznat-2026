@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');
+const zlib = require('zlib');
 const { analyze } = require('./_lib/qt');
 const { surfaceGroups, civilCounts, scanDwgJson } = require('./_lib/surf');
 
@@ -31,30 +32,39 @@ module.exports = async (req, res) => {
   if (!/^[\w\-./]+$/.test(p) || p.includes('..')) return res.status(400).json({ error: 'bad path' });
 
   // اللوحة من التخزين بصلاحية المستخدم نفسه (التخزين مقفول على الأدمن)
-  const r = await fetch(URL_ + '/storage/v1/object/qt/' + p.split('/').map(encodeURIComponent).join('/'), { headers: { apikey: ANON, Authorization: 'Bearer ' + token } });
-  if (r.status === 400 || r.status === 404) return res.status(404).json({ error: 'الملف مش موجود' });
-  if (r.status === 401 || r.status === 403) return res.status(403).json({ error: 'مش مسموح' });
-  if (!r.ok) return res.status(502).json({ error: 'storage ' + r.status });
-  const buf = Buffer.from(await r.arrayBuffer());
+  // اللوح الكبيرة متخزنة مضغوطة على أجزاء: «…dwg.gzpN» → الأجزاء «.0 … .N-1»
+  const gm = /\.gzp(\d+)$/.exec(p), parts = gm ? Array.from({ length: Math.min(+gm[1], 20) }, (_, i) => p + '.' + i) : [p];
+  const bufs = [];
+  for (const pp of parts) {
+    const r = await fetch(URL_ + '/storage/v1/object/qt/' + pp.split('/').map(encodeURIComponent).join('/'), { headers: { apikey: ANON, Authorization: 'Bearer ' + token } });
+    if (r.status === 400 || r.status === 404) return res.status(404).json({ error: 'الملف مش موجود' });
+    if (r.status === 401 || r.status === 403) return res.status(403).json({ error: 'مش مسموح' });
+    if (!r.ok) return res.status(502).json({ error: 'storage ' + r.status });
+    bufs.push(Buffer.from(await r.arrayBuffer()));
+  }
+  let buf = Buffer.concat(bufs); bufs.length = 0;
+  if (gm) { try { buf = zlib.gunzipSync(buf); } catch (e) { return res.status(400).json({ error: 'تعذّر فك ضغط اللوحة' }); } }
+  const big = buf.length > 40 * 1048576;
 
   const id = Math.random().toString(36).slice(2);
   const tmpIn = path.join(os.tmpdir(), id + '.dwg'), tmpOut = path.join(os.tmpdir(), id + '.dxf'), tmpJ = path.join(os.tmpdir(), id + '.json');
   try {
     let dxf;
-    if (/\.dxf$/i.test(p) || buf.subarray(0, 64).toString('latin1').includes('SECTION')) dxf = buf.toString('utf8');
+    if (/\.dxf(\.gzp\d+)?$/i.test(p) || buf.subarray(0, 64).toString('latin1').includes('SECTION')) dxf = buf.toString('utf8');
     else {
       const head = buf.subarray(0, 6).toString('latin1');
       if (!/^AC\d{4}$/.test(head)) return res.status(400).json({ error: 'الملف مش DWG' });
       fs.writeFileSync(tmpIn, buf);
-      const out = spawnSync(bin(), ['-y', '-o', tmpOut, tmpIn], { timeout: 50000, encoding: 'utf8', maxBuffer: 1 << 24 });
+      const out = spawnSync(bin(), ['-y', '-o', tmpOut, tmpIn], { timeout: big ? 170000 : 50000, encoding: 'utf8', maxBuffer: 1 << 24 });
       if (!fs.existsSync(tmpOut)) return res.status(422).json({ error: 'تعذّر قراءة اللوحة', detail: String(out.stderr || out.error || '').slice(-400), version: head });
       dxf = fs.readFileSync(tmpOut, 'utf8');
+      try { fs.unlinkSync(tmpOut); } catch (e) { /* مساحة /tmp محدودة مع اللوح الكبيرة */ }
     }
     const result = analyze(dxf);
     // سطوح Civil 3D: بتتقرا من بيانات الـ DWG الخام (dwg2dxf بيسيبها كعناصر Proxy)
     if (fs.existsSync(tmpIn) && result.warnings.some((w) => /Civil 3D/.test(w))) {
       try {
-        spawnSync(bin('dwgread'), ['-O', 'JSON', '-o', tmpJ, tmpIn], { timeout: 45000, encoding: 'utf8', maxBuffer: 1 << 24 });
+        spawnSync(bin('dwgread'), ['-O', 'JSON', '-o', tmpJ, tmpIn], { timeout: big ? 80000 : 45000, encoding: 'utf8', maxBuffer: 1 << 24 });
         if (fs.existsSync(tmpJ)) {
           // قراءة خفيفة (من غير JSON.parse للملف كله) — وبتتحمل nan اللي dwgread بيكتبها
           const J = scanDwgJson(fs.readFileSync(tmpJ, 'latin1'));
