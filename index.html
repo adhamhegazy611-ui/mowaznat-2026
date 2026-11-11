@@ -129,6 +129,7 @@ body.in footer{color:#7f94b8}
 .c1{--c:#b8860b;--soft:#fdf6e3}.c2{--c:#1f5135;--soft:#e8f1eb}.c3{--c:#1e3a66;--soft:#eaf0f8}
 .c4{--c:#9a3412;--soft:#fdeee6}
 .c5{--c:#0f766e;--soft:#e6f4f2}
+.c6{--c:#7c3aed;--soft:#f1eafd}
 #qt{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;background:#f4f6f9;color:var(--ink)}
 #qt .vbar{flex:none;height:46px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--navy);color:#fff;box-shadow:inset 0 -3px 0 #0f766e}
 #qt .vbar button{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:9px;padding:5px 12px;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
@@ -861,6 +862,22 @@ body:not(.in) footer{color:#6f84a6}
   #reqBtn{background:#1e3a66;border-color:rgba(255,255,255,.35);left:14px;bottom:14px;padding:9px 14px}
   main{padding-bottom:90px}
 }
+/* ===== المشاريع ===== */
+#qt .hstats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+#qt .hstat{background:var(--card,#fff);border:1px solid var(--bd,#e2e8f0);border-radius:14px;padding:12px 14px;cursor:pointer;transition:transform .15s}
+#qt .hstat:hover{transform:translateY(-2px)}
+#qt .hstat small{display:block;opacity:.75;font-size:12px;font-weight:700}
+#qt .hstat b{display:block;font-size:20px;margin-top:4px}
+#qt .htw{overflow-x:auto}
+#qt table.htab{width:100%;border-collapse:collapse;font-size:13.5px}
+#qt table.htab th{text-align:right;font-weight:800;opacity:.8;padding:8px 6px;border-bottom:1px solid var(--bd,#e2e8f0)}
+#qt table.htab td{padding:8px 6px;border-bottom:1px solid rgba(148,163,184,.18);vertical-align:top}
+#qt table.htab td.n{text-align:left;font-weight:800;white-space:nowrap}
+#qt .hlink{background:none;border:0;color:#60a5fa;font:inherit;cursor:pointer;text-decoration:underline;padding:0;text-align:right}
+#qt .hrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+#qt .hkv{display:grid;grid-template-columns:minmax(110px,max-content) 1fr;gap:6px 14px;font-size:14px}
+#qt .hkv span{opacity:.75}
+#qt .hsug{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(148,163,184,.18)}
 </style>
 </head>
 <body>
@@ -948,6 +965,11 @@ body:not(.in) footer{color:#6f84a6}
       <h2>حصر الكميات</h2>
       <div class="go"><span>فتح ←</span></div>
     </a>
+    <a class="card c6" id="hubCard" href="#" hidden>
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M8 13h8M8 16h5"/></svg></div>
+      <h2>المشاريع</h2>
+      <div class="go"><span>فتح ←</span></div>
+    </a>
   </div>
 </main>
 <footer>مكتب التصميمات</footer>
@@ -1008,7 +1030,7 @@ function show(session) {
   $('who').classList.toggle('hidden', !inn);
   if (!inn && typeof closeApp === 'function' && $('view')) closeApp();
   if (inn) { $('uName').textContent = (session.user.email || '').split('@')[0]; loadAdmin(session.user.id); }
-  else { $('reqBtn').classList.add('hidden'); $('paCard').hidden = true; $('qtCard').hidden = true; closePA(); closeQT(); }
+  else { $('reqBtn').classList.add('hidden'); $('paCard').hidden = true; $('qtCard').hidden = true; $('hubCard').hidden = true; closePA(); closeQT(); }
 }
 
 /* ===== طلبات إنشاء الحسابات (للمسؤول بس) ===== */
@@ -1027,7 +1049,8 @@ async function loadAdmin(uid) {
   IS_QT = !!(IS_ADMIN && data.username === 'adham_hegazy33'); // حصر الكميات لحساب أدهم حجازي بس
   $('reqBtn').classList.toggle('hidden', !IS_ADMIN);
   $('paCard').hidden = !IS_ADMIN;
-  $('qtCard').hidden = !IS_QT; if (!IS_QT) closeQT();
+  $('qtCard').hidden = !IS_QT; if (!IS_QT && !IS_ADMIN) closeQT();
+  $('hubCard').hidden = !IS_ADMIN;
   if (IS_ADMIN) refreshReqs();
 }
 async function getReqs() {
@@ -3304,13 +3327,14 @@ const qtN = (v, d = 0) => (v == null || !isFinite(v) ? '—' : (Math.round(Numbe
 const qtKey = (g) => g.kind + '|' + g.layer + '|' + (g.pat || g.block || '') + '|' + (g.kind === 'block' ? '' : g.color) + (g.blk ? '|@' + g.blk : '');
 const qtTag = (g) => (g.blk ? ' · جوه بلوك «' + g.blk + '»' : '') + (g.hid ? ' · طبقة مقفولة/مجمّدة' : '');
 const qtKind = (g) => g.kind === 'surface' ? (g.src === 's2s' ? 'Surface to Surface' : g.src === 'table' ? 'جدول Cut/Fill من Civil' : 'سطح فرق Civil 3D') : g.kind === 'hatch' ? 'هاتش ' + (/SOLID/i.test(g.pat) ? 'مصمت' : g.pat) : g.kind === 'line' ? 'خطوط' + (g.lt && g.lt.some((x) => x !== 'CONTINUOUS') ? ' متقطعة' : '') : 'بلوك «' + g.block + '»';
+let QT_FROM = 'qtCard';
 function qtClip() {
-  const c = $('qtCard'), r = c.getBoundingClientRect(), W = innerWidth, H = innerHeight;
+  const c = $(QT_FROM), r = c.getBoundingClientRect(), W = innerWidth, H = innerHeight;
   if (!r.width) return 'inset(45% 35% 45% 35% round 14px)';
   return `inset(${Math.max(0, r.top)}px ${Math.max(0, W - r.right)}px ${Math.max(0, H - r.bottom)}px ${Math.max(0, r.left)}px round 14px)`;
 }
 function openQT() {
-  if (!IS_QT) return;
+  if (!IS_QT) return; QT_FROM = 'qtCard';
   const q = $('qt'); q.classList.remove('hidden'); document.body.classList.add('viewing');
   q.animate([{ clipPath: qtClip() }, { clipPath: 'inset(0px 0px 0px 0px round 0px)' }], { duration: 600, easing: 'cubic-bezier(.2,.85,.25,1)' });
   history.pushState({ qt: 1 }, '');
@@ -4229,6 +4253,215 @@ function qtExport() {
   const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'حصر كميات - ' + p.name + '.xls'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 $('qtCard').onclick = (e) => { e.preventDefault(); openQT(); };
+$('hubCard').onclick = (e) => { e.preventDefault(); openHub(); };
+
+// ===================== المشاريع: كل حاجة تخص المشروع في مكان واحد =====================
+// بيربط: حصر الكميات (qt_projects) + تحليل الأسعار والموازنة (pa_projects) + موقف المشروع (mz_projects) + المقايسات (بحث بالاسم)
+const HUB = { list: [], cur: null, tab: 'qt' };
+function openHub() {
+  if (!IS_ADMIN) return; QT_FROM = 'hubCard';
+  const q = $('qt'); q.classList.remove('hidden'); document.body.classList.add('viewing');
+  q.animate([{ clipPath: qtClip() }, { clipPath: 'inset(0px 0px 0px 0px round 0px)' }], { duration: 600, easing: 'cubic-bezier(.2,.85,.25,1)' });
+  history.pushState({ qt: 1 }, '');
+  hubHome();
+}
+const hubNum = (v, d) => (v == null || v === '' ? '—' : qtN(+v, d == null ? 0 : d));
+function hubTable(heads, rows) {
+  const w = pjEl('div', 'htw'), t = pjEl('table', 'htab'), hr = pjEl('tr');
+  heads.forEach((x) => hr.appendChild(pjEl('th', '', x))); t.appendChild(hr);
+  rows.forEach((r) => t.appendChild(r)); w.appendChild(t); return w;
+}
+async function hubHome() {
+  HUB.cur = null;
+  const m = qtMain('المشاريع');
+  const hero = pjEl('div', 'qhero'), hl = pjEl('div');
+  hl.append(pjEl('h2', '', 'المشاريع'), pjEl('p', '', 'كل مشروع فيه: اللوح والكميات، تحليل الأسعار والموازنة، المقايسات، وموقف المشروع — في مكان واحد.'));
+  const nb = pjEl('button', 'qbtn on', '+ مشروع جديد'); nb.type = 'button'; nb.onclick = hubNew;
+  hero.append(hl, nb); m.appendChild(hero);
+  const grid = pjEl('div', 'qgrid'); grid.appendChild(pjEl('div', 'qempty', 'جاري التحميل…')); m.appendChild(grid);
+  const sug = pjEl('div'); sug.style.marginTop = '16px'; m.appendChild(sug);
+  const [{ data: hs, error }, { data: qps }, { data: pps }, { data: its }] = await Promise.all([
+    sb.from('hub_projects').select('*').order('created_at', { ascending: false }),
+    IS_QT ? sb.from('qt_projects').select('id,name,pa_id') : Promise.resolve({ data: [] }),
+    sb.from('pa_projects').select('id,name,items'),
+    IS_QT ? sb.from('qt_items').select('project_id') : Promise.resolve({ data: [] }),
+  ]);
+  grid.textContent = '';
+  if (error) { grid.appendChild(pjEl('div', 'qempty', 'تعذّر تحميل المشاريع.')); return; }
+  HUB.list = hs || [];
+  const cnt = {}; (its || []).forEach((x) => { cnt[x.project_id] = (cnt[x.project_id] || 0) + 1; });
+  const paBy = {}; (pps || []).forEach((p) => { paBy[p.id] = p; });
+  if (!HUB.list.length) grid.appendChild(pjEl('div', 'qempty', 'لسه مفيش مشاريع. دوس «+ مشروع جديد».'));
+  HUB.list.forEach((h) => {
+    const c = pjEl('button', 'qproj'); c.type = 'button';
+    const bits = [];
+    if (h.qt_id && IS_QT) bits.push((cnt[h.qt_id] || 0) + ' بند حصر');
+    if (h.pa_id && paBy[h.pa_id]) bits.push((paBy[h.pa_id].items || []).length + ' بند موازنة');
+    if (h.mz_id) bits.push('موقف المشروع');
+    c.append(pjEl('b', '', h.name), pjEl('span', '', bits.join(' · ') || 'مش مربوط لسه'), pjEl('small', '', new Date(h.created_at).toLocaleDateString('ar-EG')));
+    c.onclick = () => hubOpen(h.id);
+    grid.appendChild(c);
+  });
+  // مشاريع حصر أو موازنة لسه مش متجمعة هنا
+  const usedQ = new Set(HUB.list.map((h) => h.qt_id).filter(Boolean)), usedP = new Set(HUB.list.map((h) => h.pa_id).filter(Boolean));
+  const loose = [];
+  (qps || []).forEach((q) => { if (!usedQ.has(q.id)) loose.push({ name: q.name, qt_id: q.id, pa_id: q.pa_id && paBy[q.pa_id] && !usedP.has(q.pa_id) ? q.pa_id : null }); });
+  const lq = new Set(loose.map((x) => x.pa_id).filter(Boolean));
+  (pps || []).forEach((p) => { if (!usedP.has(p.id) && !lq.has(p.id)) loose.push({ name: p.name, qt_id: null, pa_id: p.id }); });
+  if (loose.length) {
+    const cd = pjEl('div', 'qcard'); cd.appendChild(pjEl('h3', '', 'مشاريع لسه مش متجمعة هنا'));
+    loose.forEach((x) => {
+      const k = [x.qt_id && 'حصر', x.pa_id && 'موازنة'].filter(Boolean).join(' + ');
+      const r = pjEl('div', 'hsug'); const b = pjEl('button', 'qbtn', '+ ضمه للمشاريع'); b.type = 'button';
+      b.onclick = async () => { b.disabled = true; const { error: e2 } = await sb.from('hub_projects').insert({ name: x.name, qt_id: x.qt_id, pa_id: x.pa_id, est_q: x.name }); if (e2) { b.disabled = false; return alert('تعذّر الإضافة'); } hubHome(); };
+      r.append(pjEl('span', '', x.name + ' — ' + k), b); cd.appendChild(r);
+    });
+    sug.appendChild(cd);
+  }
+}
+async function hubNew() {
+  const v = await qtForm('مشروع جديد', 'بعد الإنشاء تقدر تربطه بالحصر والموازنة وموقف المشروع', [{ k: 'name', label: 'اسم المشروع' }], 'إنشاء');
+  if (!v || !String(v.name || '').trim()) return;
+  const name = v.name.trim(); let qt_id = null;
+  if (IS_QT) { const { data } = await sb.from('qt_projects').insert({ name }).select('id').single(); qt_id = data ? data.id : null; }
+  const { data: h, error } = await sb.from('hub_projects').insert({ name, qt_id, est_q: name }).select('*').single();
+  if (error) return alert('تعذّر إنشاء المشروع');
+  hubOpen(h.id);
+}
+async function hubOpen(id, tab) {
+  const m = qtMain('المشاريع', hubHome); m.appendChild(pjEl('div', 'qempty', 'جاري التحميل…'));
+  const { data: h } = await sb.from('hub_projects').select('*').eq('id', id).single();
+  if (!h) { m.textContent = ''; m.appendChild(pjEl('div', 'qempty', 'تعذّر تحميل المشروع.')); return; }
+  const none = Promise.resolve({ data: null });
+  const [qp, qi, pp, mz, es] = await Promise.all([
+    h.qt_id && IS_QT ? sb.from('qt_projects').select('*').eq('id', h.qt_id).maybeSingle() : none,
+    h.qt_id && IS_QT ? sb.from('qt_items').select('id,item,unit,mode,qty,file_name,file_path,sort,created_at').eq('project_id', h.qt_id).order('sort').order('created_at') : none,
+    h.pa_id ? sb.from('pa_projects').select('id,name,items,basics,updated_at').eq('id', h.pa_id).maybeSingle() : none,
+    h.mz_id ? sb.from('mz_projects').select('*').eq('id', h.mz_id).maybeSingle() : none,
+    sb.rpc('hub_estimates', { q: h.est_q || h.name }),
+  ]);
+  HUB.cur = { h, qp: qp.data, qi: qi.data || [], pp: pp.data, mz: mz.data, es: es.data || [] };
+  if (tab) HUB.tab = tab;
+  hubRender();
+}
+function hubRender() {
+  const { h, qi, pp, mz, es } = HUB.cur;
+  const m = qtMain(h.name, hubHome);
+  const hero = pjEl('div', 'qhero'), hl = pjEl('div');
+  hl.append(pjEl('span', 'chip', 'مشروع'), pjEl('h2', '', h.name));
+  const hb = pjEl('div', 'hb');
+  const ln = pjEl('button', 'qbtn', '🔗 الربط والاسم'); ln.type = 'button'; ln.onclick = hubLink;
+  const dl = pjEl('button', 'qbtn danger', 'شيله من المشاريع'); dl.type = 'button'; dl.title = 'بيشيل التجميع بس — الحصر والموازنة والمقايسات زي ما هم';
+  dl.onclick = async () => { if (!confirm('تشيل «' + h.name + '» من المشاريع؟ (الحصر والموازنة مش هيتمسحوا)')) return; await sb.from('hub_projects').delete().eq('id', h.id); hubHome(); };
+  hb.append(ln, dl); hero.append(hl, hb); m.appendChild(hero);
+  const nb = pp ? (pp.items || []).length : null;
+  const st = pjEl('div', 'hstats');
+  const stat = (t, v, tab) => { const x = pjEl('div', 'hstat'); x.append(pjEl('small', '', t), pjEl('b', '', String(v))); x.onclick = () => { HUB.tab = tab; hubRender(); }; st.appendChild(x); };
+  if (IS_QT) { stat('اللوح', h.qt_id ? new Set(qi.filter((x) => x.file_path).map((x) => x.file_path)).size : '—', 'qt'); stat('بنود الحصر', h.qt_id ? qi.length : '—', 'qt'); }
+  stat('بنود الموازنة', nb == null ? '—' : nb, 'pa');
+  stat('المقايسات', es.length, 'est');
+  stat('إجمالي الموازنة (شامل)', mz && mz.total_incl != null ? hubNum(mz.total_incl) : '—', 'mz');
+  m.appendChild(st);
+  const tabs = pjEl('div', 'qtabs');
+  const T = [IS_QT && ['qt', 'اللوح والكميات'], ['pa', 'التحليل والموازنة'], ['est', 'المقايسات'], ['mz', 'موقف المشروع']].filter(Boolean);
+  if (!T.some(([k]) => k === HUB.tab)) HUB.tab = T[0][0];
+  T.forEach(([k, t]) => { const b = pjEl('button', HUB.tab === k ? 'on' : '', t); b.type = 'button'; b.onclick = () => { HUB.tab = k; hubRender(); }; tabs.appendChild(b); });
+  m.appendChild(tabs);
+  const cd = pjEl('div', 'qcard'); m.appendChild(cd);
+  ({ qt: hubQT, pa: hubPA, est: hubEst, mz: hubMZ })[HUB.tab](cd);
+}
+function hubNone(cd, txt, btn, fn) { cd.appendChild(pjEl('div', 'qempty', txt)); if (btn) { const b = pjEl('button', 'qbtn on', btn); b.type = 'button'; b.onclick = fn; cd.appendChild(b); } }
+function hubQT(cd) {
+  const { h, qp, qi } = HUB.cur;
+  if (!h.qt_id || !qp) return hubNone(cd, 'المشروع مش مربوط بمشروع حصر كميات.', '🔗 اربطه', hubLink);
+  const r = pjEl('div', 'hrow'); const op = pjEl('button', 'qbtn on', 'فتح في حصر الكميات ←'); op.type = 'button'; op.onclick = () => qtOpen(qp.id);
+  r.appendChild(op); cd.appendChild(r);
+  if (!qi.length) return cd.appendChild(pjEl('div', 'qempty', 'لسه مفيش لوح في الحصر.'));
+  cd.appendChild(hubTable(['البند', 'الكمية', 'الوحدة', 'اللوحة'], qi.map((x) => {
+    const tr = pjEl('tr'); tr.append(pjEl('td', '', x.item), pjEl('td', 'n', hubNum(x.qty, 2)), pjEl('td', '', x.unit || ''));
+    const fd = pjEl('td');
+    if (x.file_path) {
+      const a = pjEl('button', 'hlink', x.file_name || 'اللوحة'); a.type = 'button'; a.title = 'تنزيل اللوحة';
+      a.onclick = async () => { const { data } = await sb.storage.from('qt').createSignedUrl(x.file_path, 600, { download: x.file_name || true }); if (data) location.href = data.signedUrl; else alert('تعذّر تنزيل اللوحة'); };
+      fd.appendChild(a);
+    } else fd.textContent = x.mode === 'manual' ? 'يدوي' : '—';
+    tr.appendChild(fd); return tr;
+  })));
+}
+async function hubOpenPA(view) {
+  const { pp } = HUB.cur; if (!pp) return;
+  closeQT(); await openPA(); if (!PAE) return; await pjOpen(pp.id);
+  if (view === 'pa') { try { const its = paItems(); if (its.length) paShow(its[0]); } catch (e) { /* */ } }
+}
+function hubPA(cd) {
+  const { h, qp, pp } = HUB.cur;
+  if (!h.pa_id || !pp) {
+    hubNone(cd, 'المشروع لسه ملوش تحليل أسعار وموازنة.');
+    const r = pjEl('div', 'hrow');
+    if (qp && IS_QT) { const b = pjEl('button', 'qbtn on', '💰 اعمل الموازنة من الحصر'); b.type = 'button'; b.onclick = async () => { await qtOpen(qp.id); qtBudget(); }; r.appendChild(b); }
+    const l = pjEl('button', 'qbtn', '🔗 اربطه بموازنة موجودة'); l.type = 'button'; l.onclick = hubLink; r.appendChild(l);
+    cd.appendChild(r); return;
+  }
+  const r = pjEl('div', 'hrow');
+  const b1 = pjEl('button', 'qbtn on', 'فتح الموازنة ←'); b1.type = 'button'; b1.onclick = () => hubOpenPA('boq');
+  const b2 = pjEl('button', 'qbtn', 'فتح تحليل الأسعار ←'); b2.type = 'button'; b2.onclick = () => hubOpenPA('pa');
+  r.append(b1, b2); cd.appendChild(r);
+  const kv = pjEl('div', 'hkv'); const add = (k, v) => kv.append(pjEl('span', '', k), pjEl('b', '', v));
+  add('اسم الموازنة', pp.name); add('عدد البنود', String((pp.items || []).length));
+  add('آخر تعديل', new Date(pp.updated_at).toLocaleString('ar-EG'));
+  cd.appendChild(kv);
+}
+function hubEst(cd) {
+  const { h, es } = HUB.cur;
+  const r = pjEl('div', 'hrow'); const inp = pjEl('input'); inp.type = 'text'; inp.value = h.est_q || h.name;
+  inp.style.cssText = 'flex:1;min-width:180px;padding:8px 10px;border-radius:10px;border:1px solid var(--bd,#cbd5e1);font:inherit;background:transparent;color:inherit';
+  const b = pjEl('button', 'qbtn on', 'بحث وحفظ'); b.type = 'button';
+  b.onclick = async () => { const q = inp.value.trim(); if (!q) return; await sb.from('hub_projects').update({ est_q: q }).eq('id', h.id); hubOpen(h.id, 'est'); };
+  inp.onkeydown = (e) => { if (e.key === 'Enter') b.click(); };
+  r.append(pjEl('span', '', 'كلمة البحث في اسم المشروع:'), inp, b); cd.appendChild(r);
+  if (!es.length) return cd.appendChild(pjEl('div', 'qempty', 'مفيش مقايسات بالاسم ده. جرّب كلمة أقصر (جزء مميز من اسم المشروع).'));
+  cd.appendChild(hubTable(['م', 'الشركة', 'المشروع', 'الكتيبة', 'التاريخ'], es.map((x, i) => {
+    const tr = pjEl('tr'); tr.append(pjEl('td', '', String(i + 1)), pjEl('td', '', x.company || ''), pjEl('td', '', x.project || ''), pjEl('td', '', x.battalion || ''), pjEl('td', 'n', x.d || '')); return tr;
+  })));
+}
+function hubMZ(cd) {
+  const { h, mz } = HUB.cur;
+  if (!h.mz_id || !mz) return hubNone(cd, 'المشروع مش مربوط بمشروع في الموازنات (موقف المشاريع).', '🔗 اربطه', hubLink);
+  const kv = pjEl('div', 'hkv'); const add = (k, v) => { if (v != null && v !== '') kv.append(pjEl('span', '', k), pjEl('b', '', String(v))); };
+  add('اسم المشروع', mz.name); add('القطاع', mz.sector); add('الكتيبة', mz.battalion); add('المراجع', mz.reviewer); add('التسعير', mz.pricing_by);
+  add('موقف اللوحات', mz.st_drawings); add('موقف الموازنة', mz.st_budget); add('موقف العقود', mz.st_contracts); add('موقف الذاتي', mz.st_self);
+  add('حالة الموازنة', mz.budget_status); add('إجمالي شامل', mz.total_incl != null ? hubNum(mz.total_incl) : null); add('إجمالي غير شامل', mz.total_excl != null ? hubNum(mz.total_excl) : null);
+  add('متوقف على', mz.blocked_on); add('الإجراء المتخذ', mz.action_taken); add('ملاحظات', mz.notes);
+  cd.appendChild(kv);
+  const r = pjEl('div', 'hrow'); r.style.marginTop = '14px';
+  if (mz.sheet_path) { const s1 = pjEl('button', 'qbtn on', 'XLS فتح شيت الموازنة'); s1.type = 'button'; s1.onclick = async () => { const { data } = await sb.storage.from('mz').createSignedUrl(mz.sheet_path, 600, { download: mz.sheet_name || true }); if (data) location.href = data.signedUrl; else alert('تعذّر فتح الشيت'); }; r.appendChild(s1); }
+  const go = pjEl('a', 'qbtn', 'فتح في الموازنات ←'); go.href = 'https://mowaznat-2026.vercel.app/'; go.target = '_blank'; go.rel = 'noopener'; r.appendChild(go);
+  cd.appendChild(r);
+}
+async function hubLink() {
+  const { h } = HUB.cur;
+  const [{ data: qps }, { data: pps }, { data: mzs }] = await Promise.all([
+    IS_QT ? sb.from('qt_projects').select('id,name').order('updated_at', { ascending: false }) : Promise.resolve({ data: [] }),
+    sb.from('pa_projects').select('id,name').order('updated_at', { ascending: false }),
+    sb.from('mz_projects').select('id,name,battalion').order('sort_order'),
+  ]);
+  const NONE = '— مش مربوط —';
+  const opt = (rows, cur, lab) => { const c = (rows || []).find((r) => String(r.id) === String(cur)); return { options: [NONE].concat((rows || []).map(lab)), value: c ? lab(c) : NONE }; };
+  const qL = (r) => r.name, pL = (r) => r.name, mL = (r) => r.name + (r.battalion ? ' (ك ' + r.battalion + ')' : '') + ' #' + r.id;
+  const fields = [{ k: 'name', label: 'اسم المشروع', value: h.name }];
+  if (IS_QT) fields.push({ k: 'qt', label: 'مشروع حصر الكميات', ...opt(qps, h.qt_id, qL) });
+  fields.push({ k: 'pa', label: 'تحليل الأسعار والموازنة', ...opt(pps, h.pa_id, pL) });
+  fields.push({ k: 'mz', label: 'موقف المشروع (الموازنات)', ...opt(mzs, h.mz_id, mL) });
+  fields.push({ k: 'est', label: 'كلمة البحث في المقايسات', value: h.est_q || h.name });
+  const v = await qtForm('الربط والاسم', 'اختار من كل نظام المشروع اللي يخص «' + h.name + '»', fields, 'حفظ');
+  if (!v) return;
+  const pick = (rows, val, lab) => { const r = (rows || []).find((x) => lab(x) === val); return r ? r.id : null; };
+  const up = { name: String(v.name || h.name).trim() || h.name, pa_id: pick(pps, v.pa, pL), mz_id: pick(mzs, v.mz, mL), est_q: String(v.est || '').trim() || null };
+  if (IS_QT) up.qt_id = pick(qps, v.qt, qL);
+  const { error } = await sb.from('hub_projects').update(up).eq('id', h.id);
+  if (error) return alert('تعذّر الحفظ');
+  hubOpen(h.id);
+}
 $('qtBack').onclick = () => { if (history.state && history.state.qt) history.back(); else closeQT(); };
 addEventListener('popstate', (e) => { if (!(e.state && e.state.qt)) closeQT(); });
 
