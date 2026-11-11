@@ -3910,8 +3910,9 @@ async function qtAdd(pre) {
   fillDL(); qtSysItems().then((sys) => sys && fillDL(sys));
   l1.append(it, dl);
   const l2 = pjEl('label', 'qf'); l2.appendChild(pjEl('span', '', 'ملف اللوحة (DWG أو DXF)'));
-  const fi = pjEl('input'); fi.type = 'file'; fi.accept = '.dwg,.dxf'; l2.appendChild(fi);
+  const fi = pjEl('input'); fi.type = 'file'; fi.accept = '.dwg,.dxf'; fi.multiple = !pre; l2.appendChild(fi);
   row.append(l1, l2); c.appendChild(row);
+  if (!pre) c.appendChild(pjEl('div', 'qhint', 'تقدر تختار لوحة أو كذا لوحة مرة واحدة. لو سبت البند فاضي، السيستم بيختار البند لكل لوحة من البنود المتسجلة (من اسم الملف، أو لوحة شبهها اتحصرت قبل كده، أو أسماء الطبقات) وانت تراجع قبل الحفظ.'));
   const goB = pjEl('button', 'qbtn on', '⚡ حصر اللوحة'); goB.type = 'button'; goB.disabled = true; c.appendChild(goB);
   const st = pjEl('div', 'qstat'); c.appendChild(st);
   m.appendChild(c);
@@ -3922,6 +3923,7 @@ async function qtAdd(pre) {
   const sync = () => { goB.disabled = busy || !fi.files[0] || !it.value.trim(); };
   const go = async () => {
     const f = fi.files[0]; sync(); if (!f || busy) return;
+    if (!pre && (fi.files.length > 1 || !it.value.trim())) { const fs0 = [...fi.files].filter((x) => /\.(dwg|dxf)$/i.test(x.name) && x.size <= 400 * 1048576); if (!fs0.length) { st.textContent = 'الملفات لازم تكون DWG أو DXF وأقل من 400 ميجا'; return; } return qtBatch(fs0, it.value.trim()); }
     if (!it.value.trim()) { st.textContent = 'اكتب اسم البند وبعدين دوس «حصر اللوحة»'; it.focus(); return; }
     if (f.size > 400 * 1048576) { st.textContent = 'الملف أكبر من 400 ميجا'; return; }
     if (!/\.(dwg|dxf)$/i.test(f.name)) { st.textContent = 'الملف لازم يكون DWG أو DXF'; return; }
@@ -3958,6 +3960,119 @@ async function qtAdd(pre) {
   fi.onchange = go; goB.onclick = go; it.oninput = sync;
   it.onkeydown = (e) => { if (e.key === 'Enter' && fi.files[0]) go(); };
   it.onchange = () => { if (fi.files[0] && it.value.trim() && !busy && !ran) go(); };
+}
+// ===== كذا لوحة مرة واحدة، والبند بيتختار تلقائي من البنود المتسجلة =====
+const QT_CONC = [
+  ['كشط', /قشط|كشط|كشت|milling|scarif/i], ['تشريب', /تشريب|(^|[^a-z])mc([^a-z]|$)|prime/i], ['لاصق', /لاصق|(^|[^a-z])rc([^a-z]|$)|tack/i],
+  ['رابط', /رابط|binder/i], ['سطحي', /سطحي|سطحى|wearing/i], ['احلال', /احلال|replacement/i],
+  ['اساس', /اساس|(^|[^\u0600-\u06FF]|ال)سن([^\u0600-\u06FF]|$)|سن ?\d|base ?course|subbase/i],
+  ['ردم', /ردم|(^|[^a-z])fill([^a-z]|$)|embank/i], ['حفر', /حفر|قطع|(^|[^a-z])cut([^a-z]|$)|excavat/i],
+  ['طبان', /طبان/], ['نيوجيرسي', /نيوجيرس|نيوجرس|new ?jersey/i], ['بردور', /بردور|curb|kerb/i], ['انترلوك', /انترلوك|interlock/i],
+  ['تخطيط', /تخطيط|دهان|marking/i], ['عداي', /عداي|عبار|culvert/i], ['بلاط', /بلاط|tile/i], ['زراعة', /زراع|landscap/i],
+];
+const qtNorm = (t) => String(t || '').replace(/[\u064B-\u0652\u0640]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[_\-.]+/g, ' ').toLowerCase();
+const qtConc = (t) => { const n = qtNorm(t); const c = QT_CONC.find(([, re]) => re.test(n)); return c ? c[0] : null; };
+function qtItemGuess(fname, j, H) {
+  const names = [].concat(QT.items.filter((x) => x.mode !== 'formula').map((x) => x.item), H.map((x) => x.item), QT_ITEMS);
+  const nameFor = (c) => names.find((n) => qtConc(n) === c) || null;
+  // 1) اسم الملف
+  const cf = qtConc(fname.replace(/\.(dwg|dxf)$/i, ''));
+  if (cf && nameFor(cf)) return { item: nameFor(cf), why: 'من اسم الملف' };
+  const gs = (j.groups || []).filter((g) => !g.hid), keys = new Set(gs.map(qtKey));
+  // 2) لوحة شبهها اتحصرت قبل كده (نفس الطبقات اللي اتحسب منها البند)
+  const generic = (k) => /^\w+\|(0|DEFPOINTS)?\|/i.test(k);
+  const hm = H.find((x) => { const sel = (x.sel || []).filter((k) => !QT_XK.test(k)); return sel.length && sel.some((k) => !generic(k)) && sel.every((k) => keys.has(k)); });
+  if (hm) return { item: hm.item, why: 'زي لوحة «' + (hm.file_name || hm.item) + '» اتحصرت قبل كده' };
+  // 3) أسماء الطبقات / الكلام المكتوب في اللوحة
+  const sc = {};
+  gs.forEach((g) => { const c = g.kind !== 'surface' && !QT_BG.test(g.layer) && qtConc(g.layer); if (c) sc[c] = (sc[c] || 0) + 1 + Math.log10(1 + (g.area || 0) + (g.length || 0)); });
+  const best = Object.entries(sc).sort((a, b) => b[1] - a[1])[0];
+  if (best && nameFor(best[0])) { const g = gs.find((x) => qtConc(x.layer) === best[0]); return { item: nameFor(best[0]), why: 'من اسم الطبقة «' + g.layer + '»' }; }
+  // 4) فيها سطح فرق من Civil 3D → حفر أو ردم حسب الأكبر
+  const sf = gs.filter((g) => g.kind === 'surface' && (g.src === 'table' ? g.total : !g.src));
+  if (sf.length) { const cut = sf.reduce((s, g) => s + (g.cut || 0), 0), fill = sf.reduce((s, g) => s + (g.fill || 0), 0); const c = cut >= fill ? 'حفر' : 'ردم'; return { item: nameFor(c) || c, why: 'اللوحة فيها سطح فرق (' + (c === 'حفر' ? 'القطع' : 'الردم') + ' أكبر)' }; }
+  const tx = ((j.inv && j.inv.texts) || []).map((t) => t && t.t).filter(Boolean).join(' ');
+  const ct = qtConc(tx); if (ct && nameFor(ct)) return { item: nameFor(ct), why: 'من الكلام المكتوب في اللوحة' };
+  return { item: '', why: 'ماعرفتش أحدد البند — اكتبه' };
+}
+async function qtBatch(files, forced) {
+  const p = QT.cur; const m = qtMain(p.name + ' — ' + files.length + ' لوحة', qtProject);
+  const head = pjEl('div', 'qcard'); head.appendChild(pjEl('h3', '', files.length + ' لوحة — البند بيتختار تلقائي'));
+  head.appendChild(pjEl('div', 'qhint', 'راجع البند والكمية لكل لوحة. تقدر تغيّر البند من الخانة، والكمية بتتحسب تاني على طول.'));
+  const dl = pjEl('datalist'); dl.id = 'qtBatchDL'; head.appendChild(dl);
+  m.appendChild(head);
+  const list = pjEl('div'); m.appendChild(list);
+  const foot = pjEl('div', 'qcard'); const saveB = pjEl('button', 'qbtn on', '💾 حفظ الكل'); saveB.type = 'button'; saveB.disabled = true;
+  const cancelB = pjEl('button', 'qbtn', 'إلغاء'); cancelB.type = 'button'; const fst = pjEl('div', 'qstat');
+  foot.append(saveB, cancelB, fst); m.appendChild(foot);
+  const { data: H0 } = await sb.from('qt_items').select('item,mode,sel,thickness,file_name,created_at').neq('mode', 'formula').order('created_at', { ascending: false }).limit(800);
+  const H = (H0 || []).filter((x) => x.mode !== 'manual');
+  const opts = new Set([].concat(QT.items.map((x) => x.item), H.map((x) => x.item), QT_ITEMS).map((v) => (v || '').trim()).filter(Boolean));
+  const fillDL = (extra) => { dl.textContent = ''; const all = new Set(opts); (extra || []).forEach(([vs]) => vs.forEach((v) => v && all.add(v))); all.forEach((v) => { const o = pjEl('option'); o.value = v; dl.appendChild(o); }); };
+  fillDL(); qtSysItems().then((sys) => sys && fillDL(sys));
+  const memFor = (item) => H.find((x) => x.item === item.trim()) || null;
+  const rows = [];
+  cancelB.textContent = 'رجوع للمشروع'; cancelB.title = 'اللوح اللي مااتحفظتش بتتمسح';
+  cancelB.onclick = async () => { const ps = rows.filter((r) => r.path && !r.saved).map((r) => r.path); if (ps.length) await qtRm(ps); qtProject(); };
+  const refresh = () => { const ok = rows.filter((r) => !r.saved && r.q > 0 && r.inc.checked); saveB.disabled = !ok.length || rows.some((r) => r.busy); saveB.textContent = '💾 حفظ ' + (ok.length || '') + ' لوحة'; };
+  files.forEach((f) => {
+    const c = pjEl('div', 'qcard'), top = pjEl('div', 'hrow');
+    const inc = pjEl('input'); inc.type = 'checkbox'; inc.checked = true; inc.title = 'تتحفظ ولا لا';
+    top.append(inc, pjEl('b', '', f.name), pjEl('small', '', '(' + (f.size / 1048576).toFixed(1) + ' ميجا)'));
+    const it = pjEl('input'); it.type = 'text'; it.setAttribute('list', 'qtBatchDL'); it.placeholder = 'البند'; it.disabled = true;
+    it.style.cssText = 'flex:1;min-width:180px;padding:8px 10px;border-radius:10px;border:1px solid var(--bd,#cbd5e1);font:inherit;background:transparent;color:inherit';
+    const r2 = pjEl('div', 'hrow'); r2.append(pjEl('span', '', 'البند:'), it);
+    const why = pjEl('div', 'qhint'), qv = pjEl('div', 'qstat'), box = pjEl('div');
+    qv.style.cssText = 'font-weight:800;font-size:15px;color:#fcd34d;margin:8px 0';
+    c.append(top, r2, why, qv, box); list.appendChild(c);
+    const r = { f, c, inc, it, why, qv, box, busy: true, q: null }; rows.push(r);
+    inc.onchange = refresh;
+  });
+  const calc = (r) => {
+    const item = r.it.value.trim(); r.box.textContent = ''; r.q = null; r.au = null;
+    if (!item) { r.qv.textContent = 'اكتب البند'; return refresh(); }
+    const au = qtAuto(item, r.j.groups, memFor(item)), q = au && qtQty(r.j.groups, au);
+    if (au && q != null && q > 0) { r.au = au; r.q = q; r.qv.textContent = 'الكمية: ' + qtN(q, 2) + ' ' + QT_MODES[au.mode][1] + (au.how === 'mem' ? ' — نفس طريقة الحسبة اللي قبل كده' : ''); }
+    else {
+      r.qv.textContent = QT_BASE.test(item) && au && !au.th ? 'بند أساس: اكتب السمك في اسم البند (زي «أساس 25 سم») أو اختار يدوي' : 'السيستم ماعرفش يحسب الكمية لوحده';
+      const b = pjEl('button', 'qbtn', 'اختار اللي يتحسب يدوي'); b.type = 'button';
+      b.onclick = () => { r.saved = true; r.box.textContent = ''; qtPick(r.box, item, r.f.name, r.path, r.j, null, au || null, true); refresh(); };
+      r.box.appendChild(b);
+    }
+    refresh();
+  };
+  for (const r of rows) {
+    r.qv.innerHTML = '<span class="spin"></span> بيرفع…';
+    const path0 = p.id + '/' + Date.now() + '-' + (r.f.name.replace(/[^\w.\-]+/g, '_').replace(/^_+/, '') || 'drawing.dwg');
+    const up = await qtUpload(path0, r.f, (t) => { r.qv.innerHTML = '<span class="spin"></span> ' + t; });
+    if (up.error) { r.qv.textContent = '⚠️ تعذّر رفع الملف: ' + up.error.message; r.busy = false; r.inc.checked = false; refresh(); continue; }
+    r.path = up.path; r.qv.innerHTML = '<span class="spin"></span> بيقرا اللوحة…';
+    let j = null;
+    try { const { data: { session: s } } = await sb.auth.getSession(); const x = await fetch('/api/qt', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.access_token }, body: JSON.stringify({ path: r.path }) }); j = await x.json(); if (!x.ok) j = { error: j.error }; } catch (e) { j = { error: 'تعذّر الاتصال' }; }
+    r.busy = false;
+    if (!j || !j.groups) { r.qv.textContent = '⚠️ ' + ((j && j.error) || 'تعذّر قراءة اللوحة'); await qtRm([r.path]); r.path = null; r.inc.checked = false; refresh(); continue; }
+    qtCF(j); r.j = j;
+    const g = forced ? { item: forced, why: 'البند اللي كتبته' } : qtItemGuess(r.f.name, j, H);
+    r.it.value = g.item; r.why.textContent = (g.item ? '🤖 ' : '') + g.why; r.it.disabled = false;
+    r.it.onchange = () => { r.why.textContent = 'انت اخترته'; calc(r); };
+    calc(r);
+  }
+  saveB.onclick = async () => {
+    saveB.disabled = true; let n = 0;
+    for (const r of rows) {
+      if (r.saved || !r.inc.checked || !(r.q > 0)) continue;
+      fst.innerHTML = '<span class="spin"></span> بيحفظ ' + r.f.name + '…';
+      const row = await qtSave(r.it.value.trim(), r.f.name, r.path, r.j, r.au, r.q);
+      if (row) { r.saved = true; n++; r.qv.textContent = '✅ اتحفظت'; QT.flash = row.id; }
+    }
+    // اللوح اللي شلت علامتها: تتمسح من التخزين
+    const off = rows.filter((r) => !r.saved && r.path && !r.inc.checked);
+    if (off.length) await qtRm(off.map((r) => r.path));
+    off.forEach((r) => { r.path = null; });
+    const rest = rows.filter((r) => !r.saved && r.path);
+    if (!rest.length) { QT.tab = 'sum'; return qtProject(); }
+    fst.textContent = 'اتحفظ ' + n + ' لوحة — فاضل ' + rest.length + ' محتاجين البند أو اختيار يدوي'; refresh();
+  };
 }
 // اللي بيتحفظ: رسمة البند المحسوب كاملة، وباقي عناصر اللوحة أرقامها بس (عشان اللوح الكبيرة تتحفظ بسرعة)
 function qtSlim(groups, sel, inv) {
