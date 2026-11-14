@@ -12,11 +12,17 @@ function parseDXF(text, latin1) {
   const line = () => { if (pos >= N) return null; let e = text.indexOf('\n', pos); if (e < 0) e = N; let s = text.slice(pos, e); pos = e + 1; if (s.charCodeAt(s.length - 1) === 13) s = s.slice(0, -1); return s; };
   let pk = null; // زوج متأجل (للبص على الزوج اللي بعده)
   const HI = /[\x80-\xff]/;
-  const next = () => { if (pk) { const r = pk; pk = null; return r; } const c = line(); if (c === null) return null; let v = line(); if (v === null) return null; if (latin1 && HI.test(v)) v = Buffer.from(v, 'latin1').toString('utf8'); return [c.trim(), v]; };
+  const next = () => { if (pk) { const r = pk; pk = null; return r; } const st = pos; const c = line(); if (c === null) return null; let v = line(); if (v === null) return null; if (latin1 && HI.test(v)) v = Buffer.from(v, 'latin1').toString('utf8'); return [c.trim(), v, st]; };
+  // العناصر نفسها بتتقرا وقت الحاجة بس (بنحفظ مكانها في الملف) — عشان الذاكرة في اللوح الضخمة
+  const range = (a, b) => { const out = []; let p = a; const ln = () => { if (p >= b) return null; let e = text.indexOf('\n', p); if (e < 0 || e > b) e = b; let x = text.slice(p, e); p = e + 1; if (x.charCodeAt(x.length - 1) === 13) x = x.slice(0, -1); return x; };
+    for (;;) { const c = ln(); if (c === null) break; let v = ln(); if (v === null) break; const k = c.trim(); if (SKIP.has(k)) continue; if (latin1 && HI.test(v)) v = Buffer.from(v, 'latin1').toString('utf8'); out.push([k, v]); } return out; };
+  class Ent { constructor(t, a) { this.t = t; this.a = a; this.b = a; } get g() { return range(this.a, this.b); } }
   const peek = () => { if (!pk) pk = next(); return pk; };
   const ents = [], layers = {}, ltypes = {}, header = {}, blocks = {};
   let sec = null, tab = null, cur = null, blk = null;
+  let at = 0; // بداية الزوج الحالي
   const flush = () => {
+    if (cur && cur.a != null) cur.b = at;
     if (cur) {
       if (sec === 'ENTITIES') ents.push(cur);
       else if (sec === 'BLOCKS') {
@@ -30,18 +36,19 @@ function parseDXF(text, latin1) {
     cur = null;
   };
   for (let pr = next(); pr; pr = next()) {
-    const c = pr[0], v = pr[1];
+    const c = pr[0], v = pr[1]; at = pr[2];
     if (c === '0') {
       flush();
       if (v === 'SECTION') { const nx = peek(); sec = nx && nx[0] === '2' ? nx[1].trim() : null; next(); continue; }
       if (v === 'ENDSEC') { sec = null; tab = null; continue; }
       if (sec === 'TABLES' && v === 'TABLE') { const nx = peek(); tab = nx && nx[1].trim(); next(); continue; }
       if (v === 'ENDTAB') { tab = null; continue; }
-      if (sec === 'ENTITIES' || sec === 'TABLES' || sec === 'BLOCKS') cur = { t: v, g: [] };
+      if (sec === 'TABLES' || (sec === 'BLOCKS' && (v === 'BLOCK' || v === 'ENDBLK'))) cur = { t: v, g: [] };
+      else if (sec === 'ENTITIES' || sec === 'BLOCKS') cur = new Ent(v, pos);
       continue;
     }
     if (sec === 'HEADER' && c === '9') { const nx = peek(); if (nx) header[v.trim()] = nx[1].trim(); continue; }
-    if (cur && !SKIP.has(c)) cur.g.push([c, v]);
+    if (cur && cur.a == null && !SKIP.has(c)) cur.g.push([c, v]);
   }
   flush();
   return { ents, layers, ltypes, header, blocks };
@@ -208,17 +215,17 @@ function analyze(text, latin1) {
       const e = list[i];
       if (e.t === 'VERTEX' || e.t === 'SEQEND') continue;
       if (--budget < 0) { warn.add('اللوحة كبيرة جداً — اتقرا جزء من البلوكات بس'); return; }
-      const d = dict(e.g); if (!ctx.blk && d['67'] === '1') continue; // ورقة (paper space)
+      const eg = e.g, d = dict(eg); if (!ctx.blk && d['67'] === '1') continue; // ورقة (paper space)
       if (d['60'] === '1') continue; // عنصر مخفي
       const layer = layerOf(d, ctx), color = colorOf(d, layer, ctx), lv = LY(layer);
       types[e.t] = (types[e.t] || 0) + 1;
       const ocs = (+d['230'] || 1) < 0, Te = ocs ? mul(T, MIRX) : T, dt = Math.abs(det(Te)), sc = Math.sqrt(dt);
       const uni = Math.abs(Math.hypot(Te[0], Te[1]) - Math.hypot(Te[2], Te[3])) < 1e-9 * Math.max(1, Math.hypot(Te[0], Te[1]));
       const sfx = ctx.blk ? '|@' + ctx.blk : '', extra = ctx.blk ? { blk: ctx.blk } : {}, hid = hidOf(layer) || !!ctx.hid;
-      if (e.t === 'ACAD_PROXY_ENTITY') { proxy++; lv.other++; const pg = proxyGfx(e.g); if (pg && civ.length < 3000) civ.push({ cls: pg.cls, l: layer, box: [app(T, [pg.box[0], pg.box[1]]), app(T, [pg.box[2], pg.box[3]])] }); continue; }
+      if (e.t === 'ACAD_PROXY_ENTITY') { proxy++; lv.other++; const pg = proxyGfx(eg); if (pg && civ.length < 3000) civ.push({ cls: pg.cls, l: layer, box: [app(T, [pg.box[0], pg.box[1]]), app(T, [pg.box[2], pg.box[3]])] }); continue; }
       if (e.t === 'HATCH') {
         const pat = d['2'] || 'SOLID';
-        const paths = hatchPaths(e.g); if (!paths.length) { lv.other++; continue; }
+        const paths = hatchPaths(eg); if (!paths.length) { lv.other++; continue; }
         paths.forEach((p) => { p.pts = p.pts.map((q) => app(Te, q)); if (p.exact != null) p.exact *= dt; });
         const h = hatchArea(paths);
         const gr = G(`H|${layer}|${pat}|${color}${sfx}`, { kind: 'hatch', layer, pat, color, hex: aciHex(color), hid, ...extra });
@@ -246,16 +253,16 @@ function analyze(text, latin1) {
       }
       if (e.t === 'TEXT' || e.t === 'MTEXT' || e.t === 'ATTDEF') {
         if (e.t === 'ATTDEF') continue;
-        let tx = e.t === 'MTEXT' ? e.g.filter((x) => x[0] === '3').map((x) => x[1]).join('') + (d['1'] != null ? e.g.filter((x) => x[0] === '1').map((x) => x[1]).join('') : '') : d['1'];
+        let tx = e.t === 'MTEXT' ? eg.filter((x) => x[0] === '3').map((x) => x[1]).join('') + (d['1'] != null ? eg.filter((x) => x[0] === '1').map((x) => x[1]).join('') : '') : d['1'];
         tx = mtextClean(tx); if (!tx) continue;
         const at = app(e.t === 'MTEXT' ? T : Te, [+d['10'] || 0, +d['20'] || 0]);
         texts.push({ l: layer, t: tx, at, h: +((+d['40'] || 0) * sc).toFixed(2), ...(ctx.blk ? { blk: ctx.blk } : {}) }); lv.text++;
         continue;
       }
       if (e.t === 'DIMENSION') { const m = +d['42']; const tx = mtextClean(d['1'] || ''); dims.push({ l: layer, v: isFinite(m) ? +m.toFixed(3) : null, t: tx && tx !== '<>' ? tx.replace('<>', isFinite(m) ? m.toFixed(2) : '') : null }); lv.other++; continue; }
-      if (e.t === 'ACAD_TABLE') { const cells = e.g.filter((x) => x[0] === '1' || x[0] === '302').map((x) => mtextClean(x[1])).filter(Boolean); if (cells.length) texts.push({ l: layer, t: cells.join(' | '), at: app(T, [+d['10'] || 0, +d['20'] || 0]), table: true }); lv.text++; continue; }
+      if (e.t === 'ACAD_TABLE') { const cells = eg.filter((x) => x[0] === '1' || x[0] === '302').map((x) => mtextClean(x[1])).filter(Boolean); if (cells.length) texts.push({ l: layer, t: cells.join(' | '), at: app(T, [+d['10'] || 0, +d['20'] || 0]), table: true }); lv.text++; continue; }
       let pts = null, len = 0, closed = false, area = 0;
-      if (e.t === 'LWPOLYLINE') { const p = lwpoly(e.g); closed = p.closed; const g = polyGeom(p.pts, closed); pts = g.pts; len = g.len * sc; if (closed) area = g.pts.exact * dt; }
+      if (e.t === 'LWPOLYLINE') { const p = lwpoly(eg); closed = p.closed; const g = polyGeom(p.pts, closed); pts = g.pts; len = g.len * sc; if (closed) area = g.pts.exact * dt; }
       else if (e.t === 'POLYLINE') {
         const fl = +d['70'] || 0; if (fl & (16 | 64)) { lv.other++; warn.add('فيه أسطح Mesh / Polyface اتعدّت (مش خطوط)'); continue; }
         const vs = []; for (let j = i + 1; j < list.length && list[j].t !== 'SEQEND'; j++) if (list[j].t === 'VERTEX') { const vd = dict(list[j].g); if ((+vd['70'] || 0) & 16) continue; vs.push([+vd['10'] || 0, +vd['20'] || 0, +vd['42'] || 0, +vd['30'] || 0]); }
@@ -270,7 +277,7 @@ function analyze(text, latin1) {
         pts = []; for (let k = 0; k <= SEG * 2; k++) { const t = t0 + (t1 - t0) * k / (SEG * 2); pts.push([cx + mx * Math.cos(t) - my * ra * Math.sin(t), cy + my * Math.cos(t) + mx * ra * Math.sin(t)]); }
         len = plen(pts) * sc; closed = Math.abs(t1 - t0 - 2 * Math.PI) < 1e-6; if (closed) area = Math.PI * Math.hypot(mx, my) ** 2 * ra * dt;
       }
-      else if (e.t === 'SPLINE') { pts = []; e.g.forEach(([c, v], k) => { if (c === '11') pts.push([+v, +e.g[k + 1][1]]); }); if (!pts.length) e.g.forEach(([c, v], k) => { if (c === '10') pts.push([+v, +e.g[k + 1][1]]); }); len = plen(pts) * sc; warn.add('فيه خطوط Spline اتحسب طولها تقريبي'); }
+      else if (e.t === 'SPLINE') { pts = []; eg.forEach(([c, v], k) => { if (c === '11') pts.push([+v, +eg[k + 1][1]]); }); if (!pts.length) eg.forEach(([c, v], k) => { if (c === '10') pts.push([+v, +eg[k + 1][1]]); }); len = plen(pts) * sc; warn.add('فيه خطوط Spline اتحسب طولها تقريبي'); }
       else { lv.other++; continue; }
       if (!pts || !pts.length) continue;
       const lineT = e.t === 'LINE' || e.t === 'SPLINE' || e.t === 'ELLIPSE' ? T : Te; // دول بإحداثيات عالمية مش OCS
