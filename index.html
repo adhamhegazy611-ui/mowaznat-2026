@@ -3972,7 +3972,7 @@ const QT_CONC = [
   ['كشط', /قشط|كشط|كشت|milling|scarif/i], ['تشريب', /تشريب|(^|[^a-z])mc([^a-z]|$)|prime/i], ['لاصق', /لاصق|(^|[^a-z])rc([^a-z]|$)|tack/i],
   ['رابط', /رابط|binder/i], ['سطحي', /سطحي|سطحى|wearing/i], ['احلال', /احلال|replacement/i],
   ['اساس', /اساس|(^|[^\u0600-\u06FF]|ال)سن([^\u0600-\u06FF]|$)|سن ?\d|base ?course|subbase/i],
-  ['ردم', /ردم|(^|[^a-z])fill([^a-z]|$)|embank/i], ['حفر', /حفر|قطع|(^|[^a-z])cut([^a-z]|$)|excavat/i],
+  ['ردم', /ردم|(^|[^a-z])fill([^a-z]|$)|embank/i], ['حفر صخري', /صخر|rock/i], ['حفر', /حفر|قطع|(^|[^a-z])cut([^a-z]|$)|excavat/i],
   ['طبان', /طبان/], ['نيوجيرسي', /نيوجيرس|نيوجرس|new ?jersey/i], ['بردور', /بردور|curb|kerb/i], ['انترلوك', /انترلوك|interlock/i],
   ['تخطيط', /تخطيط|دهان|marking/i], ['عداي', /عداي|عبار|culvert/i], ['بلاط', /بلاط|tile/i], ['زراعة', /زراع|landscap/i],
 ];
@@ -3980,7 +3980,8 @@ const qtNorm = (t) => String(t || '').replace(/[\u064B-\u0652\u0640]/g, '').repl
 const qtConc = (t) => { const n = qtNorm(t); const c = QT_CONC.find(([, re]) => re.test(n)); return c ? c[0] : null; };
 function qtItemGuess(fname, j, H) {
   const names = [].concat(QT.items.filter((x) => x.mode !== 'formula').map((x) => x.item), H.map((x) => x.item), QT_ITEMS);
-  const nameFor = (c) => names.find((n) => qtConc(n) === c) || null;
+  const DEF = { 'حفر صخري': 'حفر صخرية', 'مخلفات': 'ازالة المخلفات' };
+  const nameFor = (c) => names.find((n) => qtConc(n) === c) || DEF[c] || null;
   // 1) اسم الملف
   const cf = qtConc(fname.replace(/\.(dwg|dxf)$/i, ''));
   if (cf && nameFor(cf)) return { item: nameFor(cf), why: 'من اسم الملف' };
