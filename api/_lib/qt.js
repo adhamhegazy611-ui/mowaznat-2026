@@ -4,12 +4,18 @@
 
 const SEG = 48; // عدد نقط كل قوس في الرسم والمساحة
 
-function parseDXF(text) {
-  const L = text.split(/\r?\n/);
-  const P = [];
-  for (let i = 0; i + 1 < L.length; i += 2) P.push([L[i].trim(), L[i + 1].replace(/\r$/, '')]);
+// أكواد مش بنستخدمها (handles/owners/subclass/xdata) — مش بتتخزن عشان الذاكرة
+const SKIP = new Set(['5', '100', '330', '360', '102', '1001', '1000', '1002', '1003', '1004', '1005', '1010', '1020', '1030', '1040', '1070', '1071', '347', '348', '390', '440']);
+function parseDXF(text, latin1) {
+  // قراءة سطر بسطر من غير ما نقسم الملف كله (اللوح الكبيرة كانت بتخلّص الذاكرة)
+  let pos = 0; const N = text.length;
+  const line = () => { if (pos >= N) return null; let e = text.indexOf('\n', pos); if (e < 0) e = N; let s = text.slice(pos, e); pos = e + 1; if (s.charCodeAt(s.length - 1) === 13) s = s.slice(0, -1); return s; };
+  let pk = null; // زوج متأجل (للبص على الزوج اللي بعده)
+  const HI = /[\x80-\xff]/;
+  const next = () => { if (pk) { const r = pk; pk = null; return r; } const c = line(); if (c === null) return null; let v = line(); if (v === null) return null; if (latin1 && HI.test(v)) v = Buffer.from(v, 'latin1').toString('utf8'); return [c.trim(), v]; };
+  const peek = () => { if (!pk) pk = next(); return pk; };
   const ents = [], layers = {}, ltypes = {}, header = {}, blocks = {};
-  let sec = null, tab = null, cur = null, blk = null, i = 0;
+  let sec = null, tab = null, cur = null, blk = null;
   const flush = () => {
     if (cur) {
       if (sec === 'ENTITIES') ents.push(cur);
@@ -23,19 +29,19 @@ function parseDXF(text) {
     }
     cur = null;
   };
-  for (; i < P.length; i++) {
-    const [c, v] = P[i];
+  for (let pr = next(); pr; pr = next()) {
+    const c = pr[0], v = pr[1];
     if (c === '0') {
       flush();
-      if (v === 'SECTION') { sec = P[i + 1] && P[i + 1][0] === '2' ? P[i + 1][1].trim() : null; i++; continue; }
+      if (v === 'SECTION') { const nx = peek(); sec = nx && nx[0] === '2' ? nx[1].trim() : null; next(); continue; }
       if (v === 'ENDSEC') { sec = null; tab = null; continue; }
-      if (sec === 'TABLES' && v === 'TABLE') { tab = P[i + 1] && P[i + 1][1].trim(); i++; continue; }
+      if (sec === 'TABLES' && v === 'TABLE') { const nx = peek(); tab = nx && nx[1].trim(); next(); continue; }
       if (v === 'ENDTAB') { tab = null; continue; }
       if (sec === 'ENTITIES' || sec === 'TABLES' || sec === 'BLOCKS') cur = { t: v, g: [] };
       continue;
     }
-    if (sec === 'HEADER' && c === '9') { const nx = P[i + 1]; if (nx) header[v.trim()] = nx[1].trim(); continue; }
-    if (cur) cur.g.push([c, v]);
+    if (sec === 'HEADER' && c === '9') { const nx = peek(); if (nx) header[v.trim()] = nx[1].trim(); continue; }
+    if (cur && !SKIP.has(c)) cur.g.push([c, v]);
   }
   flush();
   return { ents, layers, ltypes, header, blocks };
@@ -186,8 +192,8 @@ function proxyGfx(g) {
   return isFinite(x0) ? { cls, box: [x0, y0, x1, y1] } : null;
 }
 
-function analyze(text) {
-  const { ents, layers, ltypes, header, blocks } = parseDXF(text);
+function analyze(text, latin1) {
+  const { ents, layers, ltypes, header, blocks } = parseDXF(text, latin1);
   const groups = new Map(); const warn = new Set(); let proxy = 0;
   const inv = new Map(), types = {}, texts = [], dims = [], civ = [];
   const LY = (n) => { if (!inv.has(n)) { const l = layers[n] || {}; inv.set(n, { name: n, color: l.color || 7, hid: !!(l.off || l.frozen), hatch: 0, harea: 0, line: 0, len: 0, block: 0, text: 0, other: 0 }); } return inv.get(n); };

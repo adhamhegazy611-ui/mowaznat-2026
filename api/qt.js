@@ -2,10 +2,10 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { spawnSync } = require('child_process');
+const { spawnSync, spawn } = require('child_process');
 const zlib = require('zlib');
 const { analyze } = require('./_lib/qt');
-const { surfaceGroups, civilCounts, scanDwgJson } = require('./_lib/surf');
+const { surfaceGroups, civilCounts, scanDwgStream } = require('./_lib/surf');
 
 const URL_ = 'https://qadrtqtydtgzachfzpqw.supabase.co';
 const ANON = 'sb_publishable_YWBHuhE3Eb3Qs9VkOP1jEA_335B_9SB';
@@ -49,25 +49,27 @@ module.exports = async (req, res) => {
   const id = Math.random().toString(36).slice(2);
   const tmpIn = path.join(os.tmpdir(), id + '.dwg'), tmpOut = path.join(os.tmpdir(), id + '.dxf'), tmpJ = path.join(os.tmpdir(), id + '.json');
   try {
-    let dxf;
+    let dxf, l1 = false;
     if (/\.dxf(\.gzp\d+)?$/i.test(p) || buf.subarray(0, 64).toString('latin1').includes('SECTION')) dxf = buf.toString('utf8');
     else {
       const head = buf.subarray(0, 6).toString('latin1');
       if (!/^AC\d{4}$/.test(head)) return res.status(400).json({ error: 'الملف مش DWG' });
       fs.writeFileSync(tmpIn, buf);
+      buf = null;
       const out = spawnSync(bin(), ['-y', '-o', tmpOut, tmpIn], { timeout: big ? 170000 : 50000, encoding: 'utf8', maxBuffer: 1 << 24 });
       if (!fs.existsSync(tmpOut)) return res.status(422).json({ error: 'تعذّر قراءة اللوحة', detail: String(out.stderr || out.error || '').slice(-400), version: head });
-      dxf = fs.readFileSync(tmpOut, 'utf8');
+      dxf = fs.readFileSync(tmpOut, 'latin1'); l1 = true;
       try { fs.unlinkSync(tmpOut); } catch (e) { /* مساحة /tmp محدودة مع اللوح الكبيرة */ }
     }
-    const result = analyze(dxf);
+    const result = analyze(dxf, l1); dxf = null;
     // سطوح Civil 3D: بتتقرا من بيانات الـ DWG الخام (dwg2dxf بيسيبها كعناصر Proxy)
     if (fs.existsSync(tmpIn) && result.warnings.some((w) => /Civil 3D/.test(w))) {
       try {
-        spawnSync(bin('dwgread'), ['-O', 'JSON', '-o', tmpJ, tmpIn], { timeout: big ? 80000 : 45000, encoding: 'utf8', maxBuffer: 1 << 24 });
-        if (fs.existsSync(tmpJ)) {
-          // قراءة خفيفة (من غير JSON.parse للملف كله) — وبتتحمل nan اللي dwgread بيكتبها
-          const J = scanDwgJson(fs.readFileSync(tmpJ, 'latin1'));
+        // الـ JSON بيتقرا وهو طالع من dwgread (من غير ما يتكتب على الديسك — في اللوح الكبيرة بيوصل لمئات الميجات)
+        const ch = spawn(bin('dwgread'), ['-O', 'JSON', tmpIn], { stdio: ['ignore', 'pipe', 'ignore'] });
+        const kill = setTimeout(() => ch.kill('SIGKILL'), big ? 120000 : 60000);
+        const J = await scanDwgStream(ch.stdout).finally(() => clearTimeout(kill));
+        {
           if (result.inv) result.inv.civil = civilCounts(J);
           const sg = surfaceGroups(J, result.groups.length ? result.origin : null);
           if (sg.groups.length) {

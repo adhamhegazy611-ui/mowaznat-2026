@@ -3169,7 +3169,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) sb.a
    مشروع ← لوح DWG ← كل لوحة بند (كشط، حفر، ...). السيرفر بيقرا اللوحة ويرجّع المجموعات (هاتش/خطوط/بلوكات)
    والمستخدم بيختار اللي يتحسب، والاختيار بيتفتكر للبند ده بعد كده. */
 const QT = { list: [], cur: null, items: [], tab: 'sum' };
-const QT_ITEMS = ['كشط أسفلت', 'حفر', 'ردم', 'إحلال', 'أساس', 'طبقة تشريب MC', 'طبقة لاصقة RC', 'أسفلت رابط', 'أسفلت سطحي', 'طبانات', 'بردورة', 'انترلوك', 'تخطيط', 'عدايات'];
+const QT_ITEMS = ['كشط أسفلت', 'ازالة المخلفات', 'حفر', 'ردم', 'إحلال', 'أساس', 'طبقة تشريب MC', 'طبقة لاصقة RC', 'أسفلت رابط', 'أسفلت سطحي', 'طبانات', 'بردورة', 'انترلوك', 'تخطيط', 'عدايات'];
 const QT_MODES = { area: ['مساحة', 'م²'], volume: ['حجم (مساحة × سُمك)', 'م³'], section: ['حجم (قطاع × طول)', 'م³'], length: ['طول', 'م.ط'], paint: ['طول مدهون (خط متقطع)', 'م.ط'], count: ['عدد', 'عدد'], fill: ['ردم (Volume Dashboard)', 'م³'], cut: ['حفر (Volume Dashboard)', 'م³'] };
 // كل بند بيتحسب إزاي: البند بيحدد نوع الكمية، واللوحة بتحدد الحاجة اللي تتحسب
 const QT_RULES = [
@@ -3185,7 +3185,7 @@ const QT_RULES = [
 const QT_XK = /^[AB]\|/; // مفاتيح إضافية في sel: B|حجم ردم السطح، A|معامل ردم الإحلال
 const QT_DIG = /حفر|إحلال|احلال/;
 // الحفر بكل أنواعه (عادي/متماسك/صخر/إحلال) والردم: الكمية من سطح الفرق زي Volume Dashboard في Civil 3D
-const QT_EW = /حفر|ردم|ترابي|تراب/;
+const QT_EW = /حفر|ردم|ترابي|تراب|مخلف/;
 const qtEwMode = (item) => (/ردم/.test(item) ? 'fill' : 'cut');
 // بند الأساس وحدته م³: مساحة الهاتش × سمك الطبقة. السمك من اسم البند لو مكتوب (زي «أساس 25 سم» أو «سمك 0.30 م»)
 const QT_BASE = /أساس|اساس|إساس|سن\s*6|base\s*course/i;
@@ -3229,6 +3229,11 @@ function qtAuto0(item, groups, mem) {
     // الأولوية: جدول Cut/Fill (سطر Totals) ← أسطح الفرق كلها (مجموعها = Totals في Volume Dashboard) ← Surface to Surface لو اختيار واحد بس
     const vols = groups.filter((g) => g.kind === 'surface' && !g.src), s2 = groups.filter((g) => g.src === 's2s' && g[em] > 0);
     if (mem && mem.mode === em && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: em, sel: mem.sel.slice(), how: 'mem' };
+    // المخلفات: الفرق بين الأرض الطبيعية قبل وبعد إزالة المخلفات (Surface to Surface) — بناخد أكبر قطع
+    if (/مخلف/.test(item) && s2.length) { const b = s2.slice().sort((x, y) => y.cut - x.cut)[0]; return { mode: 'cut', sel: [qtKey(b)] }; }
+    // لو فيه Surface to Surface أكبر بكتير من الجدول / سطح الفرق (يعني الجدول لجزء صغير بس) → المستخدم يختار
+    const base0 = cfT.length ? cfT : cft.length ? cft : vols, v0 = base0.reduce((t, g) => t + (g[em] || 0), 0);
+    if (base0.length && s2.some((g) => g[em] > 5 * v0 && g.area > 5 * base0.reduce((t, g) => t + (g.area || 0), 0))) return null;
     if (cfT.length) return { mode: em, sel: [qtKey(cfT[0])] };
     if (cft.length) return { mode: em, sel: cft.map(qtKey) };
     if (vols.length) return { mode: em, sel: vols.map(qtKey) };
@@ -3963,6 +3968,7 @@ async function qtAdd(pre) {
 }
 // ===== كذا لوحة مرة واحدة، والبند بيتختار تلقائي من البنود المتسجلة =====
 const QT_CONC = [
+  ['مخلفات', /مخلف/],
   ['كشط', /قشط|كشط|كشت|milling|scarif/i], ['تشريب', /تشريب|(^|[^a-z])mc([^a-z]|$)|prime/i], ['لاصق', /لاصق|(^|[^a-z])rc([^a-z]|$)|tack/i],
   ['رابط', /رابط|binder/i], ['سطحي', /سطحي|سطحى|wearing/i], ['احلال', /احلال|replacement/i],
   ['اساس', /اساس|(^|[^\u0600-\u06FF]|ال)سن([^\u0600-\u06FF]|$)|سن ?\d|base ?course|subbase/i],

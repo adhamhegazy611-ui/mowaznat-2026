@@ -192,6 +192,42 @@ function scanDwgJson(text) {
   return out;
 }
 
+// نفس scanDwgJson بس على stdout بتاع dwgread مباشرة (من غير ما الـ JSON يتكتب على الديسك — في اللوح الكبيرة بيوصل لـ 900 ميجا)
+function scanDwgStream(stream) {
+  return new Promise((resolve, reject) => {
+    const out = { classes: {}, tins: [], counts: {} };
+    const K = Buffer.from('"entity": "UNKNOWN_ENT"'), UB = Buffer.from('"unknown_bits": "'), EN = Buffer.from('"entity":'), OB = Buffer.from('"OBJECTS": [');
+    let phase = 0, buf = Buffer.alloc(0), cap = null; // cap = {handle, cls, parts: []}
+    const head = [];
+    const step = () => {
+      for (;;) {
+        if (cap) { const q = buf.indexOf(34); if (q < 0) { cap.parts.push(buf); buf = Buffer.alloc(0); return; } cap.parts.push(buf.subarray(0, q)); out.tins.push({ handle: cap.handle, cls: cap.cls, bits: Buffer.concat(cap.parts).toString('latin1') }); cap = null; buf = buf.subarray(q + 1); continue; }
+        const p = buf.indexOf(K); if (p < 0) { buf = buf.subarray(Math.max(0, buf.length - K.length)); return; }
+        if (buf.length < p + 220) { buf = buf.subarray(p); return; }
+        const m = /"type": (\d+),\s*"handle": \[\d+,\d+,(\d+)\]/.exec(buf.subarray(p, p + 220).toString('latin1'));
+        if (!m) { buf = buf.subarray(p + K.length); continue; }
+        const dn = out.classes[+m[1]] || ''; if (/^AEC/.test(dn)) out.counts[dn] = (out.counts[dn] || 0) + 1;
+        if (!/TIN_SURFACE|VOLUME_SURFACE/i.test(dn)) { buf = buf.subarray(p + K.length); continue; }
+        const ub = buf.indexOf(UB, p + K.length), nx = buf.indexOf(EN, p + K.length);
+        if (nx >= 0 && (ub < 0 || ub > nx)) { buf = buf.subarray(nx); continue; }
+        if (ub < 0) { buf = buf.subarray(p); return; } // لسه البيانات مكملتش
+        cap = { handle: +m[2], cls: dn, parts: [] }; buf = buf.subarray(ub + UB.length);
+      }
+    };
+    stream.on('data', (ch) => {
+      if (phase === 0) {
+        head.push(ch); const all = Buffer.concat(head); const oi = all.indexOf(OB); if (oi < 0) { if (all.length > 64 << 20) { head.length = 0; head.push(all.subarray(all.length - 1 << 20)); } else { head.length = 0; head.push(all); } return; }
+        const ci = all.indexOf('"CLASSES": [');
+        if (ci >= 0 && ci < oi) { try { JSON.parse(all.subarray(ci + 11, all.lastIndexOf(']', oi) + 1).toString('latin1').replace(/(-?)\b(nan|inf)\b/gi, 'null')).forEach((c) => { out.classes[c.number] = c.dxfname; }); } catch (e) { /* */ } }
+        phase = 1; head.length = 0; buf = all.subarray(oi); step(); return;
+      }
+      buf = buf.length ? Buffer.concat([buf, ch]) : ch; step();
+    });
+    stream.on('end', () => resolve(out));
+    stream.on('error', reject);
+  });
+}
+
 // مجموعات للحصر: كل سطح فرق = مجموعة «surface» فيها الردم والحفر + شبكة ألوان للعرض
 function surfaceGroups(src, origin) {
   const ss = surfaces(src), out = [], vols = ss.filter((s) => s.volume), other = ss.length - vols.length;
@@ -225,7 +261,7 @@ function surfaceGroups(src, origin) {
   const tins = ss.filter((s) => !s.volume && s.exact && s.tin && s.tin.T.length).sort((a, b) => b.area - a.area);
   const pairs = [];
   for (let i = 0; i < tins.length; i++) for (let j = i + 1; j < tins.length; j++) {
-    const A = tins[i], B = tins[j]; if (A.area < 1.5 * B.area || A.area < 0.8 * tins[0].area) continue; if (A.zmax < B.zmin - 50 || B.zmax < A.zmin - 50) continue;
+    const A = tins[i], B = tins[j]; if (A.area < 0.8 * tins[0].area || pairs.length >= 12) continue; // سطحين بنفس المساحة = أرض طبيعية قبل/بعد (زي قطع المخلفات) if (A.zmax < B.zmin - 50 || B.zmax < A.zmin - 50) continue;
     let r; try { r = s2s(A.tin, B.tin); } catch (e) { continue; }
     if (r.area < 0.02 * B.area || r.area < 50 || r.fill + r.cut < 1) continue;
     pairs.push({ A, B, r, ia: i + 1, ib: j + 1 });
@@ -251,4 +287,4 @@ function civilCounts(J) {
   return n;
 }
 
-module.exports = { civilCounts, surfaces, surfaceGroups, decodePoints, volumeOf, decodeTin, tinVolume, s2s, scanDwgJson };
+module.exports = { civilCounts, surfaces, surfaceGroups, decodePoints, volumeOf, decodeTin, tinVolume, s2s, scanDwgJson, scanDwgStream };
