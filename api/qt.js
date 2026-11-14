@@ -6,10 +6,18 @@ const { spawnSync, fork } = require('child_process');
 const zlib = require('zlib');
 const { analyze } = require('./_lib/qt');
 
+async function local(m) {
+  const { surfaceGroups, civilCounts, scanDwgStream } = require('./_lib/surf');
+  if (m.mode === 'dxf') { const t = fs.readFileSync(m.file, m.latin1 ? 'latin1' : 'utf8'); return analyze(t, !!m.latin1); }
+  const { spawn } = require('child_process'); const ch = spawn(m.bin, ['-O', 'JSON', m.file], { stdio: ['ignore', 'pipe', 'ignore'] });
+  const J = await scanDwgStream(ch.stdout); return { civil: civilCounts(J), groups: surfaceGroups(J, m.origin || null).groups };
+}
 // شغل تقيل في عملية منفصلة (الذاكرة بترجع لما تخلص)
+const WORKER = path.join(__dirname, '_lib', 'worker.js');
 function work(msg, ms) {
+  if (!fs.existsSync(WORKER)) return local(msg); // احتياطي لو ملف العامل مش موجود في النسخة المرفوعة
   return new Promise((resolve, reject) => {
-    const w = fork(path.join(__dirname, '_lib', 'worker.js'), [], { execArgv: ['--max-old-space-size=1700'], stdio: ['ignore', 'ignore', 'ignore', 'ipc'] });
+    const w = fork(WORKER, [], { execArgv: ['--max-old-space-size=1700'], stdio: ['ignore', 'ignore', 'ignore', 'ipc'] });
     let done = false; const t = setTimeout(() => { if (!done) { done = true; w.kill('SIGKILL'); reject(new Error('timeout')); } }, ms);
     w.on('message', (m) => { if (done) return; done = true; clearTimeout(t); w.kill(); m.ok ? resolve(m.r) : reject(new Error(m.error)); });
     w.on('exit', (c, sig) => { if (done) return; done = true; clearTimeout(t); reject(new Error('worker exit ' + (sig || c))); });
