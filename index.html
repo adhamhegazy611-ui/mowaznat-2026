@@ -3170,7 +3170,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) sb.a
    والمستخدم بيختار اللي يتحسب، والاختيار بيتفتكر للبند ده بعد كده. */
 const QT = { list: [], cur: null, items: [], tab: 'sum' };
 const QT_ITEMS = ['كشط أسفلت', 'ازالة المخلفات', 'حفر', 'ردم', 'إحلال', 'أساس', 'طبقة تشريب MC', 'طبقة لاصقة RC', 'أسفلت رابط', 'أسفلت سطحي', 'طبانات', 'بردورة', 'انترلوك', 'تخطيط', 'عدايات'];
-const QT_MODES = { area: ['مساحة', 'م²'], volume: ['حجم (مساحة × سُمك)', 'م³'], section: ['حجم (قطاع × طول)', 'م³'], length: ['طول', 'م.ط'], paint: ['طول مدهون (خط متقطع)', 'م.ط'], count: ['عدد', 'عدد'], fill: ['ردم (Volume Dashboard)', 'م³'], cut: ['حفر (Volume Dashboard)', 'م³'] };
+const QT_MODES = { area: ['مساحة', 'م²'], volume: ['حجم (مساحة × سُمك)', 'م³'], section: ['حجم (قطاع × طول)', 'م³'], length: ['طول', 'م.ط'], paint: ['طول مدهون (خط متقطع)', 'م.ط'], count: ['عدد', 'عدد'], fill: ['ردم (Surface to Surface)', 'م³'], cut: ['حفر (Surface to Surface)', 'م³'] };
 // كل بند بيتحسب إزاي: البند بيحدد نوع الكمية، واللوحة بتحدد الحاجة اللي تتحسب
 const QT_RULES = [
   [/طبان/, 'section'],
@@ -3225,20 +3225,16 @@ function qtAuto0(item, groups, mem) {
   const keys = new Set(groups.map(qtKey));
   if (mem && mem.sel) mem = { ...mem, sel: mem.sel.filter((k) => !QT_XK.test(k)) };
   if (QT_EW.test(item)) {
-    const em = qtEwMode(item), cft = groups.filter((g) => g.src === 'table'), cfT = cft.filter((g) => g.total);
-    // الأولوية: جدول Cut/Fill (سطر Totals) ← أسطح الفرق كلها (مجموعها = Totals في Volume Dashboard) ← Surface to Surface لو اختيار واحد بس
-    const s2 = groups.filter((g) => g.src === 's2s' && g[em] > 0);
-    // سطح الفرق اللي ماتقراش بالمثلثات الأصلية (تقريبي) مايتاخدش تلقائي لو فيه مقارنة سطحين مظبوطة
-    const vols = groups.filter((g) => g.kind === 'surface' && !g.src && g.exact !== false);
+    // الحفر والردم: Surface to Surface بس (مقارنة سطحين بأسمائهم من Civil)
+    const em = qtEwMode(item), s2 = groups.filter((g) => g.src === 's2s' && g[em] > 0);
     if (mem && mem.mode === em && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: em, sel: mem.sel.slice(), how: 'mem' };
-    // المخلفات: الفرق بين الأرض الطبيعية قبل وبعد إزالة المخلفات (Surface to Surface) — بناخد أكبر قطع
+    // المخلفات: الأرض قبل وبعد الإزالة — أكبر قطع
     if (/مخلف/.test(item) && s2.length) { const b = s2.slice().sort((x, y) => y.cut - x.cut)[0]; return { mode: 'cut', sel: [qtKey(b)] }; }
-    // لو فيه Surface to Surface أكبر بكتير من الجدول / سطح الفرق (يعني الجدول لجزء صغير بس) → المستخدم يختار
-    const base0 = cfT.length ? cfT : cft.length ? cft : vols, v0 = base0.reduce((t, g) => t + (g[em] || 0), 0);
-    if (base0.length && s2.some((g) => g[em] > 5 * v0 && g.area > 5 * base0.reduce((t, g) => t + (g.area || 0), 0))) return null;
-    if (cfT.length) return { mode: em, sel: [qtKey(cfT[0])] };
-    if (cft.length) return { mode: em, sel: cft.map(qtKey) };
-    if (vols.length) return { mode: em, sel: vols.map(qtKey) };
+    // اسم البند فيه اسم سطح (زي «حفر عادية» وسطح اسمه «عادية»، أو «صخر» و ROCK)
+    const words = qtNorm(item).replace(/حفر|ردم|قطع|اعمال|في|تربه|ارض/g, ' ').split(/\s+/).filter((w) => w.length >= 3);
+    const hit = (g) => { const nm = qtNorm((g.baseName || '') + ' ' + (g.compName || '')); return words.some((w) => nm.includes(w) || (/صخر/.test(w) && /rock/.test(nm))); };
+    const named = s2.filter(hit);
+    if (named.length === 1) return { mode: em, sel: [qtKey(named[0])] };
     if (s2.length === 1) return { mode: em, sel: [qtKey(s2[0])] };
     return null;   // أكتر من اختيار Surface to Surface: المستخدم يحدد الأرض الطبيعية والتصميم
   }
@@ -4021,7 +4017,7 @@ function qtItemGuess(fname, j, H) {
   const best = Object.entries(sc).sort((a, b) => b[1] - a[1])[0];
   if (best && nameFor(best[0])) { const g = gs.find((x) => qtConc(x.layer) === best[0]); return { item: nameFor(best[0]), why: 'من اسم الطبقة «' + g.layer + '»' }; }
   // 4) فيها سطح فرق من Civil 3D → حفر أو ردم حسب الأكبر
-  const sf = gs.filter((g) => g.kind === 'surface' && (g.src === 'table' ? g.total : !g.src));
+  const sf = gs.filter((g) => g.src === 's2s');
   if (sf.length) { const cut = sf.reduce((s, g) => s + (g.cut || 0), 0), fill = sf.reduce((s, g) => s + (g.fill || 0), 0); const c = cut >= fill ? 'حفر' : 'ردم'; return { item: nameFor(c) || c, why: 'اللوحة فيها سطح فرق (' + (c === 'حفر' ? 'القطع' : 'الردم') + ' أكبر)' }; }
   const tx = ((j.inv && j.inv.texts) || []).map((t) => t && t.t).filter(Boolean).join(' ');
   const ct = qtConc(tx); if (ct && nameFor(ct)) return { item: nameFor(ct), why: 'من الكلام المكتوب في اللوحة' };
@@ -4129,20 +4125,24 @@ async function qtSave(item, fname, path, R, a, q, existing) {
 }
 // اختيار الحاجة اللي تتحسب يدوي (لو السيستم ماعرفش، أو من «تعديل الحسبة» في التفاصيل)
 function qtPick(box, item, fname, path, R, existing, start, isNew) {
-  qtCF(R);
-  const groups = (R.groups || []).filter((g) => !(g.kind === 'surface' && !g.src && g.exact === false)); // سطح الفرق التقريبي مابيظهرش
+  // الحفر والردم: بيظهر Surface to Surface بس، وباقي البنود: الهاتشات والخطوط والبلوكات بس (من غير السطوح)
+  const s2G = (R.groups || []).filter((g) => g.src === 's2s'), otherG = (R.groups || []).filter((g) => g.kind !== 'surface');
+  const ewItem = QT_EW.test(item);
   let sel = new Set((start && start.sel) || (existing && existing.sel) || []), mode = (start && start.mode) || (existing && existing.mode) || 'area';
+  if (ewItem && mode !== 'cut' && mode !== 'fill') mode = qtEwMode(item);
+  let groups = mode === 'cut' || mode === 'fill' ? s2G : otherG;
   let th = (start && start.th) || (existing && existing.thickness ? +existing.thickness : null), only = (R.only || (start && start.only)) || null;
   const c = pjEl('div', 'qcard'); c.appendChild(pjEl('h3', '', (existing ? 'تعديل حسبة ' : '') + item));
   const wrap = pjEl('div', 'qdet'), svgBox = pjEl('div', 'qsvgbox'), side = pjEl('div');
   wrap.append(svgBox, side); c.appendChild(wrap); box.appendChild(c);
   const tot = pjEl('div', 'qtotal');
   const draw = () => {
+    groups = mode === 'cut' || mode === 'fill' ? s2G : otherG;
     svgBox.textContent = ''; svgBox.appendChild(qtSvg(groups, sel, R.bbox, R.inv));
     side.textContent = '';
     side.appendChild(pjEl('div', 'qhint', QT_BASE.test(item) && mode === 'volume' ? 'بند الأساس وحدته م³ = مساحة الهاتش × سمك الطبقة. ' + (th ? 'السمك ' + qtN(th, 2) + ' م' : 'اكتب سمك الطبقة بالمتر (مثلاً 0.25)') + (sel.size ? '' : ' وعلّم على الهاتش.') : isNew ? 'مقدرتش أحدد «' + item + '» لوحدي في اللوحة دي. علّم على الحاجة اللي تتحسب، وهفتكرها للبند ده بعد كده.' : 'علّم على الحاجة اللي تتحسب واختار نوع الكمية.'));
     const ml = pjEl('div', 'qmodes');
-    Object.entries(QT_MODES).forEach(([k, [t]]) => { const b = pjEl('button', mode === k ? 'on' : '', t); b.type = 'button'; b.onclick = () => { mode = k; if (k !== 'count') only = null; draw(); }; ml.appendChild(b); });
+    Object.entries(QT_MODES).filter(([k]) => !ewItem || k === 'cut' || k === 'fill').forEach(([k, [t]]) => { const b = pjEl('button', mode === k ? 'on' : '', t); b.type = 'button'; b.onclick = () => { mode = k; if (k !== 'count') only = null; draw(); }; ml.appendChild(b); });
     side.appendChild(ml);
     if (mode === 'volume') {
       const l = pjEl('label', 'qf inl'); l.appendChild(pjEl('span', '', 'السُمك / العمق (م)'));
@@ -4165,7 +4165,8 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
     side.appendChild(list);
     (R.warnings || []).filter(qtWarnOk).forEach((w) => side.appendChild(pjEl('div', 'qwarn', '⚠️ ' + w)));
     side.appendChild(tot);
-    if (R.inv) side.appendChild(qtInventory(R.inv, groups));
+    if (R.inv && mode !== 'cut' && mode !== 'fill') side.appendChild(qtInventory(R.inv, groups));
+    if ((mode === 'cut' || mode === 'fill') && !s2G.length) side.appendChild(pjEl('div', 'qwarn', '⚠️ اللوحة مفيهاش سطحين من Civil يتقارنوا ببعض'));
     calc();
   };
   // أسماء البنود اللي هتتحفظ (انت اللي بتسميها) — لكل سطح مختار في الحفر/الردم بند لوحده
