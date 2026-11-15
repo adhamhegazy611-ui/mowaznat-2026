@@ -3227,7 +3227,10 @@ function qtAuto0(item, groups, mem) {
   if (QT_EW.test(item)) {
     const em = qtEwMode(item), cft = groups.filter((g) => g.src === 'table'), cfT = cft.filter((g) => g.total);
     // الأولوية: جدول Cut/Fill (سطر Totals) ← أسطح الفرق كلها (مجموعها = Totals في Volume Dashboard) ← Surface to Surface لو اختيار واحد بس
-    const vols = groups.filter((g) => g.kind === 'surface' && !g.src), s2 = groups.filter((g) => g.src === 's2s' && g[em] > 0);
+    const s2 = groups.filter((g) => g.src === 's2s' && g[em] > 0);
+    // سطح الفرق اللي ماتقراش بالمثلثات الأصلية (تقريبي) مايتاخدش تلقائي لو فيه مقارنة سطحين مظبوطة
+    let vols = groups.filter((g) => g.kind === 'surface' && !g.src && g.exact !== false);
+    if (!vols.length && !s2.length) vols = groups.filter((g) => g.kind === 'surface' && !g.src);
     if (mem && mem.mode === em && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: em, sel: mem.sel.slice(), how: 'mem' };
     // المخلفات: الفرق بين الأرض الطبيعية قبل وبعد إزالة المخلفات (Surface to Surface) — بناخد أكبر قطع
     if (/مخلف/.test(item) && s2.length) { const b = s2.slice().sort((x, y) => y.cut - x.cut)[0]; return { mode: 'cut', sel: [qtKey(b)] }; }
@@ -3355,7 +3358,7 @@ async function qtDownload(path, name) {
 const qtN = (v, d = 0) => (v == null || !isFinite(v) ? '—' : (Math.round(Number(v) * 10 ** d + 1e-7) / 10 ** d).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: d }));
 const qtKey = (g) => g.kind + '|' + g.layer + '|' + (g.pat || g.block || '') + '|' + (g.kind === 'block' ? '' : g.color) + (g.blk ? '|@' + g.blk : '');
 const qtTag = (g) => (g.blk ? ' · جوه بلوك «' + g.blk + '»' : '') + (g.hid ? ' · طبقة مقفولة/مجمّدة' : '');
-const qtKind = (g) => g.kind === 'surface' ? (g.src === 's2s' ? 'Surface to Surface' : g.src === 'table' ? 'جدول Cut/Fill من Civil' : 'سطح فرق Civil 3D') : g.kind === 'hatch' ? 'هاتش ' + (/SOLID/i.test(g.pat) ? 'مصمت' : g.pat) : g.kind === 'line' ? 'خطوط' + (g.lt && g.lt.some((x) => x !== 'CONTINUOUS') ? ' متقطعة' : '') : 'بلوك «' + g.block + '»';
+const qtKind = (g) => g.kind === 'surface' ? (g.src === 's2s' ? 'Surface to Surface' : g.src === 'table' ? 'جدول Cut/Fill من Civil' : 'سطح فرق Civil 3D' + (g.exact === false ? ' (تقريبي)' : '')) : g.kind === 'hatch' ? 'هاتش ' + (/SOLID/i.test(g.pat) ? 'مصمت' : g.pat) : g.kind === 'line' ? 'خطوط' + (g.lt && g.lt.some((x) => x !== 'CONTINUOUS') ? ' متقطعة' : '') : 'بلوك «' + g.block + '»';
 let QT_FROM = 'qtCard';
 function qtClip() {
   const c = $(QT_FROM), r = c.getBoundingClientRect(), W = innerWidth, H = innerHeight;
