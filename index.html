@@ -3229,8 +3229,7 @@ function qtAuto0(item, groups, mem) {
     // الأولوية: جدول Cut/Fill (سطر Totals) ← أسطح الفرق كلها (مجموعها = Totals في Volume Dashboard) ← Surface to Surface لو اختيار واحد بس
     const s2 = groups.filter((g) => g.src === 's2s' && g[em] > 0);
     // سطح الفرق اللي ماتقراش بالمثلثات الأصلية (تقريبي) مايتاخدش تلقائي لو فيه مقارنة سطحين مظبوطة
-    let vols = groups.filter((g) => g.kind === 'surface' && !g.src && g.exact !== false);
-    if (!vols.length && !s2.length) vols = groups.filter((g) => g.kind === 'surface' && !g.src);
+    const vols = groups.filter((g) => g.kind === 'surface' && !g.src && g.exact !== false);
     if (mem && mem.mode === em && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: em, sel: mem.sel.slice(), how: 'mem' };
     // المخلفات: الفرق بين الأرض الطبيعية قبل وبعد إزالة المخلفات (Surface to Surface) — بناخد أكبر قطع
     if (/مخلف/.test(item) && s2.length) { const b = s2.slice().sort((x, y) => y.cut - x.cut)[0]; return { mode: 'cut', sel: [qtKey(b)] }; }

@@ -250,7 +250,7 @@ function scanDwgStream(stream) {
 
 // مجموعات للحصر: كل سطح فرق = مجموعة «surface» فيها الردم والحفر + شبكة ألوان للعرض
 function surfaceGroups(src, origin) {
-  const ss = surfaces(src), out = [], vols = ss.filter((s) => s.volume), other = ss.length - vols.length;
+  const ss = surfaces(src), out = [], vols = ss.filter((s) => s.volume && s.exact), other = ss.length - vols.length; // سطح الفرق التقريبي (ماتقراش بالمثلثات الأصلية) مابيظهرش خالص
   const R = (q) => Math.round(q * 100) / 100;
   let O = origin && isFinite(origin[0]) ? origin : null;
   // شبكة ألوان للعرض من المثلثات
