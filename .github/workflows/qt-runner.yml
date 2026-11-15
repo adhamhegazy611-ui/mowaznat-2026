@@ -1,0 +1,30 @@
+# سيرفر اللوح الضخمة لحصر الكميات (tasmemat): بياخد الشغل من طابور qt_jobs ويحصره بذاكرة أكبر من Vercel.
+# الكود في فرع portal-site (ci/qt-runner.js). التحقق بـ GitHub OIDC — مفيش أسرار.
+name: qt-runner
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+concurrency:
+  group: qt-runner
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: portal-site
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: حصر اللوح اللي مستنية
+        run: chmod +x api/_bin/* && node ci/qt-runner.js
+        env:
+          QT_HEAP: '12000'
+          QT_TMUL: '6'
+          QT_POLL_SEC: '280'
