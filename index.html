@@ -4163,11 +4163,17 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
       const ln = pjEl('div'); ln.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap';
       const inp = pjEl('input'); inp.type = 'text'; inp.value = names[r.k]; inp.placeholder = 'اسم البند (مثلاً حفر عادية)'; inp.setAttribute('list', 'qtItemsDL');
       inp.style.cssText = 'flex:1;min-width:160px;padding:8px 10px;border-radius:10px;border:1px solid rgba(148,163,184,.45);font:inherit;font-weight:800;background:transparent;color:inherit';
-      inp.oninput = () => { names[r.k] = inp.value; upd(); };
+      inp.oninput = () => { names[r.k] = inp.value; upd(); const tl = box2.lastChild; if (split && tl && tl.firstChild) tl.firstChild.textContent = 'الإجمالي (' + rows.map((x) => String(names[x.k] || '').trim() || '؟').join(' + ') + ') ='; };
       ln.append(inp, pjEl('span', '', '='), pjEl('b', '', r.q == null ? '—' : qtN(r.q)), pjEl('span', '', u));
       box2.appendChild(ln);
       if (r.g) box2.appendChild(pjEl('small', '', r.g.layer));
     });
+    if (split) { // إجمالي البنود اللي هتتضاف
+      const sum = rows.reduce((t, r) => t + (r.q || 0), 0), tl = pjEl('div');
+      tl.style.cssText = 'display:flex;gap:8px;align-items:center;border-top:1px solid rgba(255,255,255,.25);padding-top:8px;margin-top:2px';
+      tl.append(pjEl('span', '', 'الإجمالي (' + rows.map((r) => String(names[r.k] || '').trim() || '؟').join(' + ') + ') ='), pjEl('b', '', qtN(sum)), pjEl('span', '', u));
+      box2.appendChild(tl);
+    }
     tot.appendChild(box2);
     const act = pjEl('div', 'qact');
     const valid = () => rows.every((r) => r.q != null && String(names[r.k] || '').trim());
