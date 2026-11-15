@@ -3333,7 +3333,35 @@ function qtQty(groups, a) {
 // اللوح الكبيرة (أكبر من 45 ميجا): بتتضغط وتتقسم أجزاء، والمسار بيتسجل «…dwg.gzpN» والأجزاء «…dwg.gzpN.0 …N-1»
 const QT_CHUNK = 45 * 1048576;
 function qtParts(path) { const m = /\.gzp(\d+)$/.exec(path || ''); return m ? Array.from({ length: +m[1] }, (_, i) => path + '.' + i) : [path]; }
-function qtRm(paths) { return sb.storage.from('qt').remove([].concat(...paths.map(qtParts))); }
+function qtRm(paths) { return sb.storage.from('qt').remove([].concat(...paths.map((p) => qtParts(p).concat([p + '.result.json'])))); }
+// قراءة اللوحة: العادية على Vercel، والضخمة (أو اللي وقعت على Vercel) على سيرفر أكبر (GitHub) من غير ما تقفل الصفحة
+const QT_BIG = 200 * 1048576;
+async function qtAnalyze(path, size, say) {
+  const viaJob = async () => {
+    const { data: job, error } = await sb.from('qt_jobs').insert({ path }).select('id').single();
+    if (error || !job) return { error: 'تعذّر بدء الحصر على السيرفر الكبير' };
+    const t0 = Date.now();
+    for (;;) {
+      const m = Math.floor((Date.now() - t0) / 60000);
+      say('اللوحة كبيرة — بتتحصر على سيرفر أكبر، ممكن تاخد من 5 لـ 10 دقايق… (' + m + ' د) — سيب الصفحة مفتوحة');
+      await new Promise((r) => setTimeout(r, 10000));
+      const { data: st } = await sb.from('qt_jobs').select('status,error').eq('id', job.id).single();
+      if (st && st.status === 'done') {
+        const { data: f } = await sb.storage.from('qt').download(path + '.result.json');
+        if (!f) return { error: 'تعذّر تحميل نتيجة الحصر' };
+        try { return JSON.parse(await f.text()); } catch (e) { return { error: 'نتيجة الحصر بايظة' }; }
+      }
+      if (st && st.status === 'error') return { error: st.error || 'تعذّر قراءة اللوحة' };
+      if (Date.now() - t0 > 45 * 60000) return { error: 'الحصر أخد وقت أكتر من اللازم — جرّب تاني' };
+    }
+  };
+  if (size > QT_BIG) return viaJob();
+  let r = null, j = null;
+  try { const { data: { session: s } } = await sb.auth.getSession(); r = await fetch('/api/qt', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.access_token }, body: JSON.stringify({ path }) }); j = await r.json().catch(() => null); } catch (e) { r = null; }
+  if (r && r.ok && j && j.groups) return j;
+  if (size > 60 * 1048576 && (!r || r.status >= 500 || !j)) return viaJob(); // وقعت على Vercel (غالباً الذاكرة)
+  return { error: (j && j.error) || 'تعذّر الاتصال' };
+}
 async function qtUpload(path, f, say) {
   const opt = { upsert: false, contentType: 'application/octet-stream' };
   if (f.size <= QT_CHUNK) { const r = await sb.storage.from('qt').upload(path, f, opt); return { error: r.error, path }; }
@@ -3946,14 +3974,9 @@ async function qtAdd(pre) {
     if (up.error) { st.textContent = 'تعذّر رفع الملف: ' + up.error.message; fi.disabled = false; return; }
     path = up.path;
     st.innerHTML = '<span class="spin"></span> بيقرا اللوحة ويحصر الكميات…';
-    let r, j;
-    try {
-      const { data: { session: s } } = await sb.auth.getSession();
-      r = await fetch('/api/qt', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.access_token }, body: JSON.stringify({ path }) });
-      j = await r.json();
-    } catch (e) { j = { error: 'تعذّر الاتصال' }; }
+    const j = await qtAnalyze(path, f.size, (t) => { st.innerHTML = '<span class="spin"></span> ' + t; });
     fi.disabled = false;
-    if (!r || !r.ok || !j.groups) { st.textContent = '⚠️ ' + (j.error || 'تعذّر قراءة اللوحة'); await qtRm([path]); return; }
+    if (!j.groups) { st.textContent = '⚠️ ' + (j.error || 'تعذّر قراءة اللوحة'); await qtRm([path]); return; }
     qtCF(j);
     const item = it.value.trim();
     let mem = null;
@@ -4056,8 +4079,7 @@ async function qtBatch(files, forced) {
     const up = await qtUpload(path0, r.f, (t) => { r.qv.innerHTML = '<span class="spin"></span> ' + t; });
     if (up.error) { r.qv.textContent = '⚠️ تعذّر رفع الملف: ' + up.error.message; r.busy = false; r.inc.checked = false; refresh(); continue; }
     r.path = up.path; r.qv.innerHTML = '<span class="spin"></span> بيقرا اللوحة…';
-    let j = null;
-    try { const { data: { session: s } } = await sb.auth.getSession(); const x = await fetch('/api/qt', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.access_token }, body: JSON.stringify({ path: r.path }) }); j = await x.json(); if (!x.ok) j = { error: j.error }; } catch (e) { j = { error: 'تعذّر الاتصال' }; }
+    const j = await qtAnalyze(r.path, r.f.size, (t) => { r.qv.innerHTML = '<span class="spin"></span> ' + t; });
     r.busy = false;
     if (!j || !j.groups) { r.qv.textContent = '⚠️ ' + ((j && j.error) || 'تعذّر قراءة اللوحة'); await qtRm([r.path]); r.path = null; r.inc.checked = false; refresh(); continue; }
     qtCF(j); r.j = j;

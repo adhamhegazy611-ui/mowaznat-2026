@@ -4,6 +4,7 @@ const path = require('path');
 const os = require('os');
 const { spawnSync, fork } = require('child_process');
 const zlib = require('zlib');
+const TM = +process.env.QT_TMUL || 1; // مضاعف المهلة (على سيرفر اللوح الضخمة)
 const { analyze } = require('./_lib/qt');
 
 async function local(m) {
@@ -17,7 +18,7 @@ const WORKER = path.join(__dirname, '_lib', 'worker.js');
 function work(msg, ms) {
   if (!fs.existsSync(WORKER)) return local(msg); // احتياطي لو ملف العامل مش موجود في النسخة المرفوعة
   return new Promise((resolve, reject) => {
-    const w = fork(WORKER, [], { execArgv: ['--max-old-space-size=1700'], stdio: ['ignore', 'ignore', 'ignore', 'ipc'] });
+    const w = fork(WORKER, [], { execArgv: ['--max-old-space-size=' + (process.env.QT_HEAP || '1700')], stdio: ['ignore', 'ignore', 'ignore', 'ipc'] });
     let done = false; const t = setTimeout(() => { if (!done) { done = true; w.kill('SIGKILL'); reject(new Error('timeout')); } }, ms);
     w.on('message', (m) => { if (done) return; done = true; clearTimeout(t); w.kill(); m.ok ? resolve(m.r) : reject(new Error(m.error)); });
     w.on('exit', (c, sig) => { if (done) return; done = true; clearTimeout(t); reject(new Error('worker exit ' + (sig || c))); });
@@ -74,18 +75,18 @@ module.exports = async (req, res) => {
       if (!/^AC\d{4}$/.test(head)) return res.status(400).json({ error: 'الملف مش DWG' });
       fs.writeFileSync(tmpIn, buf);
       buf = null;
-      const out = spawnSync(bin(), ['-y', '-o', tmpOut, tmpIn], { timeout: big ? 170000 : 50000, encoding: 'utf8', maxBuffer: 1 << 24 });
+      const out = spawnSync(bin(), ['-y', '-o', tmpOut, tmpIn], { timeout: (big ? 170000 : 50000) * TM, encoding: 'utf8', maxBuffer: 1 << 24 });
       if (!fs.existsSync(tmpOut)) return res.status(422).json({ error: 'تعذّر قراءة اللوحة', detail: String(out.stderr || out.error || '').slice(-400), version: head });
       l1 = true;
     }
     // اللوح الكبيرة: التحليل في عملية منفصلة
-    const result = dxf != null && dxf.length < 30e6 ? analyze(dxf, l1) : await work(dxf != null ? (fs.writeFileSync(tmpOut, dxf), { mode: 'dxf', file: tmpOut, unlink: true }) : { mode: 'dxf', file: tmpOut, latin1: true, unlink: true }, 200000);
+    const result = dxf != null && dxf.length < 30e6 ? analyze(dxf, l1) : await work(dxf != null ? (fs.writeFileSync(tmpOut, dxf), { mode: 'dxf', file: tmpOut, unlink: true }) : { mode: 'dxf', file: tmpOut, latin1: true, unlink: true }, 200000 * TM);
     dxf = null;
     // سطوح Civil 3D: بتتقرا من بيانات الـ DWG الخام (dwg2dxf بيسيبها كعناصر Proxy)
     if (fs.existsSync(tmpIn) && result.warnings.some((w) => /Civil 3D/.test(w))) {
       try {
         // الـ JSON بيتقرا وهو طالع من dwgread (من غير ما يتكتب على الديسك — في اللوح الكبيرة بيوصل لمئات الميجات)
-        const sg = await work({ mode: 'civ', bin: bin('dwgread'), file: tmpIn, origin: result.groups.length ? result.origin : null, timeout: big ? 120000 : 60000 }, big ? 200000 : 90000);
+        const sg = await work({ mode: 'civ', bin: bin('dwgread'), file: tmpIn, origin: result.groups.length ? result.origin : null, timeout: (big ? 120000 : 60000) * TM }, (big ? 200000 : 90000) * TM);
         {
           if (result.inv) result.inv.civil = sg.civil;
           if (sg.groups.length) {
