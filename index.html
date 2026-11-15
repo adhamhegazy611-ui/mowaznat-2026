@@ -3686,7 +3686,7 @@ function qtDetailCard(x, d, no) {
   }
   if (x.mode === 'formula') {
     const h = pjEl('div', 'qdh'); h.append(pjEl('h3', '', 'ƒ ' + x.item), pjEl('span', 'qq', qtN(x.qty) + ' ' + x.unit));
-    const eb = pjEl('button', 'qbtn sm', '✎ تعديل الحسبة'); eb.type = 'button'; eb.onclick = () => qtFxDlg(x); h.appendChild(eb);
+    const eb = pjEl('button', 'qbtn sm', '✎ تعديل وإضافة للحسبة'); eb.type = 'button'; eb.onclick = () => qtFxDlg(x); h.appendChild(eb);
     c.append(h, pjEl('div', 'qsub', 'بند محسوب من بنود تانية في المشروع — بيتحدث لوحده لو أي بند منهم اتغير'));
     const ul = pjEl('ul', 'qfx');
     qtFxTerms(x).forEach((t) => { const y = qtFxGroup(t); const li = pjEl('li'); li.textContent = y ? y.item + ': ' + qtN(y.qty) + ' ' + y.unit + ' × ' + qtN(t.k, 4) + ' = ' + qtN(y.qty * t.k) + ' ' + y.unit : '⚠️ بند «' + (t.name || '؟') + '» اتمسح — مش داخل في الحسبة'; ul.appendChild(li); });
@@ -3695,7 +3695,7 @@ function qtDetailCard(x, d, no) {
   }
   const h = pjEl('div', 'qdh'); h.append(pjEl('h3', '', no ? 'لوحة ' + no + ': ' + (x.file_name || '').replace(/^\d+-/, '') : x.item), pjEl('span', 'qq', qtN(x.qty) + ' ' + x.unit));
   if (no) { const db = pjEl('button', 'qbtn sm danger', 'حذف اللوحة'); db.type = 'button'; db.onclick = async () => { if (!confirm('حذف اللوحة دي من بند «' + x.item + '»؟')) return; if (x.file_path) await qtRm([x.file_path]); await sb.from('qt_items').delete().eq('id', x.id); QT.items = QT.items.filter((y) => y.id !== x.id); await qtRecalc(); QT.tab = 'det'; qtProject(); }; h.appendChild(db); }
-  if (d && d.groups) { const eb = pjEl('button', 'qbtn sm', '✎ تعديل الحسبة'); eb.type = 'button'; eb.onclick = () => { const box = pjEl('div'); c.replaceWith(box); qtPick(box, x.item, x.file_name, x.file_path, { groups: d.groups, bbox: d.bbox, warnings: d.warnings, inv: d.inv }, x); }; h.appendChild(eb); }
+  if (d && d.groups) { const eb = pjEl('button', 'qbtn sm', '✎ تعديل وإضافة للحسبة'); eb.type = 'button'; eb.onclick = () => { const box = pjEl('div'); c.replaceWith(box); qtPick(box, x.item, x.file_name, x.file_path, { groups: d.groups, bbox: d.bbox, warnings: d.warnings, inv: d.inv }, x); }; h.appendChild(eb); }
   c.appendChild(h);
   c.appendChild(pjEl('div', 'qsub', (x.file_name || '') + ' — ' + new Date(x.created_at).toLocaleString('ar-EG')));
   if (!d) { c.appendChild(pjEl('div', 'qempty', 'مفيش تفاصيل.')); return c; }
@@ -4108,7 +4108,7 @@ async function qtSave(item, fname, path, R, a, q, existing) {
 // اختيار الحاجة اللي تتحسب يدوي (لو السيستم ماعرفش، أو من «تعديل الحسبة» في التفاصيل)
 function qtPick(box, item, fname, path, R, existing, start, isNew) {
   qtCF(R);
-  const groups = R.groups || [];
+  const groups = (R.groups || []).filter((g) => !(g.kind === 'surface' && !g.src && g.exact === false)); // سطح الفرق التقريبي مابيظهرش
   let sel = new Set((start && start.sel) || (existing && existing.sel) || []), mode = (start && start.mode) || (existing && existing.mode) || 'area';
   let th = (start && start.th) || (existing && existing.thickness ? +existing.thickness : null), only = (R.only || (start && start.only)) || null;
   const c = pjEl('div', 'qcard'); c.appendChild(pjEl('h3', '', (existing ? 'تعديل حسبة ' : '') + item));
@@ -4146,16 +4146,53 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
     if (R.inv) side.appendChild(qtInventory(R.inv, groups));
     calc();
   };
+  // أسماء البنود اللي هتتحفظ (انت اللي بتسميها) — لكل سطح مختار في الحفر/الردم بند لوحده
+  const names = {};
   const calc = () => {
     tot.textContent = '';
     const a = { mode, sel: [...sel], th, only: mode === 'count' ? only : null };
-    const q = qtQty(groups, a), u = QT_MODES[mode][1];
-    tot.append(pjEl('span', '', item + ' ='), pjEl('b', '', q == null ? '—' : qtN(q)), pjEl('span', '', u));
-    const sv = pjEl('button', 'qbtn on', '✓ حفظ'); sv.type = 'button'; sv.disabled = q == null;
-    sv.onclick = async () => { sv.disabled = true; const r = await qtSave(item, fname, path, R, a, q, existing); if (!r) { sv.disabled = false; return; } QT.flash = r.id; QT.tab = existing ? 'det' : 'sum'; qtProject(); };
+    const u = QT_MODES[mode][1];
+    const ew = mode === 'cut' || mode === 'fill';
+    const sg = ew ? groups.filter((g) => g.kind === 'surface' && sel.has(qtKey(g))) : [];
+    const split = sg.length > 1;
+    // كل سطر = بند هيتحفظ: اسمه + اختياره + كميته
+    const rows = split ? sg.map((g) => ({ k: qtKey(g), g, a: { ...a, sel: [qtKey(g)] } })) : [{ k: '*', g: null, a }];
+    rows.forEach((r, i) => { r.q = qtQty(groups, r.a); if (names[r.k] == null) names[r.k] = i === 0 ? item : ''; });
+    const box2 = pjEl('div'); box2.style.cssText = 'display:grid;gap:8px;width:100%';
+    rows.forEach((r) => {
+      const ln = pjEl('div'); ln.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap';
+      const inp = pjEl('input'); inp.type = 'text'; inp.value = names[r.k]; inp.placeholder = 'اسم البند (مثلاً حفر عادية)'; inp.setAttribute('list', 'qtItemsDL');
+      inp.style.cssText = 'flex:1;min-width:160px;padding:8px 10px;border-radius:10px;border:1px solid rgba(148,163,184,.45);font:inherit;font-weight:800;background:transparent;color:inherit';
+      inp.oninput = () => { names[r.k] = inp.value; upd(); };
+      ln.append(inp, pjEl('span', '', '='), pjEl('b', '', r.q == null ? '—' : qtN(r.q)), pjEl('span', '', u));
+      box2.appendChild(ln);
+      if (r.g) box2.appendChild(pjEl('small', '', r.g.layer));
+    });
+    tot.appendChild(box2);
+    const act = pjEl('div', 'qact');
+    const valid = () => rows.every((r) => r.q != null && String(names[r.k] || '').trim());
+    // حفظ: بيضيف بنود جديدة تحت اللي محفوظ (مابيشيلش القديم)
+    const sv = pjEl('button', 'qbtn on', existing ? '＋ حفظ كبند جديد' : '✓ حفظ'); sv.type = 'button';
+    sv.title = existing ? 'بيضيف البند تحت البنود اللي محفوظة، والبند القديم بيفضل زي ما هو' : '';
+    const doSave = async (replace) => {
+      sv.disabled = true; if (ed) ed.disabled = true; let last = null;
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i], nm = String(names[r.k]).trim();
+        const res = await qtSave(nm, fname, path, R, r.a, r.q, replace && i === 0 ? existing : null);
+        if (!res) { sv.disabled = false; if (ed) ed.disabled = false; return; }
+        last = res;
+      }
+      QT.flash = last.id; QT.tab = 'sum'; qtProject();
+    };
+    sv.onclick = () => doSave(false);
+    let ed = null;
+    if (existing) { ed = pjEl('button', 'qbtn', '✎ عدّل البند الحالي بدل ما تضيف'); ed.type = 'button'; ed.title = 'بيغيّر البند «' + existing.item + '» نفسه'; ed.onclick = () => doSave(true); }
+    const upd = () => { const ok = valid(); sv.disabled = !ok; if (ed) ed.disabled = !ok; };
+    upd();
     const cancel = pjEl('button', 'qbtn', 'إلغاء'); cancel.type = 'button';
     cancel.onclick = async () => { if (!existing) await qtRm([path]); qtProject(); };
-    const act = pjEl('div', 'qact'); act.append(sv, cancel); tot.appendChild(act);
+    act.append(sv); if (ed) act.append(ed); act.append(cancel); tot.appendChild(act);
+    if (split) tot.appendChild(pjEl('div', 'qhint', 'كل سطح مختار هيتحفظ بند لوحده بالاسم اللي تكتبه.'));
   };
   draw();
 }
