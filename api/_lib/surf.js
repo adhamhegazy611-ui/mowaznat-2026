@@ -65,6 +65,26 @@ function volumeOf(pts, maxEdge = 30) {
 }
 
 // json: ناتج dwgread -O JSON (نص)
+// اسم السطح زي ما هو في Civil (Prospector): نص UTF-16 قبل الـ Description في آخر بيانات السطح
+function tinName(hex) {
+  try {
+    const nb = Math.min(hex.length >> 1, 6000), b = Buffer.from(hex.slice(hex.length - nb * 2), 'hex'), N = b.length * 8;
+    const rd = (bit, n) => { let v = 0; for (let i = 0; i < n; i++) { const B = bit + i; v = v * 2 + ((b[B >> 3] >> (7 - (B & 7))) & 1); } return v; };
+    const c16 = (bit) => rd(bit + 8, 8) * 256 + rd(bit, 8), ok = (c) => (c >= 32 && c < 127) || (c >= 0x600 && c <= 0x6ff);
+    const all = [];
+    for (let p = 0; p < N - 26; p++) {
+      if (rd(p, 2) !== 1) continue; const L = rd(p + 2, 8), st = p + 10; // طول النص (bitshort)
+      if (L < 1 || st + L * 16 > N) continue;
+      let t = '', good = true; for (let k = 0; k < L; k++) { const c = c16(st + k * 16); if (!ok(c)) { good = false; break; } t += String.fromCharCode(c); }
+      if (good && /[A-Za-z0-9\u0621-\u064a]/.test(t)) all.push({ a: p, e: st + L * 16, t });
+    }
+    const junk = (t) => /[\\:@]|\.(xml|txt|csv)$/i.test(t) || /- Datum$/.test(t);
+    const d = all.filter((x) => x.t === 'Description').pop();
+    if (d) { const n = all.filter((x) => x.e === d.a && !junk(x.t)).pop(); if (n) return n.t.trim(); }
+    const top = all.filter((x) => !junk(x.t) && x.t.length >= 2 && !all.some((y) => y !== x && y.a < x.a && y.e >= x.e));
+    const last = top.pop(); return last ? last.t.trim() : null;
+  } catch (e) { return null; }
+}
 function surfaces(src) {
   // src: ناتج scanDwgJson أو JSON كامل من dwgread
   let list;
@@ -78,7 +98,7 @@ function surfaces(src) {
       // المثلثات الظاهرة بس (اللي Civil حاسبها) — نفس أرقام Volume Dashboard
       const used = new Set(); t.T.forEach((tr) => tr.forEach((i) => used.add(i)));
       const zs = [...used].map((i) => t.V[i][2]).sort((a, b) => a - b), med = zs[zs.length >> 1];
-      const s = { handle: o.handle, layer: o.layer, points: used.size, zmin: zs[0], zmax: zs[zs.length - 1], tin: t, exact: true };
+      const s = { handle: o.handle, layer: o.layer, name: tinName(o.bits), points: used.size, zmin: zs[0], zmax: zs[zs.length - 1], tin: t, exact: true };
       s.volume = Math.abs(med) < 15 && zs[0] < 0 && zs[zs.length - 1] > 0 && zs.filter((z) => Math.abs(z) < 30).length > zs.length * 0.9;
       const v = tinVolume(t); s.area = v.area;
       if (s.volume) Object.assign(s, { fill: v.fill, cut: v.cut, _v: { P: t.V, tris: flat3(t.T) } });
@@ -87,7 +107,7 @@ function surfaces(src) {
     // احتياطي: النقط بس (الطريقة القديمة)
     const pts = decodePoints(o.bits); if (!pts || pts.length < 10) continue;
     const zs = pts.map((p) => p[2]).sort((a, b) => a - b), med = zs[zs.length >> 1];
-    const s = { handle: o.handle, layer: o.layer, points: pts.length, zmin: zs[0], zmax: zs[zs.length - 1] };
+    const s = { handle: o.handle, layer: o.layer, name: tinName(o.bits), points: pts.length, zmin: zs[0], zmax: zs[zs.length - 1] };
     const small = pts.filter((p) => Math.abs(p[2]) < 30);
     s.volume = Math.abs(med) < 15 && small.length > pts.length * 0.9 && zs[0] < 0 && zs[zs.length - 1] > 0;
     if (s.volume) { const v = volumeOf(small); Object.assign(s, { area: v.area, fill: v.fill, cut: v.cut, points: v.P.length, _v: v }); }
@@ -252,7 +272,7 @@ function surfaceGroups(src, origin) {
   vols.forEach((s, idx) => {
     const g = grid(s._v.P, s._v.tris);
     out.push({
-      key: 'S|' + s.handle, kind: 'surface', layer: vols.length > 1 ? 'سطح الفرق ' + (idx + 1) : 'سطح الفرق', handle: s.handle, color: 0, hex: '#f5b301', exact: !!s.exact,
+      key: 'S|' + s.handle, kind: 'surface', layer: s.name ? 'سطح الفرق «' + s.name + '»' : vols.length > 1 ? 'سطح الفرق ' + (idx + 1) : 'سطح الفرق', name: s.name || null, handle: s.handle, color: 0, hex: '#f5b301', exact: !!s.exact,
       n: s.points, tris: s._v.tris.length / 3, area: +s.area.toFixed(3), fill: +s.fill.toFixed(3), cut: +s.cut.toFixed(3), length: 0, paint: 0,
       zmin: +s.zmin.toFixed(3), zmax: +s.zmax.toFixed(3), maxEdge: s.exact ? 0 : 30, items: [], ext: g.ext, geom: g.geom,
     });
@@ -261,17 +281,17 @@ function surfaceGroups(src, origin) {
   const tins = ss.filter((s) => !s.volume && s.exact && s.tin && s.tin.T.length).sort((a, b) => b.area - a.area);
   const pairs = [];
   for (let i = 0; i < tins.length; i++) for (let j = i + 1; j < tins.length; j++) {
-    const A = tins[i], B = tins[j]; if (A.area < 0.8 * tins[0].area || pairs.length >= 12) continue; // سطحين بنفس المساحة = أرض طبيعية قبل/بعد (زي قطع المخلفات) if (A.zmax < B.zmin - 50 || B.zmax < A.zmin - 50) continue;
+    const A = tins[i], B = tins[j]; if (pairs.length >= 15) continue; // كل سطحين متداخلين (أرض طبيعية/حد طبقة/تصميم/قبل وبعد) if (A.zmax < B.zmin - 50 || B.zmax < A.zmin - 50) continue;
     let r; try { r = s2s(A.tin, B.tin); } catch (e) { continue; }
     if (r.area < 0.02 * B.area || r.area < 50 || r.fill + r.cut < 1) continue;
     pairs.push({ A, B, r, ia: i + 1, ib: j + 1 });
   }
-  const lab = (s, n) => 'سطح ' + n + ' (منسوب ' + s.zmin.toFixed(1) + '–' + s.zmax.toFixed(1) + '، ' + Math.round(s.area).toLocaleString('en') + ' م²)';
+  const lab = (s, n) => (s.name ? '«' + s.name + '»' : 'سطح ' + n) + ' (منسوب ' + s.zmin.toFixed(1) + '–' + s.zmax.toFixed(1) + '، ' + Math.round(s.area).toLocaleString('en') + ' م²)';
   pairs.forEach(({ A, B, r, ia, ib }) => {
     const BT = B.tin, t = flat3(BT.T);
     const g = grid(BT.V, t);
     out.push({
-      key: 'SS|' + A.handle + '|' + B.handle, kind: 'surface', src: 's2s', layer: 'سطح ' + ia + ' ← سطح ' + ib, base: lab(A, ia), comp: lab(B, ib), handle: B.handle, color: 0, hex: '#22c55e', exact: true,
+      key: 'SS|' + A.handle + '|' + B.handle, kind: 'surface', src: 's2s', layer: A.name && B.name ? '«' + A.name + '» ← «' + B.name + '»' : 'سطح ' + ia + ' ← سطح ' + ib, baseName: A.name || null, compName: B.name || null, base: lab(A, ia), comp: lab(B, ib), handle: B.handle, color: 0, hex: '#22c55e', exact: true,
       n: B.points, tris: BT.T.length, area: +r.area.toFixed(3), fill: +r.fill.toFixed(3), cut: +r.cut.toFixed(3), length: 0, paint: 0,
       zmin: +B.zmin.toFixed(3), zmax: +B.zmax.toFixed(3), items: [], ext: g.ext, geom: g.geom,
     });
@@ -287,4 +307,4 @@ function civilCounts(J) {
   return n;
 }
 
-module.exports = { civilCounts, surfaces, surfaceGroups, decodePoints, volumeOf, decodeTin, tinVolume, s2s, scanDwgJson, scanDwgStream };
+module.exports = { civilCounts, surfaces, surfaceGroups, decodePoints, volumeOf, decodeTin, tinVolume, s2s, scanDwgJson, scanDwgStream, tinName };

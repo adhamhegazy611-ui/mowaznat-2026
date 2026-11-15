@@ -3774,7 +3774,7 @@ function qtGroupDetail(g, mode, th) {
   const ul = pjEl('ul');
   const li = (t, c) => { const e = pjEl('li', c || ''); e.textContent = t; ul.appendChild(e); };
   if (g.kind === 'surface') {   // الطريقة والكمية بس
-    const how = g.src === 'table' ? 'من جدول Cut/Fill Summary في اللوحة' + (g.total ? ' (سطر Totals)' : '') : g.src === 's2s' ? 'Surface to Surface (' + g.layer + ')' : 'من سطح الفرق (Volume Surface) في اللوحة';
+    const how = g.src === 'table' ? 'من جدول Cut/Fill Summary في اللوحة' + (g.total ? ' (سطر Totals)' : '') : g.src === 's2s' ? (g.baseName && g.compName ? 'قارنت سطح «' + g.compName + '» بسطح «' + g.baseName + '» (Surface to Surface) — الحفر = الحتت اللي «' + g.baseName + '» فيها أعلى من «' + g.compName + '»، والردم العكس' : 'Surface to Surface (' + g.layer + ')') : 'من سطح الفرق (Volume Surface)' + (g.name ? ' «' + g.name + '»' : '') + ' في اللوحة';
     li('الطريقة: ' + how);
     if (mode === 'cut' || mode === 'fill') li('الكمية: ' + (mode === 'cut' ? 'حفر' : 'ردم') + ' = ' + qtN(g[mode]) + ' م³', 'net');
     else { li('حفر = ' + qtN(g.cut) + ' م³'); li('ردم = ' + qtN(g.fill) + ' م³'); }
