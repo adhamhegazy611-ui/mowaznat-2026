@@ -3233,6 +3233,8 @@ function qtAuto0(item, groups, mem) {
     // اسم البند فيه اسم سطح (زي «حفر عادية» وسطح اسمه «عادية»، أو «صخر» و ROCK)
     const words = qtNorm(item).replace(/حفر|ردم|قطع|اعمال|في|تربه|ارض/g, ' ').split(/\s+/).filter((w) => w.length >= 3);
     const hit = (g) => { const nm = qtNorm((g.baseName || '') + ' ' + (g.compName || '')); return words.some((w) => nm.includes(w) || (/صخر/.test(w) && /rock/.test(nm))); };
+    const rp = s2.filter((g) => g.rep);
+    if (rp.length === 1) return { mode: em, sel: [qtKey(rp[0])] }; // لوحة فيها إحلال: الحفر/الردم = الأساسي + الإحلال
     const named = s2.filter(hit);
     if (named.length === 1) return { mode: em, sel: [qtKey(named[0])] };
     if (s2.length === 1) return { mode: em, sel: [qtKey(s2[0])] };
@@ -3270,7 +3272,27 @@ function qtAuto0(item, groups, mem) {
 }
 // جدول Cut/Fill Summary اللي Civil 3D بيطلّعه من Volume Dashboard (أو Volumes report) جوه اللوحة:
 // كل سطر فيه (اسم سطح الفرق، المساحة، Cut، Fill، Net) + سطر Totals — دي نفس أرقام Civil بالظبط
+// الإحلال: لو فيه سطح «قاع إحلال» (Replacement/إحلال) — الإحلال = حفر لحد قاعه − حفر لحد التصميم،
+// وبيتزود مرة على الحفر ومرة على الردم (بيتشال تراب ويتحط مكانه مادة إحلال)
+const QT_REPL = /replac|احلال|إحلال/i, QT_DSGN = /ferma|فرم|design|تصميم|finish|\bfg\b|final/i;
+function qtRep(d) {
+  if (!d || d._rep || !Array.isArray(d.groups)) return; d._rep = 1;
+  if (d.groups.some((g) => g.rep)) return; // اتضاف قبل كده (تفاصيل محفوظة)
+  const s2 = d.groups.filter((g) => g.src === 's2s' && g.baseName && g.compName);
+  const add = [];
+  s2.filter((g) => QT_REPL.test(g.compName) && !QT_REPL.test(g.baseName)).forEach((pR) => {
+    const cands = s2.filter((g) => g.baseName === pR.baseName && g !== pR && !QT_REPL.test(g.compName));
+    if (!cands.length) return;
+    const pD = cands.find((g) => QT_DSGN.test(g.compName)) || cands.sort((a, b) => (b.area || 0) - (a.area || 0))[0];
+    const rep = Math.max(0, (pR.cut || 0) - (pD.cut || 0));
+    add.push({ kind: 'surface', src: 's2s', rep: { rep, cutD: pD.cut || 0, fillD: pD.fill || 0, cutR: pR.cut || 0, base: pR.baseName, dsgn: pD.compName, repl: pR.compName },
+      layer: '«' + pR.baseName + '» ← «' + pD.compName + '» + إحلال «' + pR.compName + '»', baseName: pR.baseName, compName: pD.compName,
+      cut: (pD.cut || 0) + rep, fill: (pD.fill || 0) + rep, area: pD.area, n: pD.n, hex: '#a855f7', color: 0, geom: pD.geom || [], items: [], exact: true, length: 0 });
+  });
+  if (add.length) d.groups.unshift(...add);
+}
 function qtCF(d) {
+  qtRep(d);
   if (!d || d._cf || !d.inv || !Array.isArray(d.inv.texts)) return d; d._cf = 1;
   const T = d.inv.texts.filter((t) => t && typeof t.t === 'string' && t.at);
   const num = (t) => { const m = /-?[\d,]*\.?\d+/.exec(String(t).replace(/,/g, '')); return m ? +m[0] : null; };
@@ -3798,6 +3820,15 @@ function qtGroupDetail(g, mode, th) {
   const li = (t, c) => { const e = pjEl('li', c || ''); e.textContent = t; ul.appendChild(e); };
   if (g.kind === 'surface') {   // الطريقة والكمية بس
     const how = g.src === 'table' ? 'من جدول Cut/Fill Summary في اللوحة' + (g.total ? ' (سطر Totals)' : '') : g.src === 's2s' ? (g.baseName && g.compName ? 'قارنت سطح «' + g.compName + '» بسطح «' + g.baseName + '» (Surface to Surface) — الحفر = الحتت اللي «' + g.baseName + '» فيها أعلى من «' + g.compName + '»، والردم العكس' : 'Surface to Surface (' + g.layer + ')') : 'من سطح الفرق (Volume Surface)' + (g.name ? ' «' + g.name + '»' : '') + ' في اللوحة';
+    if (g.rep) {
+      const r = g.rep;
+      li('قارنت سطح «' + r.dsgn + '» بسطح «' + r.base + '»: حفر ' + qtN(r.cutD) + ' م³، ردم ' + qtN(r.fillD) + ' م³');
+      li('الإحلال = الحفر لحد قاع الإحلال «' + r.repl + '» ' + qtN(r.cutR) + ' − الحفر لحد «' + r.dsgn + '» ' + qtN(r.cutD) + ' = ' + qtN(r.rep) + ' م³', 'minus');
+      if (mode === 'fill') li('الكمية: ردم ' + qtN(r.fillD) + ' + إحلال ' + qtN(r.rep) + ' = ' + qtN(g.fill) + ' م³', 'net');
+      else if (mode === 'cut') li('الكمية: حفر ' + qtN(r.cutD) + ' + إحلال ' + qtN(r.rep) + ' = ' + qtN(g.cut) + ' م³', 'net');
+      else { li('حفر ' + qtN(r.cutD) + ' + إحلال ' + qtN(r.rep) + ' = ' + qtN(g.cut) + ' م³'); li('ردم ' + qtN(r.fillD) + ' + إحلال ' + qtN(r.rep) + ' = ' + qtN(g.fill) + ' م³'); }
+      b.appendChild(ul); return b;
+    }
     li('الطريقة: ' + how);
     if (mode === 'cut' || mode === 'fill') li('الكمية: ' + (mode === 'cut' ? 'حفر' : 'ردم') + ' = ' + qtN(g[mode]) + ' م³', 'net');
     else { li('حفر = ' + qtN(g.cut) + ' م³'); li('ردم = ' + qtN(g.fill) + ' م³'); }
@@ -3828,6 +3859,8 @@ function qtFormula(x, d) {
   const gs = (d.groups || []).filter((g) => (x.sel || []).includes(qtKey(g)));
   const fp = qtFillParts(x);
   if (fp) return 'الكمية = ردم السطح ' + qtN(fp.base) + (fp.digs.length ? ' + ردم الإحلال ' + (fp.digs.length > 1 ? '(' + fp.digs.map((y) => qtN(y.qty)).join(' + ') + ')' : qtN(fp.digs[0].qty)) + ' م² × ' + qtN(fp.k, 3) + ' م' : '') + ' = ' + qtN(x.qty) + ' م³';
+  const rg = (x.mode === 'fill' || x.mode === 'cut') && gs.length === 1 && gs[0].rep;
+  if (rg) return 'الكمية = ' + (x.mode === 'fill' ? 'ردم ' + qtN(rg.fillD) : 'حفر ' + qtN(rg.cutD)) + ' + إحلال ' + qtN(rg.rep) + ' = ' + qtN(x.qty) + ' م³';
   if (x.mode === 'fill' || x.mode === 'cut') return 'الكمية = ' + (x.mode === 'fill' ? 'حجم الردم' : 'حجم الحفر') + ' (Surface to Surface)' + (gs.length > 1 ? ' (' + gs.map((g) => qtN(g[x.mode])).join(' + ') + ')' : '') + ' = ' + qtN(x.qty) + ' م³';
   const base = gs.map((g) => qtN(x.mode === 'count' ? g.n : x.mode === 'length' ? g.length : x.mode === 'paint' ? g.paint : g.area));
   if (x.mode === 'section') { const h = gs.filter((g) => g.kind === 'hatch'), l = gs.filter((g) => g.kind === 'line'); return 'الكمية = مساحة القطاع ' + qtN(h.reduce((s, g) => s + g.area, 0), 4) + ' م² × الطول ' + qtN(l.reduce((s, g) => s + g.length, 0)) + ' م = ' + qtN(x.qty) + ' م³'; }
