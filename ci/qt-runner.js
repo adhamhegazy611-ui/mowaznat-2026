@@ -33,7 +33,9 @@ async function run(job) {
   if (out.c !== 200 || !out.o.groups) return call('finish', { id: job.id, ok: false, error: out.o.error || 'تعذّر قراءة اللوحة' });
   const up = await realFetch(job.upload, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-upsert': 'true' }, body: JSON.stringify(out.o) });
   if (!up.ok) return call('finish', { id: job.id, ok: false, error: 'رفع النتيجة ' + up.status });
-  return call('finish', { id: job.id, ok: true });
+  // ملخص صغير للمجموعات (من غير الرسم) — للمراجعة من قاعدة البيانات
+  const summary = (out.o.groups || []).slice(0, 400).map((g) => ({ kind: g.kind, layer: g.layer, pat: g.pat, color: g.color, n: g.n, area: g.area && +g.area.toFixed(3), length: g.length && +g.length.toFixed(3), paint: g.paint && +g.paint.toFixed(3), cut: g.cut && +g.cut.toFixed(2), fill: g.fill && +g.fill.toFixed(2), src: g.src, hid: g.hid, blk: g.blk, overlap: g.overlap, parts: g.items ? g.items.length : undefined }));
+  return call('finish', { id: job.id, ok: true, summary: { groups: summary, warnings: out.o.warnings, bbox: out.o.bbox, inv: out.o.inv && { types: out.o.inv.types, civil: out.o.inv.civil, layerCount: out.o.inv.layerCount, texts: (out.o.inv.texts || []).slice(0, 150).map((t) => t.t) } } });
 }
 module.exports = { run, setCall: (f) => { call = f; } };
 if (require.main === module) (async () => {
