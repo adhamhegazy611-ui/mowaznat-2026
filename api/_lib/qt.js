@@ -204,16 +204,24 @@ function nestedLines(geom, items) {
   geom.forEach((g, i) => { if (g.t === 'l' && g.closed && items[i] && items[i].area > 0 && g.pts.length > 2) { const xs = g.pts.map((p) => p[0]), ys = g.pts.map((p) => p[1]); C.push({ i, pts: g.pts, a: items[i].area, bb: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] }); } });
   if (C.length < 2 || C.length > 3000) return { holes: 0 };
   const inside = (pt, poly) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < (xj - xi) * (pt[1] - yi) / (yj - yi) + xi) c = !c; } return c; };
-  let area = 0, holes = 0;
+  let area = 0, holes = 0, inner = 0;
+  // خط جوه خط: لو مساحته أقل من نص اللي حواليه = فتحة (بتتطرح). لو قريبة منه = خط داخلي موازي (حد أسفلت جوه حد الطريق) — مابيتحسبش، الخارجي بس
   C.forEach((p) => {
     const step = Math.max(1, Math.floor(p.pts.length / 24)), smp = p.pts.filter((_, k) => k % step === 0);
-    let depth = 0;
-    C.forEach((q) => { if (q === p || q.a <= p.a) return; if (q.bb[0] > p.bb[0] + 1e-6 || q.bb[1] > p.bb[1] + 1e-6 || q.bb[2] < p.bb[2] - 1e-6 || q.bb[3] < p.bb[3] - 1e-6) return; const k = smp.filter((pt) => inside(pt, q.pts)).length; if (k >= 0.8 * smp.length) depth++; });
+    const par = [];
+    C.forEach((q) => { if (q === p || q.a <= p.a) return; if (q.bb[0] > p.bb[0] + 1e-6 || q.bb[1] > p.bb[1] + 1e-6 || q.bb[2] < p.bb[2] - 1e-6 || q.bb[3] < p.bb[3] - 1e-6) return; const k = smp.filter((pt) => inside(pt, q.pts)).length; if (k >= 0.8 * smp.length) par.push(q); });
+    p.par = par;
+  });
+  C.forEach((p) => {
+    if (!p.par.length) { area += p.a; return; }
+    const dir = p.par.reduce((m, q) => (q.a < m.a ? q : m)); // أقرب خط حواليه
+    if (p.a >= 0.5 * dir.a) { inner++; return; }
+    const depth = p.par.filter((q) => !(q.par.length && q.a >= 0.5 * q.par.reduce((m, r) => (r.a < m.a ? r : m)).a)).length; // الخطوط الموازية ماتتعدّش
     if (depth % 2) { holes++; area -= p.a; } else area += p.a;
   });
   // خطوط مقفولة مالهاش علاقة ببعض بتتجمع عادي
   geom.forEach((g, i) => { if (!(g.t === 'l' && g.closed && items[i] && items[i].area > 0 && g.pts.length > 2)) area += 0; });
-  return { holes, area: +area.toFixed(3) };
+  return { holes, inner, area: +area.toFixed(3) };
 }
 function analyze(text, latin1) {
   const { ents, layers, ltypes, header, blocks } = parseDXF(text, latin1);
@@ -316,7 +324,7 @@ function analyze(text, latin1) {
     gr.geom.forEach((g) => { if (g.t === 'h') g.polys.forEach((p) => p.forEach(ext)); else if (g.t === 'l') g.pts.forEach(ext); else ext(g.at); });
     // هاتشات فوق بعض في نفس المجموعة: الجزء المتداخل يتحسب مرة واحدة بس (زي مساحة المنطقة المتهشرة فعلاً)
     // خطوط مقفولة جوه بعض (حدود خارجية وجواها حدود داخلية): الداخلي بيتطرح زي جزر الهاتش (Even-Odd)
-    if (gr.kind === 'line' && gr.geom.length > 1) { try { const r = nestedLines(gr.geom, gr.items); if (r.holes) { gr.areaRaw = +gr.area.toFixed(3); gr.holes = r.holes; gr.area = r.area; } } catch (e) { /* */ } }
+    if (gr.kind === 'line' && gr.geom.length > 1) { try { const r = nestedLines(gr.geom, gr.items); if (r.holes || r.inner) { gr.areaRaw = +gr.area.toFixed(3); gr.holes = r.holes; gr.inner = r.inner; gr.area = r.area; } } catch (e) { /* */ } }
     if (gr.kind === 'hatch' && gr.geom.length > 1) { try { const ov = hatchOverlap(gr.geom.map((g) => g.polys)); if (ov > 0.5 && ov > 1e-4 * gr.area) { gr.overlap = +ov.toFixed(3); gr.area -= ov; } } catch (e) { /* */ } }
     return { ...gr, lt: gr.lt ? [...gr.lt] : undefined, area: +gr.area.toFixed(3), length: +gr.length.toFixed(3), paint: +gr.paint.toFixed(3) };
   });

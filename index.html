@@ -3853,6 +3853,7 @@ function qtGroupDetail(g, mode, th) {
   } else if (g.kind === 'line') {
     const li = pjEl('li'); li.textContent = g.n + ' خط، الطول ' + qtN(g.length) + ' م.ط' + (g.paint < g.length - 0.01 ? '، المدهون ' + qtN(g.paint) + ' م.ط (نسبة ' + qtN(g.paint / g.length * 100, 0) + '٪)' : '') + (g.area ? '، مساحة المقفول ' + qtN(g.area) + ' م²' : '');
     ul.appendChild(li);
+    if (g.inner) { const li2 = pjEl('li', 'minus'); li2.textContent = 'فيه ' + g.inner + ' خط مقفول جوه خط تاني وماشي جنبه (زي حد الأسفلت جوه حد الطريق) — اتحسب الخط الخارجي بس، والداخلي مااتحسبش ولا اتطرح'; ul.appendChild(li2); }
     if (g.holes) { const lh = pjEl('li', 'minus'); lh.textContent = 'فيه ' + g.holes + ' خط مقفول جوه خطوط تانية (حدود داخلية) — مساحتهم بتتطرح زي فتحات الهاتش: ' + qtN(g.areaRaw) + ' قبل الطرح ← ' + qtN(g.area) + ' م² صافي'; ul.appendChild(lh); }
     const top = g.items.slice().sort((a, b) => b.len - a.len).slice(0, 12);
     const li2 = pjEl('li', 'muted'); li2.textContent = 'الأطوال: ' + top.map((t) => qtN(t.len)).join(' + ') + (g.items.length > 12 ? ' + …' : ''); ul.appendChild(li2);
