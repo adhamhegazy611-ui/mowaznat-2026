@@ -3237,6 +3237,11 @@ function qtAuto0(item, groups, mem) {
     if (rp.length === 1) return { mode: em, sel: [qtKey(rp[0])] }; // لوحة فيها إحلال: الحفر/الردم = الأساسي + الإحلال
     const named = s2.filter(hit);
     if (named.length === 1) return { mode: em, sel: [qtKey(named[0])] };
+    // لو فيه جدول Cut/Fill من Civil: نختار المقارنة اللي حسابها مطابق له (الرقم نفسه من حسابنا)
+    const tb = groups.filter((g) => g.src === 'table' && g[em] > 0);
+    const near = (a, b) => Math.abs(a - b) <= Math.max(1, 0.005 * b);
+    const mt = s2.filter((g) => tb.some((t) => near(g.cut, t.cut) && near(g.fill, t.fill)));
+    if (mt.length === 1) return { mode: em, sel: [qtKey(mt[0])] };
     if (s2.length === 1) return { mode: em, sel: [qtKey(s2[0])] };
     return null;   // أكتر من اختيار Surface to Surface: المستخدم يحدد الأرض الطبيعية والتصميم
   }
@@ -4262,19 +4267,27 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
       i.oninput = () => { th = parseFloat(i.value) || null; calc(); }; l.appendChild(i); side.appendChild(l);
       setTimeout(() => { if (!th) i.focus(); }, 30);
     }
+    const ewm = mode === 'cut' || mode === 'fill';
     const list = pjEl('div', 'qglist');
-    groups.forEach((g) => {
+    groups.filter((g) => !ewm || g[mode] > 0.5 || sel.has(qtKey(g))).forEach((g) => {
       const k = qtKey(g), row = pjEl('label', 'qgi' + (sel.has(k) ? ' on' : ''));
       const cb = pjEl('input'); cb.type = 'checkbox'; cb.checked = sel.has(k);
       cb.onchange = () => { if (cb.checked) sel.add(k); else sel.delete(k); draw(); };
       const sw = pjEl('i'); sw.style.background = g.hex;
-      const v = pjEl('span', 'v', g.kind === 'surface' ? (g.src === 's2s' ? 'S2S · ' : '') + 'ردم ' + qtN(g.fill) + ' · حفر ' + qtN(g.cut) + ' م³' : g.kind === 'hatch' ? qtN(g.area) + ' م²' : g.kind === 'line' ? qtN(g.length) + ' م.ط' : g.n + ' عدد');
+      const v = pjEl('span', 'v', g.kind === 'surface' ? (ewm ? (mode === 'fill' ? 'ردم ' + qtN(g.fill) : 'حفر ' + qtN(g.cut)) + ' م³' : 'ردم ' + qtN(g.fill) + ' · حفر ' + qtN(g.cut) + ' م³') : g.kind === 'hatch' ? qtN(g.area) + ' م²' : g.kind === 'line' ? qtN(g.length) + ' م.ط' : g.n + ' عدد');
       if (g.kind === 'line') v.appendChild(pjEl('small', '', g.n + ' خط' + (g.area ? ' · مقفول ' + qtN(g.area) + ' م²' : '') + (g.paint < g.length - 0.01 ? ' · مدهون ' + qtN(g.paint) : '')));
-      row.append(cb, sw, pjEl('b', '', qtKind(g)), pjEl('span', 'ly', g.layer + qtTag(g)), v);
+      row.append(cb, sw, pjEl('b', '', ewm ? '' : qtKind(g)), pjEl('span', 'ly', g.layer + qtTag(g)), v);
       if (g.hid) row.classList.add('hid');
       list.appendChild(row);
     });
-    side.appendChild(list);
+    if (ewm && groups.length) { // الحفر/الردم: الرقم بس، والاختيارات متخبية
+      const pk = groups.filter((g) => sel.has(qtKey(g)));
+      const hd = pjEl('div', 'qhint'); hd.style.cssText = 'font-size:1.05em';
+      hd.textContent = pk.length ? 'قارنت ' + pk.map((g) => g.layer).join(' + ') : 'اختار السطحين اللي يتقارنوا من تحت ⬇';
+      side.appendChild(hd);
+      const dt = pjEl('details'); dt.open = !pk.length; const sm = pjEl('summary', '', 'غيّر السطحين'); sm.style.cssText = 'cursor:pointer;font-weight:800;margin:6px 0';
+      dt.append(sm, list); side.appendChild(dt);
+    } else side.appendChild(list);
     (R.warnings || []).filter(qtWarnOk).forEach((w) => side.appendChild(pjEl('div', 'qwarn', '⚠️ ' + w)));
     side.appendChild(tot);
     if (R.inv && mode !== 'cut' && mode !== 'fill') side.appendChild(qtInventory(R.inv, groups));
