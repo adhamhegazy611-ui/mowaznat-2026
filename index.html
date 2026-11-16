@@ -3216,6 +3216,12 @@ function qtFillParts(x) {
 }
 const qtWarnOk = (w) => !/Civil 3D|سطح تاني|سطوح/.test(w);
 const QT_BG = /ASPHALT|MARKING|TITL|TEXT|DIM|FRAME|BORDER|DEFPOINTS/i;
+function qtCivChain(groups) {
+  const near = (a, b) => Math.abs(a - b) <= Math.max(1, 0.005 * Math.abs(b));
+  const vols = groups.filter((g) => g.kind === 'surface' && !g.src && g.cut > 0), s2 = groups.filter((g) => g.src === 's2s' && !g.rep), out = [];
+  vols.forEach((v) => { const m = s2.filter((g) => !out.includes(g) && near(g.cut, v.cut) && near(g.fill, v.fill)); if (m.length) out.push(m[0]); });
+  return out.length === vols.length ? out : [];
+}
 function qtAuto(item, groups, mem) {
   const top = groups.filter((g) => !g.hid && !g.blk);
   if (top.length < groups.length && !(mem && mem.sel && mem.sel.some((k) => k.includes('|@')))) { const r = qtAuto0(item, top, mem); if (r) return r; }
@@ -3228,6 +3234,8 @@ function qtAuto0(item, groups, mem) {
     // الحفر والردم: Surface to Surface بس (مقارنة سطحين بأسمائهم من Civil)
     const em = qtEwMode(item), s2 = groups.filter((g) => g.src === 's2s' && g[em] > 0);
     if (mem && mem.mode === em && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: em, sel: mem.sel.slice(), how: 'mem' };
+    // سطوح الفرق اللي المهندس عاملها في Civil (زي «QTY CUT» و«QTY CUT&FILL»): بنحسب نفس المقارنات Surface to Surface ونجمع القطع
+    if (em === 'cut') { const ch = qtCivChain(groups); if (ch.length > 1) return { mode: 'cut', sel: ch.map(qtKey), merge: true }; }
     // المخلفات: الأرض قبل وبعد الإزالة — أكبر قطع
     if (/مخلف/.test(item) && s2.length) { const b = s2.slice().sort((x, y) => y.cut - x.cut)[0]; return { mode: 'cut', sel: [qtKey(b)] }; }
     // اسم البند فيه اسم سطح (زي «حفر عادية» وسطح اسمه «عادية»، أو «صخر» و ROCK)
@@ -4210,7 +4218,7 @@ async function qtSave(item, fname, path, R, a, q, existing) {
   const sl = qtSlim(groups, sel, R.inv), keep = sl.keep;
   let extra = [];
   if (a.mode === 'fill') { const old = existing && (existing.sel || []).find((k) => /^A\|/.test(k)); extra = ['B|' + (+q.toFixed(3))].concat(old ? [old] : []); }
-  const row = { item, unit: QT_MODES[a.mode][1], mode: a.mode, thickness: a.mode === 'volume' ? a.th : null, qty: +q.toFixed(3), sel: [...sel, ...extra], detail: { groups: keep, bbox: R.bbox, warnings: R.warnings || [], only: a.only || null, inv: sl.inv, _cf: 1, rock: a.rock || null } };
+  const row = { item, unit: QT_MODES[a.mode][1], mode: a.mode, thickness: a.mode === 'volume' ? a.th : null, qty: +q.toFixed(3), sel: [...sel, ...extra], detail: { groups: keep, bbox: R.bbox, warnings: R.warnings || [], only: a.only || null, inv: sl.inv, _cf: 1, rock: a.rock || null, merge: a.merge || null } };
   const cols = 'id,item,unit,mode,thickness,qty,file_name,file_path,sel,note,sort,created_at';
   let res;
   if (existing) res = await sb.from('qt_items').update(row).eq('id', existing.id).select(cols).single();
@@ -4246,6 +4254,7 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
   const s2G = (R.groups || []).filter((g) => g.src === 's2s'), otherG = (R.groups || []).filter((g) => g.kind !== 'surface');
   const ewItem = QT_EW.test(item);
   const ROCK = { rows: (existing && existing._rock) || [], file: '' }; // قطاعات الصخر من تقرير الجسات
+  const merge = !!((start && start.merge) || (existing && existing.detail && existing.detail.merge)); // أكتر من مقارنة بتتجمع في بند واحد (مراحل القطع)
   let sel = new Set((start && start.sel) || (existing && existing.sel) || []), mode = (start && start.mode) || (existing && existing.mode) || 'area';
   if (ewItem && mode !== 'cut' && mode !== 'fill') mode = qtEwMode(item);
   let groups = mode === 'cut' || mode === 'fill' ? s2G : otherG;
@@ -4301,11 +4310,11 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
   const names = {};
   const calc = () => {
     tot.textContent = '';
-    const a = { mode, sel: [...sel], th, only: mode === 'count' ? only : null };
+    const a = { mode, sel: [...sel], th, only: mode === 'count' ? only : null, merge: merge && mode === 'cut' };
     const u = QT_MODES[mode][1];
     const ew = mode === 'cut' || mode === 'fill';
     const sg = ew ? groups.filter((g) => g.kind === 'surface' && sel.has(qtKey(g))) : [];
-    const split = sg.length > 1 || (mode === 'cut' && ROCK.rows.length > 0);
+    const split = (sg.length > 1 && !a.merge) || (mode === 'cut' && ROCK.rows.length > 0);
     // كل سطر = بند هيتحفظ: اسمه + اختياره + كميته
     let rows = split ? sg.map((g) => ({ k: qtKey(g), g, a: { ...a, sel: [qtKey(g)] } })) : [{ k: '*', g: null, a }];
     rows.forEach((r, i) => { r.q = qtQty(groups, r.a); if (names[r.k] == null) names[r.k] = i === 0 ? item : ''; });
