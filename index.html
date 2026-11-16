@@ -3235,7 +3235,6 @@ function qtAuto0(item, groups, mem) {
     const em = qtEwMode(item), s2 = groups.filter((g) => g.src === 's2s' && g[em] > 0);
     if (mem && mem.mode === em && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: em, sel: mem.sel.slice(), how: 'mem' };
     // سطوح الفرق اللي المهندس عاملها في Civil (زي «QTY CUT» و«QTY CUT&FILL»): بنحسب نفس المقارنات Surface to Surface ونجمع القطع
-    if (em === 'cut') { const ch = qtCivChain(groups); if (ch.length > 1) return { mode: 'cut', sel: ch.map(qtKey), merge: true }; }
     // المخلفات: الأرض قبل وبعد الإزالة — أكبر قطع
     if (/مخلف/.test(item) && s2.length) { const b = s2.slice().sort((x, y) => y.cut - x.cut)[0]; return { mode: 'cut', sel: [qtKey(b)] }; }
     // اسم البند فيه اسم سطح (زي «حفر عادية» وسطح اسمه «عادية»، أو «صخر» و ROCK)
@@ -3243,6 +3242,10 @@ function qtAuto0(item, groups, mem) {
     const hit = (g) => { const nm = qtNorm((g.baseName || '') + ' ' + (g.compName || '')); return words.some((w) => nm.includes(w) || (/صخر/.test(w) && /rock/.test(nm))); };
     const rp = s2.filter((g) => g.rep);
     if (rp.length === 1) return { mode: em, sel: [qtKey(rp[0])] }; // لوحة فيها إحلال: الحفر/الردم = الأساسي + الإحلال
+    // لو Civil محفوظ فيه سطوح فرق (محسوبة من نفس المثلثات): هي الرقم الأدق — القطع = مجموعهم، والردم = سطح الفرق اللي فيه الردم
+    const vols = groups.filter((g) => g.kind === 'surface' && !g.src && g.exact !== false);
+    if (em === 'cut') { const vc = vols.filter((g) => g.cut > 0.5); if (vc.length > 1) return { mode: 'cut', sel: vc.map(qtKey), merge: true }; if (vc.length === 1) return { mode: 'cut', sel: [qtKey(vc[0])] }; }
+    if (em === 'fill') { const vf = vols.filter((g) => g.fill > 0.5).sort((x, y) => y.fill - x.fill)[0]; if (vf) return { mode: 'fill', sel: [qtKey(vf)] }; }
     const named = s2.filter(hit);
     if (named.length === 1) return { mode: em, sel: [qtKey(named[0])] };
     // لو فيه جدول Cut/Fill من Civil: نختار المقارنة اللي حسابها مطابق له (الرقم نفسه من حسابنا)
@@ -4251,7 +4254,7 @@ function qtCheck(R, s2G) {
 }
 function qtPick(box, item, fname, path, R, existing, start, isNew) {
   // الحفر والردم: بيظهر Surface to Surface بس، وباقي البنود: الهاتشات والخطوط والبلوكات بس (من غير السطوح)
-  const s2G = (R.groups || []).filter((g) => g.src === 's2s'), otherG = (R.groups || []).filter((g) => g.kind !== 'surface');
+  const s2G = (R.groups || []).filter((g) => g.src === 's2s' || (g.kind === 'surface' && !g.src && g.exact !== false)), otherG = (R.groups || []).filter((g) => g.kind !== 'surface');
   const ewItem = QT_EW.test(item);
   const ROCK = { rows: (existing && existing._rock) || [], file: '' }; // قطاعات الصخر من تقرير الجسات
   const merge = !!((start && start.merge) || (existing && existing.detail && existing.detail.merge)); // أكتر من مقارنة بتتجمع في بند واحد (مراحل القطع)
