@@ -4493,7 +4493,9 @@ async function hubHome() {
   const hero = pjEl('div', 'qhero'), hl = pjEl('div');
   hl.append(pjEl('h2', '', 'المشاريع'), pjEl('p', '', 'كل مشروع فيه: اللوح والكميات، تحليل الأسعار والموازنة، المقايسات، وموقف المشروع — في مكان واحد.'));
   const nb = pjEl('button', 'qbtn on', '+ مشروع جديد'); nb.type = 'button'; nb.onclick = hubNew;
-  hero.append(hl, nb); m.appendChild(hero);
+  const sb2 = pjEl('button', 'qbtn', '📎 ربط شيتات الموازنات'); sb2.type = 'button'; sb2.title = 'اختار ملفات الإكسيل وكل ملف يتربط بالمشروع بتاعه في الموازنات'; sb2.onclick = mzBulk;
+  const hb0 = pjEl('div', 'hb'); hb0.append(nb, sb2);
+  hero.append(hl, hb0); m.appendChild(hero);
   const grid = pjEl('div', 'qgrid'); grid.appendChild(pjEl('div', 'qempty', 'جاري التحميل…')); m.appendChild(grid);
   const sug = pjEl('div'); sug.style.marginTop = '16px'; m.appendChild(sug);
   const [{ data: hs, error }, { data: qps }, { data: pps }, { data: its }] = await Promise.all([
@@ -4534,6 +4536,97 @@ async function hubHome() {
     });
     sug.appendChild(cd);
   }
+}
+// ===== ربط شيتات الموازنات بمشاريع «الموازنات» مرة واحدة =====
+// بيقرا عنوان أول شيت من الملف نفسه (xlsx = zip) عشان المطابقة تبقى أدق
+async function xlsxTitle(file) {
+  try {
+    const b = new Uint8Array(await file.arrayBuffer()), dv = new DataView(b.buffer), td = new TextDecoder(), got = {};
+    let e = b.length - 22; while (e > 0 && dv.getUint32(e, true) !== 0x06054b50) e--; if (e <= 0) return '';
+    let p = dv.getUint32(e + 16, true); const n = dv.getUint16(e + 10, true);
+    for (let i = 0; i < n; i++) {
+      const meth = dv.getUint16(p + 10, true), cs = dv.getUint32(p + 20, true), fl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lo = dv.getUint32(p + 42, true);
+      const name = td.decode(b.subarray(p + 46, p + 46 + fl)); p += 46 + fl + xl + cl;
+      if (name !== 'xl/sharedStrings.xml' && name !== 'xl/worksheets/sheet1.xml') continue;
+      const st = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true), raw = b.subarray(st, st + cs);
+      got[name] = meth === 0 ? td.decode(raw) : await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+    }
+    const ss = [...(got['xl/sharedStrings.xml'] || '').matchAll(/<si>([\s\S]*?)<\/si>/g)].map((m) => [...m[1].matchAll(/<t[^>]*>([^<]*)<\/t>/g)].map((x) => x[1]).join(''));
+    // أول نصوص في أول شيت (العنوان عادة)
+    const idx = [...(got['xl/worksheets/sheet1.xml'] || '').slice(0, 60000).matchAll(/<c [^>]*t="s"[^>]*>\s*<v>(\d+)<\/v>/g)].slice(0, 1).map((m) => ss[+m[1]] || '');
+    return (idx.length ? idx : ss.slice(0, 3)).join(' ').replace(/&amp;/g, '&');
+  } catch (e) { return ''; }
+}
+function mzNorm(t) {
+  return String(t || '').replace(/\.(xlsx|xlsm|xls|xlsb|csv)$/i, '').replace(/[\u064B-\u0652\u0640]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
+    .replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).toLowerCase()
+    .replace(/\d{1,2}[-/]\d{1,2}[-/]\d{2,4}/g, ' ').replace(/(\d)([\u0600-\u06FF])/g, '$1 $2').replace(/([\u0600-\u06FF])(\d)/g, '$1 $2').replace(/([a-z])0+(\d)/g, '$1$2').replace(/[()\-+_,،:]/g, ' ');
+}
+const MZ_STOP = new Set(['موازنه', 'تقديريه', 'لاعمال', 'اعمال', 'لمشروع', 'مشروع', 'اجماليه', 'ذاتي', 'طريق', 'طرق', 'بطول', 'كم', 'متر', 'خاصه', 'اداره', 'مسعره', 'منطقه', 'بنود', 'الاعمال', 'تطوير', 'انشاء']);
+const mzToks = (t) => mzNorm(t).split(/\s+/).map((w) => w.replace(/^(و?ب?ال|لل)(?=..)/, '').replace(/^اجماليه(ل?مشروع)?$/, '')).filter((w) => (w.length >= 2 || /\d/.test(w)) && !MZ_STOP.has(w));
+function mzMatch(text, P) {
+  const a = new Set(mzToks(text)); if (!a.size) return [];
+  // الدرجة = نص (كلمات المشروع اللي في الملف) + نص (كلمات الملف اللي في المشروع)
+  const sc = P.map((p) => { const b = mzToks(p.name); if (!b.length) return 0; let k = 0; b.forEach((w) => { if (a.has(w) || (w.length >= 4 && [...a].some((x) => x.length >= 4 && (x.startsWith(w) || w.startsWith(x))))) k++; }); return 0.5 * k / b.length + 0.5 * Math.min(1, k / a.size); });
+  const best = Math.max(...sc); if (best < 0.5) return [];
+  const top = P.filter((_, i) => sc[i] >= best - 1e-9);
+  // نفس الاسم في كذا كتيبة = كلهم؛ أسماء مختلفة متعادلة = المستخدم يختار
+  return new Set(top.map((p) => mzNorm(p.name).replace(/\s+/g, ' ').trim())).size === 1 ? top.map((p) => p.id) : [];
+}
+async function mzBulk() {
+  const fi = pjEl('input'); fi.type = 'file'; fi.multiple = true; fi.accept = '.xlsx,.xlsm,.xls,.xlsb,.csv'; fi.hidden = true; document.body.appendChild(fi);
+  fi.onchange = async () => {
+    const files = [...fi.files]; fi.remove(); if (!files.length) return;
+    const m = qtMain('ربط شيتات الموازنات', hubHome);
+    const cd = pjEl('div', 'qcard'); cd.appendChild(pjEl('h3', '', files.length + ' ملف'));
+    cd.appendChild(pjEl('div', 'qhint', 'كل ملف متعلّم قدامه المشروع (أو المشاريع) اللي هيتربط بيها. راجع وعدّل، وبعدين «ربط الكل». المشروع اللي عنده شيت قبل كده الجديد هيحل مكانه.'));
+    m.appendChild(cd);
+    const { data: P } = await sb.from('mz_projects').select('id,name,battalion,sheet_path').order('sort_order');
+    const lab = (p) => p.name.replace(/\s+/g, ' ').trim() + (p.battalion ? ' — ك ' + p.battalion : '');
+    const rows = [];
+    for (const f of files) {
+      const title = await xlsxTitle(f);
+      let ids = mzMatch(f.name, P || []); const it = title ? mzMatch(f.name + ' ' + title, P || []) : [];
+      if (it.length && (!ids.length || it.length < ids.length || !ids.every((x) => it.includes(x)))) ids = it.length <= ids.length || !ids.length ? it : ids;
+      const box = pjEl('div', 'qcard'); const h = pjEl('div', 'hrow'); h.append(pjEl('b', '', '📗 ' + f.name)); box.appendChild(h);
+      if (title) box.appendChild(pjEl('small', '', title.slice(0, 140)));
+      const chosen = new Set(ids), list = pjEl('div'), st = pjEl('div', 'qstat');
+      const draw = () => {
+        list.textContent = '';
+        if (!chosen.size) list.appendChild(pjEl('div', 'qwarn', '⚠️ ماعرفتش المشروع — اختاره من تحت'));
+        [...chosen].forEach((id) => { const p = P.find((x) => x.id === id); const c = pjEl('div', 'hsug'); const x = pjEl('button', 'qbtn', '✕'); x.type = 'button'; x.onclick = () => { chosen.delete(id); draw(); }; c.append(pjEl('span', '', '🔗 ' + lab(p) + (p.sheet_path ? ' (عنده شيت — هيتبدل)' : '')), x); list.appendChild(c); });
+        const sel = pjEl('select'); sel.style.cssText = 'max-width:100%;padding:6px;border-radius:8px;font:inherit;background:transparent;color:inherit;margin-top:6px';
+        const o0 = pjEl('option', '', '+ ضيف مشروع…'); o0.value = ''; sel.appendChild(o0);
+        P.filter((p) => !chosen.has(p.id)).forEach((p) => { const o = pjEl('option', '', lab(p)); o.value = p.id; sel.appendChild(o); });
+        sel.onchange = () => { if (sel.value) { chosen.add(+sel.value); draw(); } };
+        list.appendChild(sel);
+      };
+      draw(); box.append(list, st); m.appendChild(box);
+      rows.push({ f, chosen, st });
+    }
+    const foot = pjEl('div', 'qcard'); const go = pjEl('button', 'qbtn on', '🔗 ربط الكل'); go.type = 'button'; const fs = pjEl('div', 'qstat');
+    foot.append(go, fs); m.appendChild(foot);
+    go.onclick = async () => {
+      go.disabled = true; let ok = 0, bad = 0;
+      for (const r of rows) {
+        for (const id of r.chosen) {
+          const p = P.find((x) => x.id === id);
+          r.st.innerHTML = '<span class="spin"></span> بيرفع لـ ' + lab(p) + '…';
+          const ext = (r.f.name.match(/\.(xlsx|xlsm|xls|xlsb|csv)$/i) || [0, 'xlsx'])[1].toLowerCase(), path = id + '/' + Date.now() + '.' + ext;
+          const up = await sb.storage.from('mz').upload(path, r.f, { contentType: r.f.type || 'application/octet-stream' });
+          if (up.error) { bad++; r.st.textContent = '⚠️ تعذّر الرفع لـ ' + lab(p) + ': ' + up.error.message; continue; }
+          const { error } = await sb.from('mz_projects').update({ sheet_path: path, sheet_name: r.f.name }).eq('id', id);
+          if (error) { bad++; await sb.storage.from('mz').remove([path]); r.st.textContent = '⚠️ تعذّر ربط ' + lab(p); continue; }
+          if (p.sheet_path && p.sheet_path !== path) await sb.storage.from('mz').remove([p.sheet_path]);
+          p.sheet_path = path; ok++;
+        }
+        if (r.chosen.size && !/⚠️/.test(r.st.textContent)) r.st.textContent = '✅ اتربط بـ ' + r.chosen.size + ' مشروع';
+      }
+      fs.textContent = 'اتربط ' + ok + (bad ? ' — وفيه ' + bad + ' ماتربطش' : '') + '. افتح الموازنات وهتلاقي زرار «فتح الشيت».';
+      go.disabled = false;
+    };
+  };
+  fi.click();
 }
 async function hubNew() {
   const v = await qtForm('مشروع جديد', 'بعد الإنشاء تقدر تربطه بالحصر والموازنة وموقف المشروع', [{ k: 'name', label: 'اسم المشروع' }], 'إنشاء');
