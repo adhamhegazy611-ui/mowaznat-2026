@@ -3816,6 +3816,7 @@ function qtGroupDetail(g, mode, th) {
   } else if (g.kind === 'line') {
     const li = pjEl('li'); li.textContent = g.n + ' خط، الطول ' + qtN(g.length) + ' م.ط' + (g.paint < g.length - 0.01 ? '، المدهون ' + qtN(g.paint) + ' م.ط (نسبة ' + qtN(g.paint / g.length * 100, 0) + '٪)' : '') + (g.area ? '، مساحة المقفول ' + qtN(g.area) + ' م²' : '');
     ul.appendChild(li);
+    if (g.holes) { const lh = pjEl('li', 'minus'); lh.textContent = 'فيه ' + g.holes + ' خط مقفول جوه خطوط تانية (حدود داخلية) — مساحتهم بتتطرح زي فتحات الهاتش: ' + qtN(g.areaRaw) + ' قبل الطرح ← ' + qtN(g.area) + ' م² صافي'; ul.appendChild(lh); }
     const top = g.items.slice().sort((a, b) => b.len - a.len).slice(0, 12);
     const li2 = pjEl('li', 'muted'); li2.textContent = 'الأطوال: ' + top.map((t) => qtN(t.len)).join(' + ') + (g.items.length > 12 ? ' + …' : ''); ul.appendChild(li2);
   } else {
@@ -3827,7 +3828,7 @@ function qtFormula(x, d) {
   const gs = (d.groups || []).filter((g) => (x.sel || []).includes(qtKey(g)));
   const fp = qtFillParts(x);
   if (fp) return 'الكمية = ردم السطح ' + qtN(fp.base) + (fp.digs.length ? ' + ردم الإحلال ' + (fp.digs.length > 1 ? '(' + fp.digs.map((y) => qtN(y.qty)).join(' + ') + ')' : qtN(fp.digs[0].qty)) + ' م² × ' + qtN(fp.k, 3) + ' م' : '') + ' = ' + qtN(x.qty) + ' م³';
-  if (x.mode === 'fill' || x.mode === 'cut') return 'الكمية = ' + (x.mode === 'fill' ? 'حجم الردم' : 'حجم الحفر') + ' من سطح الفرق' + (gs.length > 1 ? ' (' + gs.map((g) => qtN(g[x.mode])).join(' + ') + ')' : '') + ' = ' + qtN(x.qty) + ' م³';
+  if (x.mode === 'fill' || x.mode === 'cut') return 'الكمية = ' + (x.mode === 'fill' ? 'حجم الردم' : 'حجم الحفر') + ' (Surface to Surface)' + (gs.length > 1 ? ' (' + gs.map((g) => qtN(g[x.mode])).join(' + ') + ')' : '') + ' = ' + qtN(x.qty) + ' م³';
   const base = gs.map((g) => qtN(x.mode === 'count' ? g.n : x.mode === 'length' ? g.length : x.mode === 'paint' ? g.paint : g.area));
   if (x.mode === 'section') { const h = gs.filter((g) => g.kind === 'hatch'), l = gs.filter((g) => g.kind === 'line'); return 'الكمية = مساحة القطاع ' + qtN(h.reduce((s, g) => s + g.area, 0), 4) + ' م² × الطول ' + qtN(l.reduce((s, g) => s + g.length, 0)) + ' م = ' + qtN(x.qty) + ' م³'; }
   if (x.mode === 'count' && gs.length) { return 'الكمية = عدد ' + qtN(x.qty, 0) + ' (من طبقة «' + gs.map((g) => g.layer).join('، ') + '»)'; }
