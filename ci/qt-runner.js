@@ -29,6 +29,20 @@ async function run(job) {
     handler({ method: 'POST', headers: { authorization: 'Bearer runner' }, body: { path: job.path }, query: {} }, res).catch((e) => resolve({ c: 500, o: { error: String(e && e.message || e) } }));
   });
   global.fetch = realFetch;
+  // تشخيص: لو فيه عناصر Civil ومطلعش ولا سطح
+  const ty = out.o.inv && out.o.inv.types || {};
+  if (ty.ACAD_PROXY_ENTITY && !(out.o.groups || []).some((g) => g.kind === 'surface') && !/\.gzp/.test(job.path)) {
+    try {
+      const fs = require('fs'), f = '/tmp/dbg.dwg'; fs.writeFileSync(f, parts[job.path]);
+      const r = require('child_process').spawnSync(require('path').join(__dirname, '../api/_bin/dwgread'), ['-O', 'JSON', '-o', '/tmp/dbg.json', f], { encoding: 'utf8', maxBuffer: 1 << 26, timeout: 600000 });
+      console.log('DBG dwgread status', r.status, r.signal, 'stderr tail:', String(r.stderr || '').slice(-1500));
+      const J = fs.existsSync('/tmp/dbg.json') ? fs.readFileSync('/tmp/dbg.json', 'latin1') : '';
+      console.log('DBG json bytes', J.length, 'UNKNOWN_ENT', (J.match(/"entity": "UNKNOWN_ENT"/g) || []).length, 'UNKNOWN_OBJ', (J.match(/UNKNOWN_OBJ/g) || []).length);
+      const ci = J.indexOf('"CLASSES": ['); console.log('DBG classes idx', ci, 'objects idx', J.indexOf('"OBJECTS": ['));
+      console.log('DBG AEC classes', (J.slice(ci, ci + 400000).match(/"dxfname": "AEC[^"]*"/g) || []).slice(0, 60).join(' '));
+      console.log('DBG head', J.slice(0, 600));
+    } catch (e) { console.log('DBG fail', e.message); }
+  }
   console.log('analyzed status', out.c, 'in', Date.now() - t0, 'ms', out.o.error || '', (out.o.groups || []).length, 'groups');
   if (out.c !== 200 || !out.o.groups) return call('finish', { id: job.id, ok: false, error: out.o.error || 'تعذّر قراءة اللوحة' });
   const up = await realFetch(job.upload, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-upsert': 'true' }, body: JSON.stringify(out.o) });

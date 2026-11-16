@@ -238,7 +238,13 @@ function scanDwgStream(stream) {
       if (phase === 0) {
         head.push(ch); const all = Buffer.concat(head); const oi = all.indexOf(OB); if (oi < 0) { if (all.length > 64 << 20) { head.length = 0; head.push(all.subarray(all.length - 1 << 20)); } else { head.length = 0; head.push(all); } return; }
         const ci = all.indexOf('"CLASSES": [');
-        if (ci >= 0 && ci < oi) { try { JSON.parse(all.subarray(ci + 11, all.lastIndexOf(']', oi) + 1).toString('latin1').replace(/(-?)\b(nan|inf)\b/gi, 'null')).forEach((c) => { out.classes[c.number] = c.dxfname; }); } catch (e) { /* */ } }
+        if (ci >= 0 && ci < oi) {
+          const cs = all.subarray(ci + 11, all.lastIndexOf(']', oi) + 1).toString('latin1');
+          try { JSON.parse(cs.replace(/(-?)\b(nan|inf)\b/gi, 'null')).forEach((c) => { out.classes[c.number] = c.dxfname; }); } catch (e) {
+            // احتياطي: لو الـ JSON فيه حروف غريبة، نطلع رقم واسم كل كلاس بالـ regex
+            const re = /"number":\s*(\d+)[\s\S]*?"dxfname":\s*"([^"]*)"/g; let m; while ((m = re.exec(cs))) out.classes[+m[1]] = m[2];
+          }
+        }
         phase = 1; head.length = 0; buf = all.subarray(oi); step(); return;
       }
       buf = buf.length ? Buffer.concat([buf, ch]) : ch; step();
