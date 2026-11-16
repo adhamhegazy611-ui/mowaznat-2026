@@ -4216,6 +4216,25 @@ async function qtSave(item, fname, path, R, a, q, existing) {
   return res.data;
 }
 // اختيار الحاجة اللي تتحسب يدوي (لو السيستم ماعرفش، أو من «تعديل الحسبة» في التفاصيل)
+// مراجعة: الحساب دايماً Surface to Surface — ولو اللوحة فيها جدول Cut/Fill من Civil بنقارن بيه بس
+function qtCheck(R, s2G) {
+  const T = (R.groups || []).filter((g) => g.src === 'table' && (g.cut || g.fill)); if (!T.length) return null;
+  const seen = new Set(), rows = T.filter((t) => { const k = Math.round(t.cut) + '|' + Math.round(t.fill); if (seen.has(k)) return false; seen.add(k); return true; });
+  const d = (a, b) => Math.abs(a - b) / Math.max(1, Math.abs(b));
+  const cand = []; s2G.forEach((g) => { cand.push({ n: g.layer, cut: g.cut, fill: g.fill }); if (g.rep) cand.push({ n: g.layer + ' (من غير الإحلال)', cut: g.rep.cutD, fill: g.rep.fillD }); });
+  const box = pjEl('div', 'qhint'); box.style.cssText = 'display:grid;gap:6px;border:1px dashed rgba(148,163,184,.6);padding:10px;border-radius:10px';
+  box.appendChild(pjEl('b', '', '🔎 مراجعة على جدول Civil اللي في اللوحة'));
+  rows.forEach((t) => {
+    const nm = t.layer.replace(/\s*\(جدول Civil\)$/, '');
+    let best = null; cand.forEach((c) => { const e = Math.max(d(c.cut, t.cut), d(c.fill, t.fill)); if (!best || e < best.e) best = { ...c, e }; });
+    const ln = pjEl('div', '', nm + ': حفر ' + qtN(t.cut) + ' · ردم ' + qtN(t.fill) + ' م³ ← ');
+    if (!best) ln.appendChild(pjEl('b', '', '— مفيش سطوح عندي أقارن بيها'));
+    else if (best.e < 0.005) ln.appendChild(pjEl('b', '', '✅ مطابق لحسابي ' + best.n));
+    else { ln.appendChild(pjEl('b', '', '❌ مش مطابق')); ln.appendChild(pjEl('small', '', ' — أقرب حساب عندي ' + best.n + ': حفر ' + qtN(best.cut) + ' · ردم ' + qtN(best.fill) + ' (فرق حفر ' + qtN(best.cut - t.cut) + ' · ردم ' + qtN(best.fill - t.fill) + ')')); }
+    box.appendChild(ln);
+  });
+  return box;
+}
 function qtPick(box, item, fname, path, R, existing, start, isNew) {
   // الحفر والردم: بيظهر Surface to Surface بس، وباقي البنود: الهاتشات والخطوط والبلوكات بس (من غير السطوح)
   const s2G = (R.groups || []).filter((g) => g.src === 's2s'), otherG = (R.groups || []).filter((g) => g.kind !== 'surface');
@@ -4260,7 +4279,8 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
     side.appendChild(tot);
     if (R.inv && mode !== 'cut' && mode !== 'fill') side.appendChild(qtInventory(R.inv, groups));
     if (mode === 'cut') side.appendChild(qtRockBox(ROCK, () => draw()));
-    if ((mode === 'cut' || mode === 'fill') && !s2G.length) side.appendChild(pjEl('div', 'qwarn', '⚠️ اللوحة مفيهاش سطحين من Civil يتقارنوا ببعض'));
+    if ((mode === 'cut' || mode === 'fill') && !s2G.length) side.appendChild(pjEl('div', 'qwarn', '⚠️ السطوح مش محفوظة جوه ملف اللوحة (غالباً Data Shortcut)، فمقدرش أحسب Surface to Surface. صدّر اللوحة من Civil والسطوح جواها وارفعها تاني.'));
+    if (mode === 'cut' || mode === 'fill') { const ck = qtCheck(R, s2G); if (ck) side.appendChild(ck); }
     calc();
   };
   // أسماء البنود اللي هتتحفظ (انت اللي بتسميها) — لكل سطح مختار في الحفر/الردم بند لوحده
