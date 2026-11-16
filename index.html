@@ -3769,6 +3769,7 @@ function qtDetailCard(x, d, no) {
   const f = pjEl('div', 'qformula');
   f.textContent = qtFormula(x, d);
   side.appendChild(f);
+  if (d.rock && d.rock.rows) { const tb = pjEl('div', 'qcard'); tb.appendChild(pjEl('b', '', 'قطاعات الصخر (تقرير الجسات' + (d.rock.file ? ' — ' + d.rock.file : '') + ')')); const ul = pjEl('ul'); d.rock.rows.forEach((r) => ul.appendChild(pjEl('li', '', r.from + ' → ' + r.to + ': ' + qtN(qtRockLen(r)) + ' م × ' + r.w + ' × ' + r.d + ' = ' + qtN(qtRockVol(r)) + ' م³'))); tb.appendChild(ul); side.appendChild(tb); }
   (d.warnings || []).filter(qtWarnOk).forEach((w) => side.appendChild(pjEl('div', 'qwarn', '⚠️ ' + w)));
   wrap.appendChild(side); c.appendChild(wrap);
   return c;
@@ -3856,6 +3857,7 @@ function qtGroupDetail(g, mode, th) {
   b.appendChild(ul); return b;
 }
 function qtFormula(x, d) {
+  if (d && d.rock) { const k = d.rock; return k.part === 'rock' ? 'الكمية = مجموع قطاعات الصخر من تقرير الجسات (' + k.rows.length + ' قطاع، الطول × العرض × العمق) = ' + qtN(x.qty) + ' م³' : 'الكمية = إجمالي الحفر شامل الإحلال ' + qtN(k.cut) + ' − الصخر من تقرير الجسات ' + qtN(k.total) + ' = ' + qtN(x.qty) + ' م³'; }
   const gs = (d.groups || []).filter((g) => (x.sel || []).includes(qtKey(g)));
   const fp = qtFillParts(x);
   if (fp) return 'الكمية = ردم السطح ' + qtN(fp.base) + (fp.digs.length ? ' + ردم الإحلال ' + (fp.digs.length > 1 ? '(' + fp.digs.map((y) => qtN(y.qty)).join(' + ') + ')' : qtN(fp.digs[0].qty)) + ' م² × ' + qtN(fp.k, 3) + ' م' : '') + ' = ' + qtN(x.qty) + ' م³';
@@ -4141,12 +4143,68 @@ function qtSlim(groups, sel, inv) {
   const iv = inv ? { ...inv, texts: (inv.texts || []).slice(0, 400), dims: (inv.dims || []).slice(0, 200), civ: (inv.civ || []).slice(0, 300) } : null;
   return { keep, inv: iv };
 }
+// ===== تقرير الجسات (قطاعات الصخر): Station من/إلى + العرض + العمق =====
+const qtSta = (t) => { const m = /(\d+)\s*\+\s*(\d{1,3}(?:\.\d+)?)/.exec(String(t)); return m ? +m[1] * 1000 + +m[2] : null; };
+const qtRockLen = (r) => Math.abs((qtSta(r.to) || 0) - (qtSta(r.from) || 0));
+const qtRockVol = (r) => qtRockLen(r) * (+r.w || 0) * (+r.d || 0);
+let PDFJS = null;
+async function qtPdfLines(file) {
+  if (!PDFJS) { await new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); }); PDFJS = window.pdfjsLib; PDFJS.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }
+  const pdf = await PDFJS.getDocument({ data: await file.arrayBuffer() }).promise, lines = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const tc = await (await pdf.getPage(p)).getTextContent(), rows = [];
+    tc.items.forEach((it) => { const s = String(it.str || '').trim(); if (!s) return; const y = it.transform[5], x = it.transform[4]; let r = rows.find((q) => Math.abs(q.y - y) < 4); if (!r) { r = { y, items: [] }; rows.push(r); } r.items.push({ x, s }); });
+    rows.forEach((r) => lines.push(r.items.sort((a, b) => a.x - b.x).map((i) => i.s)));
+  }
+  return lines;
+}
+function qtRockParse(lines) {
+  const out = []; let lastW = null;
+  lines.forEach((ln) => {
+    const toks = ln.join(' ').match(/\d+\s*\+\s*\d{3}(?:\.\d+)?|-?\d+(?:[.,]\d+)?/g) || [];
+    const st = toks.filter((t) => /\+/.test(t)); if (st.length !== 2) return;
+    const a = qtSta(st[0]), b = qtSta(st[1]); const from = a < b ? st[0] : st[1], to = a < b ? st[1] : st[0], L = Math.abs(b - a); if (!L) return;
+    const nums = toks.filter((t) => !/\+/.test(t)).map((t) => +t.replace(',', '.')).filter((v) => v > 0 && v !== L);
+    let w = null, d = null;
+    for (const v of nums) for (const u of nums) { if (u === v || w) continue; if (nums.some((A) => Math.abs(A - L * v * u) <= Math.max(1, 0.01 * A))) { w = Math.max(u, v); d = Math.min(u, v); } }
+    if (!w) { w = lastW || nums.find((v) => v > 5 && v < 60) || null; d = nums.filter((v) => v !== w && v > 0 && v <= 20).sort((x, y) => x - y)[0] || null; }
+    if (!w || !d) return; lastW = w;
+    out.push({ from: from.replace(/\s/g, ''), to: to.replace(/\s/g, ''), w, d });
+  });
+  return out;
+}
+function qtRockBox(ROCK, redraw) {
+  const b = pjEl('div', 'qcard');
+  const h = pjEl('div', 'hrow'); h.appendChild(pjEl('b', '', '🪨 تقرير جسات (قطاعات الصخر)'));
+  const fi = pjEl('input'); fi.type = 'file'; fi.accept = '.pdf'; fi.hidden = true;
+  const up = pjEl('button', 'qbtn', ROCK.rows.length ? '📎 تقرير تاني' : '📎 إرفاق تقرير جسات'); up.type = 'button'; up.onclick = () => fi.click();
+  const add = pjEl('button', 'qbtn', '+ سطر'); add.type = 'button'; add.onclick = () => { ROCK.rows.push({ from: '0+000', to: '0+100', w: (ROCK.rows[0] || {}).w || 14.75, d: 1 }); redraw(); };
+  h.append(up, add, fi); b.appendChild(h);
+  const st = pjEl('div', 'qhint'); b.appendChild(st);
+  fi.onchange = async () => {
+    const f = fi.files[0]; if (!f) return; st.textContent = 'بيقرا التقرير…';
+    try { const rows = qtRockParse(await qtPdfLines(f)); if (!rows.length) { st.textContent = 'ماعرفتش أقرا جدول الصخر من الملف — ضيف السطور بإيدك'; return; } ROCK.rows = rows; ROCK.file = f.name; redraw(); }
+    catch (e) { st.textContent = 'تعذّر قراءة الملف'; }
+  };
+  if (!ROCK.rows.length) { st.textContent = 'لو فيه صخر: ارفع تقرير الجسات (PDF) والمنظومة هتقسم الحفر لصخري (من التقرير) ومتماسكة (الإجمالي شامل الإحلال − الصخر).'; return b; }
+  const t = pjEl('table', 'htab'); const hr = pjEl('tr'); ['من', 'إلى', 'الطول', 'العرض', 'العمق', 'م³', ''].forEach((x) => hr.appendChild(pjEl('th', '', x))); t.appendChild(hr);
+  ROCK.rows.forEach((r, i) => {
+    const tr = pjEl('tr');
+    const inp = (k, w) => { const td = pjEl('td'), x = pjEl('input'); x.value = r[k]; x.style.cssText = 'width:' + w + 'px;background:transparent;color:inherit;border:1px solid rgba(148,163,184,.4);border-radius:6px;padding:3px;font:inherit'; x.onchange = () => { r[k] = k === 'w' || k === 'd' ? +x.value : x.value.trim(); redraw(); }; td.appendChild(x); return td; };
+    const del = pjEl('button', 'qbtn', '✕'); del.type = 'button'; del.onclick = () => { ROCK.rows.splice(i, 1); redraw(); };
+    const tdd = pjEl('td'); tdd.appendChild(del);
+    tr.append(inp('from', 70), inp('to', 70), pjEl('td', 'n', qtN(qtRockLen(r))), inp('w', 55), inp('d', 45), pjEl('td', 'n', qtN(qtRockVol(r))), tdd); t.appendChild(tr);
+  });
+  const w = pjEl('div', 'htw'); w.appendChild(t); b.appendChild(w);
+  b.appendChild(pjEl('div', 'qstat', 'إجمالي الصخر = ' + qtN(ROCK.rows.reduce((s, r) => s + qtRockVol(r), 0)) + ' م³ — راجع السطور وعدّل لو حاجة اتقرت غلط'));
+  return b;
+}
 async function qtSave(item, fname, path, R, a, q, existing) {
   const groups = R.groups || [], sel = new Set(a.sel.filter((k) => !QT_XK.test(k)));
   const sl = qtSlim(groups, sel, R.inv), keep = sl.keep;
   let extra = [];
   if (a.mode === 'fill') { const old = existing && (existing.sel || []).find((k) => /^A\|/.test(k)); extra = ['B|' + (+q.toFixed(3))].concat(old ? [old] : []); }
-  const row = { item, unit: QT_MODES[a.mode][1], mode: a.mode, thickness: a.mode === 'volume' ? a.th : null, qty: +q.toFixed(3), sel: [...sel, ...extra], detail: { groups: keep, bbox: R.bbox, warnings: R.warnings || [], only: a.only || null, inv: sl.inv, _cf: 1 } };
+  const row = { item, unit: QT_MODES[a.mode][1], mode: a.mode, thickness: a.mode === 'volume' ? a.th : null, qty: +q.toFixed(3), sel: [...sel, ...extra], detail: { groups: keep, bbox: R.bbox, warnings: R.warnings || [], only: a.only || null, inv: sl.inv, _cf: 1, rock: a.rock || null } };
   const cols = 'id,item,unit,mode,thickness,qty,file_name,file_path,sel,note,sort,created_at';
   let res;
   if (existing) res = await sb.from('qt_items').update(row).eq('id', existing.id).select(cols).single();
@@ -4162,6 +4220,7 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
   // الحفر والردم: بيظهر Surface to Surface بس، وباقي البنود: الهاتشات والخطوط والبلوكات بس (من غير السطوح)
   const s2G = (R.groups || []).filter((g) => g.src === 's2s'), otherG = (R.groups || []).filter((g) => g.kind !== 'surface');
   const ewItem = QT_EW.test(item);
+  const ROCK = { rows: (existing && existing._rock) || [], file: '' }; // قطاعات الصخر من تقرير الجسات
   let sel = new Set((start && start.sel) || (existing && existing.sel) || []), mode = (start && start.mode) || (existing && existing.mode) || 'area';
   if (ewItem && mode !== 'cut' && mode !== 'fill') mode = qtEwMode(item);
   let groups = mode === 'cut' || mode === 'fill' ? s2G : otherG;
@@ -4200,6 +4259,7 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
     (R.warnings || []).filter(qtWarnOk).forEach((w) => side.appendChild(pjEl('div', 'qwarn', '⚠️ ' + w)));
     side.appendChild(tot);
     if (R.inv && mode !== 'cut' && mode !== 'fill') side.appendChild(qtInventory(R.inv, groups));
+    if (mode === 'cut') side.appendChild(qtRockBox(ROCK, () => draw()));
     if ((mode === 'cut' || mode === 'fill') && !s2G.length) side.appendChild(pjEl('div', 'qwarn', '⚠️ اللوحة مفيهاش سطحين من Civil يتقارنوا ببعض'));
     calc();
   };
@@ -4211,10 +4271,17 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
     const u = QT_MODES[mode][1];
     const ew = mode === 'cut' || mode === 'fill';
     const sg = ew ? groups.filter((g) => g.kind === 'surface' && sel.has(qtKey(g))) : [];
-    const split = sg.length > 1;
+    const split = sg.length > 1 || (mode === 'cut' && ROCK.rows.length > 0);
     // كل سطر = بند هيتحفظ: اسمه + اختياره + كميته
-    const rows = split ? sg.map((g) => ({ k: qtKey(g), g, a: { ...a, sel: [qtKey(g)] } })) : [{ k: '*', g: null, a }];
+    let rows = split ? sg.map((g) => ({ k: qtKey(g), g, a: { ...a, sel: [qtKey(g)] } })) : [{ k: '*', g: null, a }];
     rows.forEach((r, i) => { r.q = qtQty(groups, r.a); if (names[r.k] == null) names[r.k] = i === 0 ? item : ''; });
+    // تقرير جسات: الصخر من التقرير، والمتماسكة = إجمالي الحفر (شامل الإحلال) − الصخر
+    const rk = mode === 'cut' && ROCK.rows.length ? +ROCK.rows.reduce((t, x) => t + qtRockVol(x), 0).toFixed(3) : 0;
+    if (rk) {
+      const tot = rows.reduce((t, r) => t + (r.q || 0), 0), info = { rows: ROCK.rows.map((x) => ({ ...x, v: +qtRockVol(x).toFixed(3) })), total: rk, cut: +tot.toFixed(3), file: ROCK.file };
+      rows = [{ k: 'rock', g: null, a: { ...a, rock: { ...info, part: 'rock' } }, q: rk }, { k: 'rest', g: null, a: { ...a, rock: { ...info, part: 'rest' } }, q: +(tot - rk).toFixed(3) }];
+      if (names.rock == null) names.rock = 'حفر صخري'; if (names.rest == null) names.rest = 'حفر متماسكة';
+    }
     const box2 = pjEl('div'); box2.style.cssText = 'display:grid;gap:8px;width:100%';
     rows.forEach((r) => {
       const ln = pjEl('div'); ln.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap';
@@ -4255,7 +4322,7 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
     const cancel = pjEl('button', 'qbtn', 'إلغاء'); cancel.type = 'button';
     cancel.onclick = async () => { if (!existing) await qtRm([path]); qtProject(); };
     act.append(sv); if (ed) act.append(ed); act.append(cancel); tot.appendChild(act);
-    if (split) tot.appendChild(pjEl('div', 'qhint', 'كل سطح مختار هيتحفظ بند لوحده بالاسم اللي تكتبه.'));
+    if (split) tot.appendChild(pjEl('div', 'qhint', rk ? 'الصخري = مجموع قطاعات تقرير الجسات، والمتماسكة = إجمالي الحفر (شامل الإحلال) − الصخري. كل واحد هيتحفظ بند لوحده.' : 'كل سطح مختار هيتحفظ بند لوحده بالاسم اللي تكتبه.'));
   };
   draw();
 }
