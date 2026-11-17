@@ -2266,8 +2266,9 @@ function pjSheetTools(it) {
   const si = it.i, sh = PA.sheets[si], isCopy = sh.copyKey != null;
   const mk = (t, f, ttl) => { const x = pjEl('button', '', t); x.type = 'button'; x.title = ttl || ''; x.style.marginInlineStart = '6px'; x.onclick = f; hb.appendChild(x); return x; };
   mk('⧉ نسخة من البند', () => pjCopyItem(si), 'اعمل نسخة من البند ده في المشروع تعدّل فيها وتزود معدات');
+  if (!isCopy) mk('+ إضافة معدة', () => pjEqDirect(si), 'زوّد معدة في البند ده (في المشروع ده بس — التحليل العام زي ما هو)');
   if (isCopy) {
-    mk('+ إضافة معدة', () => pjAddEq(si), 'زوّد معدة في النسخة دي');
+    mk('+ إضافة معدة', () => pjAddEq(si), 'زوّد معدة في البند ده');
     mk('حذف النسخة', () => pjDelCopy(si));
     const c = PJ.cur.extra.copies.find((x) => x.key === sh.copyKey);
     if (c && c.eq && c.eq.length) {
@@ -2321,6 +2322,27 @@ async function pjCopyItem(si) {
   { const b = p.basics = p.basics || {}; if (b.sec && b.sec[si]) b.sec[ni] = b.sec[si]; if (b.wiz && b.wiz.secs) b.wiz.secs.forEach((sx) => { const j = sx.items.indexOf(si); if (j >= 0) sx.items.splice(j + 1, 0, ni); }); }
   await pjSaveExtra(); paSave(); paUndoReset();
   paNav($('paQ').value); const x = paItems().find((y) => !y.safety && y.i === ni); if (x) paShow(x);
+}
+// إضافة معدة لبند أصلي على طول: البند بيتبدّل في المشروع بنسخة بنفس الاسم والكمية والأرقام، وبعدين تختار المعدة
+async function pjEqDirect(si) {
+  const p = PJ.cur; if (!p) return;
+  { const X = pjScan(); const has = Object.values(X.eq).some((e) => e.cells.some(([s0, r]) => s0 === si && r < PJ_ROW0)); if (!has) return alert('البند ده مفيهوش جدول معدات أقدر أزود فيه.'); }
+  p.extra = p.extra || {}; p.extra.copies = p.extra.copies || []; p.extra.swap = p.extra.swap || {};
+  const nm = PAnames[si] || PA.sheets[si].title.trim(), key = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  p.extra.copies.push({ key, base: si, name: nm, eq: [] });
+  const ov = PAE.dump(); pjRebuild();
+  const ni = PA.sheets.length - 1;
+  if (ov[si]) { const d = PAE.dump(); d[ni] = JSON.parse(JSON.stringify(ov[si])); PAE.resetAll(); PAE.load(d); }
+  PAnames[ni] = nm;
+  const at = p.items.indexOf(si); if (at >= 0) p.items[at] = ni; else p.items.push(ni);
+  if (p.qty && p.qty[si] != null) { p.qty[ni] = p.qty[si]; delete p.qty[si]; }
+  const b = p.basics = p.basics || {};
+  ['qd', 'pr', 'tq', 'rg', 'desc', 'note', 'sec'].forEach((f) => { if (b[f] && b[f][si] != null) { b[f][ni] = b[f][si]; delete b[f][si]; } });
+  if (b.wiz && b.wiz.secs) b.wiz.secs.forEach((sx) => { const j = sx.items.indexOf(si); if (j >= 0) sx.items[j] = ni; });
+  p.extra.swap[si] = key; // «تحديث الكميات من الحصر» يروح للنسخة دي مش للأصل
+  await pjSaveExtra(); paSave(); paUndoReset();
+  paNav($('paQ').value); const x = paItems().find((y) => !y.safety && y.i === ni); if (x) paShow(x);
+  pjAddEq(ni);
 }
 async function pjDelCopy(si) {
   const p = PJ.cur, key = PA.sheets[si].copyKey; if (!confirm('حذف النسخة «' + (PAnames[si] || PA.sheets[si].title) + '»؟')) return;
@@ -4892,6 +4914,7 @@ async function pjSyncFromQT() {
   const sum = {}; (its || []).forEach((x) => { if (x.mode === 'formula') return; const k = x.item.trim() + '|' + x.unit; sum[k] = (sum[k] || 0) + +x.qty; });
   { const R = qtRepTargets((its || []).filter((x) => x.mode !== 'formula')); if (R.rep > 0 && (R.cut || R.fill)) { (its || []).filter(R.isRep).forEach((x) => { delete sum[x.item.trim() + '|' + x.unit]; }); [R.cut, R.fill].forEach((t) => { if (t) { const k = t.item.trim() + '|' + t.unit; sum[k] = (sum[k] || 0) + R.rep; } }); } }
   const qty = {}; Object.entries(qp.pa_map || {}).forEach(([k, m]) => { if (!m || m.si == null || !(k in sum)) return; qty[m.si] = (qty[m.si] || 0) + sum[k] * (m.k || 1); });
+  { const sw = (p.extra && p.extra.swap) || {}; Object.keys(qty).forEach((si) => { const key = sw[si]; if (!key) return; const ni = PA.sheets.findIndex((x) => x && x.copyKey === key && !x.copyDel); if (ni >= 0) { qty[ni] = (qty[ni] || 0) + qty[si]; delete qty[si]; } }); }
   let ch = 0; Object.entries(qty).forEach(([si, v]) => { const nv = Math.round(v); if (p.qty[si] !== nv) ch++; p.qty[si] = nv; if (+si < PJ_CUS && !p.items.includes(+si)) p.items.push(+si); });
   const { error } = await sb.from('pa_projects').update({ items: p.items, qty: p.qty, updated_at: new Date().toISOString() }).eq('id', p.id);
   if (error) return alert('تعذّر تحديث الموازنة');
