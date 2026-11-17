@@ -913,6 +913,7 @@ body:not(.in) footer{color:#6f84a6}
 #qt .qsec{background:rgba(9,22,42,.86);backdrop-filter:blur(10px);border:1px solid var(--bd);border-radius:16px;overflow:hidden;box-shadow:0 14px 34px rgba(2,8,20,.32);align-self:start}
 #qt .qsec{padding:0}#qt .qsec[hidden]{display:none}#qt .qsec>.qls{border-top:0;padding:15px 18px;margin:0}#qt .qsec .qlr{grid-template-columns:minmax(0,1fr) auto;row-gap:2px;padding:12px 18px}#qt .qsec .qlr .ac{grid-column:1/-1;grid-row:2;justify-content:flex-start;margin-inline-start:44px}
 @media (max-width:560px){#qt .qlist.qsecs{grid-template-columns:1fr}}</style>
+<style id="qrep-css">#qt .qlr.rep{background:rgba(129,140,248,.07)}#qt .qlr.rep .tt b:after{content:"  ↺ من لوحة الإحلال";font-size:11px;color:#a5b4fc;font-weight:700}</style>
 <style id="qtot-css">#qt .qsectot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 18px;border-top:1px dashed rgba(233,165,20,.45);background:rgba(233,165,20,.08)}#qt .qsectot span{color:#dbe5f3;font-size:13px;font-weight:700}#qt .qsectot b{color:var(--ac2,#f5c04a);font-size:20px;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}</style>
 <style id="qdt-css">#qt .qdtabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 auto 12px;max-width:1180px}
 #qt .qdtabs button{height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--bd);background:rgba(9,22,42,.8);color:#dbe5f3;font:inherit;font-weight:700;font-size:13.5px;cursor:pointer}
@@ -3714,17 +3715,22 @@ function qtSummary(m) {
   const L = pjEl('div', 'qlist qsecs'); m.appendChild(L);
   if (!secs.size) { L.appendChild(pjEl('div', 'qempty', 'لسه مفيش بنود — ارفع أول لوحة.')); return; }
   const rows = [];
+  // الإحلال بيظهر جوه الحفر وجوه الردم (من غير ما تدخله مرتين)، ومالوش كارت لوحده
+  const REP = secs.get('ehlal') || [];
+  if (REP.length) { secs.delete('ehlal'); ['hafr', 'radm'].forEach((k) => { if (!secs.has(k)) secs.set(k, []); }); }
   QT_SECS.filter(([k]) => secs.has(k)).forEach(([k, name, ic]) => {
     const list = secs.get(k);
     // القسم: كارت زي كروت الصفحة الرئيسية، وبنوده ظاهرة تحته بكمياتها
     const card = pjEl('div', 'qsec'), sh = pjEl('div', 'qls');
-    sh.append(pjEl('i', '', ic), pjEl('b', '', name), pjEl('span', '', list.length + (list.length === 1 ? ' بند' : list.length < 11 ? ' بنود' : ' بند')));
+    const nn = list.length + ((k === 'hafr' || k === 'radm') ? REP.length : 0);
+    sh.append(pjEl('i', '', ic), pjEl('b', '', name), pjEl('span', '', nn + (nn === 1 ? ' بند' : nn < 11 ? ' بنود' : ' بند')));
     card.appendChild(sh); L.appendChild(card);
     const items = [];
     list.forEach((G) => { const r = qtRow(G); card.appendChild(r); items.push(r); rows.push([r, G.item]); });
+    if (k === 'hafr' || k === 'radm') REP.forEach((G) => { const r = qtRow(G); r.classList.add('rep'); card.appendChild(r); items.push(r); rows.push([r, G.item]); });
     card._items = items;
     // التوتال: الحفر = لوح الحفر + الإحلال، والردم = لوح الردم + الإحلال
-    const rep = (secs.get('ehlal') || []).filter((G) => /م³|م3/.test(G.unit)).reduce((t, G) => t + +G.qty, 0);
+    const rep = REP.filter((G) => /م³|م3/.test(G.unit)).reduce((t, G) => t + +G.qty, 0);
     if (k === 'hafr' || k === 'radm') {
       const own = list.filter((G) => /م³|م3/.test(G.unit)).reduce((t, G) => t + +G.qty, 0);
       if (rep > 0 || list.length > 1) {
