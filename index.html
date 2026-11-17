@@ -906,6 +906,9 @@ body:not(.in) footer{color:#6f84a6}
 #apps .card:hover{box-shadow:0 0 0 1px rgba(226,191,104,.55),0 22px 44px rgba(2,8,20,.42)}
 #apps .sec{color:#e2bf68}
 </style>
+<style id="qpdel-css">#qt .qpw{position:relative;display:flex}#qt .qpw>.qproj{flex:1}
+#qt .qpdel{position:absolute;top:10px;inset-inline-end:10px;width:32px;height:32px;border-radius:9px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-size:14px;display:grid;place-items:center;opacity:.75;transition:opacity .15s,background .15s}
+#qt .qpdel:hover,#qt .qpdel:focus-visible{opacity:1;background:#ef4444;color:#fff}</style>
 </head>
 <body>
 <div class="scene" aria-hidden="true">
@@ -3509,8 +3512,23 @@ async function qtHome() {
     const c = pjEl('button', 'qproj'); c.type = 'button';
     c.append(pjEl('b', '', p.name), pjEl('span', '', (p.battalion ? 'ك ' + p.battalion + ' · ' : '') + (cnt[p.id] || 0) + ' لوحة'), pjEl('small', '', new Date(p.updated_at).toLocaleDateString('ar-EG')));
     c.onclick = () => qtOpen(p.id);
-    grid.appendChild(c);
+    const w = pjEl('div', 'qpw'), x = pjEl('button', 'qpdel', '🗑'); x.type = 'button'; x.title = 'حذف المشروع'; x.setAttribute('aria-label', 'حذف المشروع ' + p.name);
+    x.onclick = (e) => { e.stopPropagation(); qtDelProject(p); };
+    w.append(c, x); grid.appendChild(w);
   });
+}
+// حذف مشروع من القائمة: البنود + كل اللوح المرفوعة عليه (حتى اللي ماتحفظتش في بند)
+async function qtDelProject(p) {
+  if (!confirm('حذف مشروع «' + p.name + '» بكل بنوده ولوحه نهائياً؟')) return;
+  const { data: its } = await sb.from('qt_items').select('file_path').eq('project_id', p.id);
+  const paths = (its || []).map((x) => x.file_path).filter(Boolean);
+  if (paths.length) await qtRm(paths);
+  const { data: fl } = await sb.storage.from('qt').list(p.id, { limit: 1000 });
+  if (fl && fl.length) await sb.storage.from('qt').remove(fl.map((f) => p.id + '/' + f.name));
+  await sb.from('qt_items').delete().eq('project_id', p.id);
+  const { error } = await sb.from('qt_projects').delete().eq('id', p.id);
+  if (error) return alert('تعذّر حذف المشروع: ' + error.message);
+  qtHome();
 }
 async function qtNew() {
   const v = await qtDlg('مشروع حصر جديد', '', '');
