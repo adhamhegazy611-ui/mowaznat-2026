@@ -922,6 +922,7 @@ body:not(.in) footer{color:#6f84a6}
 #qt .qditems button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 12px;border-radius:10px;border:1px solid rgba(148,173,212,.2);background:rgba(18,38,68,.85);color:#fff;font:inherit;cursor:pointer;text-align:start}
 #qt .qditems button b{font-size:13.5px}#qt .qditems button span{font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums}
 #qt .qditems button.on{border-color:var(--ac,#e9a514);box-shadow:0 0 0 1px var(--ac,#e9a514) inset;background:rgba(233,165,20,.12)}</style>
+<style id="qins2-css">#qt .qinsok.warn{border-color:rgba(245,158,11,.6);background:rgba(245,158,11,.08)}#qt .qinsw{color:#fcd34d;font-weight:700;font-size:13.5px}#qt .qinsg{color:#86efac;font-weight:700;font-size:13.5px}#qt .qinsl2{margin:0;padding-inline-start:18px;color:#cbd5e1;font-size:13px}</style>
 <style id="qins-css">#qt .qins{margin-top:12px;display:flex;flex-direction:column;gap:6px}#qt .qinsl{font-size:12.5px;color:var(--mut);font-weight:700}
 #qt .qinsr{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:10px;align-items:start}@media(max-width:760px){#qt .qinsr{grid-template-columns:1fr}}
 #qt .qins textarea{width:100%;min-height:84px;font:inherit;font-size:14px;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);background:rgba(9,22,42,.7);color:#fff;resize:vertical}
@@ -3318,22 +3319,30 @@ function qtIns(tx, j, item) {
   const isArea = /مسطح|مساحة|مساحه/.test(t);
   const em = /ردم/.test(item) ? 'fill' : /ردم/.test(t) ? 'fill' : 'cut';
   const pairs = gs.filter((g) => g.src === 's2s' || (g.kind === 'surface' && !g.src));
+  const surfOf = (nm) => { const n = low(nm), v = pairs.find((g) => !g.src && low(g.name) === n); if (v) return v; return pairs.filter((g) => g.src === 's2s' && (low(g.baseName) === n || low(g.compName) === n)).sort((x, y) => y.area - x.area)[0]; };
+  const nameOf = (g) => (g.src ? g.layer : '«' + g.name + '»');
+  // مسطح سطح أو أكتر (A + B + C …): كل سطح بمساحته، ونشوف لو فيه سطوح راكبة على بعض
+  if (!ex && sf.length && (isArea || !QT_EW.test(item))) {
+    const sel = []; const miss2 = [];
+    sf.forEach((n) => { const g = surfOf(n); if (!g) miss2.push(n); else if (!sel.includes(g)) sel.push(g); });
+    if (miss2.length) return { err: 'السطح ' + miss2.map((x) => '«' + x + '»').join('، ') + ' مش داخل في أي مقارنة في اللوحة — مقدرش أعرف مسطحه' };
+    const r = { a: { mode: 'area', sel: sel.map(qtKey) }, msg: 'مسطح ' + sf.map((x) => '«' + x + '»').join(' + ') };
+    return qtOvWarn(r, sel, 'area', sf);
+  }
+  // حفر/ردم من مقارنة أو أكتر: سطحين = مقارنة واحدة، أكتر = سطح مشترك مع كل الباقيين
   if (!ex && sf.length >= 2) {
-    const [a1, b1] = sf.map(low);
-    const g = pairs.find((g) => g.src === 's2s' && ((low(g.baseName) === a1 && low(g.compName) === b1) || (low(g.baseName) === b1 && low(g.compName) === a1)));
-    if (!g) return { err: 'مفيش مقارنة في اللوحة بين «' + sf[0] + '» و«' + sf[1] + '»' };
-    if (isArea) return { a: { mode: 'area', sel: [qtKey(g)] }, msg: 'مسطح المقارنة بين «' + g.baseName + '» و«' + g.compName + '»' };
-    return { a: { mode: em, sel: [qtKey(g)] }, msg: (em === 'fill' ? 'الردم' : 'الحفر') + ' من مقارنة «' + g.baseName + '» بـ «' + g.compName + '»' };
+    const S = sf.map(low), hit2 = (g, h, o) => (low(g.baseName) === h && low(g.compName) === o) || (low(g.baseName) === o && low(g.compName) === h);
+    let sel = null, hub = null;
+    if (S.length === 2) { const g = pairs.find((g) => g.src === 's2s' && hit2(g, S[0], S[1])); if (!g) return { err: 'مفيش مقارنة في اللوحة بين «' + sf[0] + '» و«' + sf[1] + '»' }; sel = [g]; }
+    else {
+      for (let i = 0; i < S.length && !sel; i++) { const h = S[i], o = S.filter((_, k) => k !== i), gs2 = o.map((x) => pairs.find((g) => g.src === 's2s' && hit2(g, h, x))); if (gs2.every(Boolean)) { sel = gs2; hub = sf[i]; } }
+      if (!sel) return { err: 'السطوح دي مش كلها متقارنة بسطح واحد مشترك — اكتب كل مقارنة لوحدها، زي «قارن الفرمة بـ A و B و C»' };
+    }
+    const r = { a: { mode: em, sel: sel.map(qtKey), merge: sel.length > 1 }, msg: (em === 'fill' ? 'الردم' : 'الحفر') + ' من ' + (hub ? 'مقارنة «' + hub + '» بـ ' + sf.filter((x) => x !== hub).map((x) => '«' + x + '»').join(' + ') : 'مقارنة «' + sel[0].baseName + '» بـ «' + sel[0].compName + '»') };
+    return qtOvWarn(r, sel, em, sf);
   }
   if (!ex && sf.length === 1) {
-    const n = low(sf[0]);
-    if (isArea || !QT_EW.test(item)) {
-      const v = pairs.filter((g) => !g.src && low(g.name) === n)[0];
-      const c = v ? [v] : pairs.filter((g) => g.src === 's2s' && (low(g.baseName) === n || low(g.compName) === n)).sort((x, y) => y.area - x.area);
-      if (!c.length) return { err: 'السطح «' + sf[0] + '» مش داخل في أي مقارنة في اللوحة' };
-      return { a: { mode: 'area', sel: [qtKey(c[0])] }, msg: 'مسطح سطح «' + sf[0] + '»' };
-    }
-    const c = pairs.filter((g) => (!g.src && low(g.name) === n) || (g.src === 's2s' && (low(g.baseName) === n || low(g.compName) === n)));
+    const c = pairs.filter((g) => (!g.src && low(g.name) === low(sf[0])) || (g.src === 's2s' && (low(g.baseName) === low(sf[0]) || low(g.compName) === low(sf[0]))));
     if (c.length === 1) return { a: { mode: em, sel: [qtKey(c[0])] }, msg: (em === 'fill' ? 'الردم' : 'الحفر') + ' من ' + c[0].layer };
     return { err: 'السطح «' + sf[0] + '» داخل في أكتر من مقارنة — اكتب السطح التاني اللي يتقارن بيه' };
   }
@@ -3354,6 +3363,32 @@ function qtIns(tx, j, item) {
     return { a: au, msg: 'كل حاجة ماعدا ' + [...ly, ...sf].map((x) => '«' + x + '»').join(' و') };
   }
   return { err: 'مفهمتش التعليمات — اختار أسماء السطوح أو اللايرات من القايمة' };
+}
+// تنبيه لو السطوح/المقارنات اللي اخترتها راكبة على بعض (الجزء المشترك هيتحسب مرتين)
+function qtOverlap(gs) {
+  const G = gs.map((g) => (g.geom || []).find((t) => t && t.t === 'g'));
+  const cells = G.map((g) => { const o = []; if (g && g.z) for (let j = 0; j < g.ny; j++) for (let i = 0; i < g.nx; i++) if (g.z[j * g.nx + i] != null) o.push([g.x0 + (i + 0.5) * g.cs, g.y0 + (j + 0.5) * g.cs]); return o; });
+  const on = (g, x, y) => { if (!g || !g.z) return false; const i = Math.floor((x - g.x0) / g.cs), j = Math.floor((y - g.y0) / g.cs); return i >= 0 && j >= 0 && i < g.nx && j < g.ny && g.z[j * g.nx + i] != null; };
+  const out = [];
+  for (let a = 0; a < gs.length; a++) for (let b = a + 1; b < gs.length; b++) {
+    const [s0, l0] = cells[a].length <= cells[b].length ? [a, b] : [b, a];
+    if (!cells[s0].length) continue;
+    const pct = cells[s0].filter(([x, y]) => on(G[l0], x, y)).length / cells[s0].length;
+    if (pct > 0.1) out.push({ a: gs[s0], b: gs[l0], pct });
+  }
+  // مساحة من غير تكرار (تقريبي من الشبكة)
+  let tot = 0, uni = 0;
+  gs.forEach((g, i) => { const cs2 = G[i] ? G[i].cs * G[i].cs : 0; cells[i].forEach(([x, y]) => { tot += cs2; if (!gs.slice(0, i).some((_, k) => on(G[k], x, y))) uni += cs2; }); });
+  return { pairs: out, ratio: tot ? uni / tot : 1 };
+}
+function qtOvWarn(r, sel, md, names) {
+  if (sel.length < 2) return r;
+  const o = qtOverlap(sel); if (!o.pairs.length) { r.ok = 'السطوح جنب بعض ومش راكبة على بعض ✓'; return r; }
+  const nm = (g) => (g.src === 's2s' ? (md === 'area' ? '«' + (names.find((n) => String(g.compName).toLowerCase() === n.toLowerCase()) || g.compName) + '»' : '«' + g.compName + '»') : '«' + (g.name || g.layer) + '»');
+  r.warn = o.pairs.map((p) => nm(p.a) + ' راكب على ' + nm(p.b) + ' في حوالي ' + Math.round(p.pct * 100) + '% منه — الجزء ده هيتحسب مرتين');
+  const sum = sel.reduce((t, g) => t + (md === 'area' ? g.area : g[md]), 0);
+  if (md === 'area') r.alt = 'لو شلنا التكرار المسطح ≈ ' + qtN(sum * o.ratio) + ' م² (بدل ' + qtN(sum) + ')';
+  return r;
 }
 function qtCivChain(groups) {
   const near = (a, b) => Math.abs(a - b) <= Math.max(1, 0.005 * Math.abs(b));
@@ -4183,7 +4218,7 @@ async function qtAdd(pre) {
   row.append(l1, l2); c.appendChild(row);
   // تعليمات اللوحة (اختياري): بالكلام العادي + فلتر بأسماء السطوح واللايرات اللي في اللوحة
   const insW = pjEl('div', 'qins');
-  insW.appendChild(pjEl('span', 'qinsl', 'تعليمات اللوحة (اختياري) — زي: «قارن EG بـ ALL MOST7AT» · «مسطح سطح ALL MOST7AT» · «متحسبش لاير MARKING» · «خد لاير CURB بس»'));
+  insW.appendChild(pjEl('span', 'qinsl', 'تعليمات اللوحة (اختياري) — زي: «قارن EG بـ ALL MOST7AT» · «مسطح A + B + C» · «قارن الفرمة بـ A و B و C» · «متحسبش لاير MARKING» · «خد لاير CURB بس»'));
   const insR = pjEl('div', 'qinsr');
   const ins = pjEl('textarea'); ins.rows = 2; ins.placeholder = 'اكتب اللي محتاجه من اللوحة…';
   const fW = pjEl('div', 'qinsf'), flt = pjEl('input'); flt.type = 'search'; flt.placeholder = '🔍 أسماء السطوح واللايرات';
@@ -4262,6 +4297,9 @@ async function qtAdd(pre) {
       }
       const q = qtQty(j.groups, I.a);
       bx.append(pjEl('b', '', 'فهمت: ' + I.msg), pjEl('div', 'qinsq', (q == null ? '—' : qtN(q)) + ' ' + QT_MODES[I.a.mode][1]));
+      if (I.a.sel.length > 1) { const ul = pjEl('ul', 'qinsl2'); j.groups.filter((g) => I.a.sel.includes(qtKey(g))).forEach((g) => ul.appendChild(pjEl('li', '', g.layer + ' = ' + qtN(I.a.mode === 'area' ? g.area : g[I.a.mode]) + ' ' + QT_MODES[I.a.mode][1]))); bx.appendChild(ul); }
+      if (I.ok) bx.appendChild(pjEl('div', 'qinsg', I.ok));
+      if (I.warn) { bx.classList.add('warn'); I.warn.forEach((w) => bx.appendChild(pjEl('div', 'qinsw', '⚠️ ' + w))); if (I.alt) bx.appendChild(pjEl('div', 'qinsw', '↳ ' + I.alt)); bx.appendChild(pjEl('div', 'qhint', 'لو ده مقصود احفظ عادي، ولو لأ عدّل التعليمات واختار سطوح جنب بعض.')); }
       const ok = pjEl('button', 'qbtn on', '✓ تمام، احفظ'); ok.type = 'button';
       const ed = pjEl('button', 'qbtn', '✎ عدّل التعليمات'); ed.type = 'button';
       ok.onclick = async () => { ok.disabled = true; st.innerHTML = '<span class="spin"></span> بيحفظ…'; const row = await qtSave(item, f.name, path, j, { ...I.a, ins: tx }, q); if (row) { QT.flash = row.id; QT.tab = 'sum'; qtProject(); } else { ok.disabled = false; st.textContent = 'تعذّر الحفظ'; } };
