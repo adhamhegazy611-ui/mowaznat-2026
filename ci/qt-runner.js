@@ -29,6 +29,7 @@ async function run(job) {
     handler({ method: 'POST', headers: { authorization: 'Bearer runner' }, body: { path: job.path }, query: {} }, res).catch((e) => resolve({ c: 500, o: { error: String(e && e.message || e) } }));
   });
   global.fetch = realFetch;
+  try { (out.o.groups || []).filter((g) => g.kind === 'line').forEach((g) => { const it = (g.items || []).map((x) => +(x.len || x.length || 0)).sort((a, b) => a - b); console.log('LN', g.layer, it.length, 'smallest', it.slice(0, 12).map((v) => v.toFixed(2)).join(' '), 'largest', it.slice(-5).map((v) => v.toFixed(1)).join(' ')); }); } catch (e) { console.log('LN fail', e.message); }
   try { // تشخيص: جمع المقارنات المنفصلة (نفس دالة الصفحة)
     const src = require('fs').readFileSync(require('path').join(__dirname, '../index.html'), 'utf8');
     const qtDisjoint = eval('(' + /function qtDisjoint[\s\S]*?\n}\n/.exec(src)[0] + ')');
