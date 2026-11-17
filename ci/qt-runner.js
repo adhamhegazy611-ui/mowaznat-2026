@@ -29,6 +29,9 @@ async function run(job) {
     handler({ method: 'POST', headers: { authorization: 'Bearer runner' }, body: { path: job.path }, query: {} }, res).catch((e) => resolve({ c: 500, o: { error: String(e && e.message || e) } }));
   });
   global.fetch = realFetch;
+  try { (out.o.groups || []).filter((g) => g.kind === 'hatch').forEach((g) => { const it = g.items || [], neg = it.filter((x) => x.net < 0); const sa = (P) => { let a = 0; for (let i = 0; i < P.length; i++) { const p = P[i], q = P[(i + 1) % P.length]; a += p[0] * q[1] - q[0] * p[1]; } return a / 2; };
+    console.log('HT', g.layer, g.pat, 'n', it.length, 'area', g.area.toFixed(1), 'neg', neg.length, neg.reduce((t, x) => t + x.net, 0).toFixed(1));
+    it.map((x, i) => [x, i]).sort((a, b) => Math.abs(b[0].net) - Math.abs(a[0].net)).slice(0, 4).forEach(([x, i]) => { const gm = g.geom[i]; console.log('HT  item', i, 'net', x.net, 'parts', JSON.stringify(x.parts.slice(0, 6)), 'polys', (gm.polys || []).map((P) => P.length + 'pts sarea=' + sa(P).toFixed(1) + ' bb=' + [Math.min(...P.map((q) => q[0])), Math.min(...P.map((q) => q[1])), Math.max(...P.map((q) => q[0])), Math.max(...P.map((q) => q[1]))].map((v) => v.toFixed(0)).join(',')).slice(0, 6).join(' ; ')); }); }); } catch (e) { console.log('HT fail', e.message); }
   try { // تشخيص: جمع المقارنات المنفصلة (نفس دالة الصفحة)
     const src = require('fs').readFileSync(require('path').join(__dirname, '../index.html'), 'utf8');
     const qtDisjoint = eval('(' + /function qtDisjoint[\s\S]*?\n}\n/.exec(src)[0] + ')');
