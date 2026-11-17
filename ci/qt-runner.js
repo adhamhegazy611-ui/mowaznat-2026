@@ -29,6 +29,11 @@ async function run(job) {
     handler({ method: 'POST', headers: { authorization: 'Bearer runner' }, body: { path: job.path }, query: {} }, res).catch((e) => resolve({ c: 500, o: { error: String(e && e.message || e) } }));
   });
   global.fetch = realFetch;
+  try { // تشخيص: جمع المقارنات المنفصلة (نفس دالة الصفحة)
+    const src = require('fs').readFileSync(require('path').join(__dirname, '../index.html'), 'utf8');
+    const qtDisjoint = eval('(' + /function qtDisjoint[\s\S]*?\n}\n/.exec(src)[0] + ')');
+    for (const em of ['cut', 'fill']) { const d = qtDisjoint(out.o.groups || [], em); console.log('DJ', em, d ? d.length + ' parts = ' + d.reduce((t, g) => t + g[em], 0).toFixed(2) : 'null'); }
+  } catch (e) { console.log('DJ fail', e.message); }
   // تشخيص: لو فيه عناصر Civil ومطلعش ولا سطح
   const ty = out.o.inv && out.o.inv.types || {};
   if (ty.ACAD_PROXY_ENTITY && !(out.o.groups || []).some((g) => g.kind === 'surface') && !/\.gzp/.test(job.path)) {

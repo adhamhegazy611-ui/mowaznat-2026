@@ -3271,6 +3271,23 @@ function qtFillParts(x) {
 }
 const qtWarnOk = (w) => !/Civil 3D|سطح تاني|سطوح/.test(w);
 const QT_BG = /ASPHALT|MARKING|TITL|TEXT|DIM|FRAME|BORDER|DEFPOINTS/i;
+// مقارنات Surface to Surface كل واحدة في منطقة لوحدها (زي إحلال مناطق جامعة كيان): بنجمعهم كلهم من غير اختيار.
+// بنشيل اللي عمقه مستحيل (> 15 م = سطوح مالهاش علاقة ببعض) واللي متكرر، ولو أي اتنين راكبين على نفس المنطقة نرجع null
+function qtDisjoint(groups, em) {
+  const seen = new Set();
+  const c = groups.filter((g) => g.src === 's2s' && !g.rep && g[em] > 0.5 && g.area > 0 && g[em] / g.area < 15).filter((g) => { const k = Math.round(g[em]) + '|' + Math.round(g.area); if (seen.has(k)) return false; seen.add(k); return true; });
+  if (c.length < 2) return null;
+  const G = c.map((g) => (g.geom || []).find((t) => t && t.t === 'g'));
+  if (G.some((x) => !x || !x.z)) return null;
+  const cells = G.map((g) => { const o = []; for (let j = 0; j < g.ny; j++) for (let i = 0; i < g.nx; i++) if (g.z[j * g.nx + i] != null) o.push([g.x0 + (i + 0.5) * g.cs, g.y0 + (j + 0.5) * g.cs]); return o; });
+  const on = (g, x, y) => { const i = Math.floor((x - g.x0) / g.cs), j = Math.floor((y - g.y0) / g.cs); return i >= 0 && j >= 0 && i < g.nx && j < g.ny && g.z[j * g.nx + i] != null; };
+  for (let a = 0; a < c.length; a++) for (let b = 0; b < c.length; b++) {
+    if (a === b || cells[a].length > cells[b].length || (cells[a].length === cells[b].length && a > b)) continue;
+    const n = cells[a].filter(([x, y]) => on(G[b], x, y)).length;
+    if (n > 0.1 * cells[a].length) return null;
+  }
+  return c;
+}
 function qtCivChain(groups) {
   const near = (a, b) => Math.abs(a - b) <= Math.max(1, 0.005 * Math.abs(b));
   const vols = groups.filter((g) => g.kind === 'surface' && !g.src && g.cut > 0), s2 = groups.filter((g) => g.src === 's2s' && !g.rep), out = [];
@@ -3288,7 +3305,6 @@ function qtAuto0(item, groups, mem) {
   if (QT_EW.test(item)) {
     // الحفر والردم: Surface to Surface بس (مقارنة سطحين بأسمائهم من Civil)
     const em = qtEwMode(item), s2 = groups.filter((g) => g.src === 's2s' && g[em] > 0);
-    if (mem && mem.mode === em && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: em, sel: mem.sel.slice(), how: 'mem' };
     // سطوح الفرق في Civil متسمّية باسم البند: CUT حفر · FILL ردم · ROCK صخري · SOIL متماسكة · REP إحلال — لو أكتر من واحد بنجمعهم
     const kw = qtVolKw(item), vn = kw && qtVolNamed(groups, kw);
     if (vn && vn.length) { const m = kw === 'FILL' ? 'fill' : 'cut'; return vn.length > 1 ? { mode: m, sel: vn.map(qtKey), merge: true } : { mode: m, sel: [qtKey(vn[0])] }; }
@@ -3299,10 +3315,12 @@ function qtAuto0(item, groups, mem) {
     const hit = (g) => { const nm = qtNorm((g.baseName || '') + ' ' + (g.compName || '')); return words.some((w) => nm.includes(w) || (/صخر/.test(w) && /rock/.test(nm))); };
     const rp = s2.filter((g) => g.rep);
     if (rp.length === 1) return { mode: em, sel: [qtKey(rp[0])] }; // لوحة فيها إحلال: الحفر/الردم = الأساسي + الإحلال
+    const dj = qtDisjoint(groups, em); if (dj) return { mode: em, sel: dj.map(qtKey), merge: true };
     // لو Civil محفوظ فيه سطوح فرق (محسوبة من نفس المثلثات): هي الرقم الأدق — القطع = مجموعهم، والردم = سطح الفرق اللي فيه الردم
     const vols = (kw === 'CUT' || kw === 'FILL') ? groups.filter((g) => g.kind === 'surface' && !g.src && g.exact !== false) : [];
     if (em === 'cut') { const vc = vols.filter((g) => g.cut > 0.5); if (vc.length > 1) return { mode: 'cut', sel: vc.map(qtKey), merge: true }; if (vc.length === 1) return { mode: 'cut', sel: [qtKey(vc[0])] }; }
     if (em === 'fill') { const vf = vols.filter((g) => g.fill > 0.5).sort((x, y) => y.fill - x.fill)[0]; if (vf) return { mode: 'fill', sel: [qtKey(vf)] }; }
+    if (mem && mem.mode === em && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: em, sel: mem.sel.slice(), how: 'mem' };
     const named = s2.filter(hit);
     if (named.length === 1) return { mode: em, sel: [qtKey(named[0])] };
     // لو فيه جدول Cut/Fill من Civil: نختار المقارنة اللي حسابها مطابق له (الرقم نفسه من حسابنا)
@@ -4404,7 +4422,7 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
   const names = {};
   const calc = () => {
     tot.textContent = '';
-    const a = { mode, sel: [...sel], th, only: mode === 'count' ? only : null, merge: merge && mode === 'cut' };
+    const a = { mode, sel: [...sel], th, only: mode === 'count' ? only : null, merge: merge && (mode === 'cut' || mode === 'fill') };
     const u = QT_MODES[mode][1];
     const ew = mode === 'cut' || mode === 'fill';
     const sg = ew ? groups.filter((g) => g.kind === 'surface' && sel.has(qtKey(g))) : [];
