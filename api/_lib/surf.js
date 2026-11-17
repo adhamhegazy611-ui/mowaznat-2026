@@ -297,7 +297,7 @@ function surfaceGroups(src, origin) {
     const BT = B.tin, t = flat3(BT.T);
     const g = grid(BT.V, t);
     out.push({
-      key: 'SS|' + A.handle + '|' + B.handle, kind: 'surface', src: 's2s', layer: A.name && B.name ? '«' + A.name + '» ← «' + B.name + '»' : 'سطح ' + ia + ' ← سطح ' + ib, baseName: A.name || null, compName: B.name || null, base: lab(A, ia), comp: lab(B, ib), handle: B.handle, color: 0, hex: '#22c55e', exact: true,
+      key: 'SS|' + A.handle + '|' + B.handle, kind: 'surface', src: 's2s', layer: A.name && B.name ? '«' + A.name + '» ← «' + B.name + '»' : 'سطح ' + ia + ' ← سطح ' + ib, baseName: A.name || null, compName: B.name || null, baseArea: +A.area.toFixed(3), compArea: +B.area.toFixed(3), base: lab(A, ia), comp: lab(B, ib), handle: B.handle, color: 0, hex: '#22c55e', exact: true,
       n: B.points, tris: BT.T.length, area: +r.area.toFixed(3), fill: +r.fill.toFixed(3), cut: +r.cut.toFixed(3), length: 0, paint: 0,
       zmin: +B.zmin.toFixed(3), zmax: +B.zmax.toFixed(3), items: [], ext: g.ext, geom: g.geom,
     });
