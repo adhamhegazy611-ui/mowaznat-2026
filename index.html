@@ -4782,7 +4782,9 @@ async function qtBudget() {
   const allD = pjEl('div', 'qball'), adi = pjEl('input'); adi.type = 'number'; adi.step = 'any'; adi.placeholder = 'كم';
   const adb = pjEl('button', 'qbtn', 'طبّق على كل البنود اللي ليها نقل'); adb.type = 'button';
   allD.append(pjEl('span', '', 'مسافة النقل لكل البنود:'), adi, adb); bd.appendChild(allD);
-  const G = qtGroups().filter((g) => g.mode !== 'formula');
+  let G = qtGroups().filter((g) => g.mode !== 'formula');
+  // الإحلال بيتضاف على الحفر والردم ومش بيتسعّر لوحده
+  { const R = qtRepTargets(G); if (R.rep > 0 && (R.cut || R.fill)) G = G.filter((g) => !R.isRep(g)).map((g) => (g === R.cut || g === R.fill ? { ...g, qty: g.qty + R.rep, repNote: R.rep } : g)); }
   const tb = pjEl('table', 'qbt'), hr = pjEl('tr'); ['بند الحصر', 'الكمية', 'بند تحليل الأسعار', 'معامل', 'مسافة النقل (كم)', 'الكمية في الموازنة'].forEach((h) => hr.appendChild(pjEl('th', '', h))); tb.appendChild(hr);
   const rows = [], distOf = (si) => (lb.dist && lb.dist[si] != null ? lb.dist[si] : null);
   G.forEach((g) => {
@@ -4804,7 +4806,7 @@ async function qtBudget() {
       tr.classList.toggle('off', !c);
     };
     sel.onchange = calc; kin.oninput = calc;
-    const c1 = pjEl('td', 'n'); c1.append(pjEl('b', '', g.item), pjEl('small', '', qtSecOf(g.item)[1]));
+    const c1 = pjEl('td', 'n'); c1.append(pjEl('b', '', g.item + (g.repNote ? ' (شامل الإحلال ' + qtN(g.repNote) + ')' : '')), pjEl('small', '', qtSecOf(g.item)[1]));
     const c3 = pjEl('td'); c3.append(sel, warn);
     const c4 = pjEl('td'); c4.appendChild(kin); const c5 = pjEl('td'); c5.appendChild(din);
     tr.append(c1, pjEl('td', 'q', qtN(g.qty) + ' ' + g.unit), c3, c4, c5, res); tb.appendChild(tr);
@@ -4874,12 +4876,21 @@ function pjCmdMenu(btn) {
   document.body.appendChild(mn);
   setTimeout(() => document.addEventListener('click', function f(ev) { if (!mn.contains(ev.target)) { mn.remove(); document.removeEventListener('click', f); } }), 0);
 }
+// التسعير: الإحلال مش بند لوحده — بيتضاف على أول بند حفر (غير الصخري) وعلى أول بند ردم (م³)
+function qtRepTargets(list) {
+  const m3 = (x) => /م³|م3/.test(x.unit), sec = (x) => (x.mode === 'formula' ? '' : qtSecOf(x.item)[0]);
+  const rep = list.filter((x) => sec(x) === 'ehlal' && m3(x)).reduce((t, x) => t + +x.qty, 0);
+  const cut = list.find((x) => sec(x) === 'hafr' && m3(x) && !/صخر/.test(x.item)) || list.find((x) => sec(x) === 'hafr' && m3(x));
+  const fill = list.find((x) => sec(x) === 'radm' && m3(x));
+  return { rep, cut, fill, isRep: (x) => sec(x) === 'ehlal' && m3(x) };
+}
 function pjToast(t) { const x = pjEl('div', 'pjtoast', t); document.body.appendChild(x); setTimeout(() => x.classList.add('out'), 3800); setTimeout(() => x.remove(), 4400); }
 async function pjSyncFromQT() {
   const p = PJ.cur; if (!p || !p.qt_id) return;
   const [{ data: qp }, { data: its }] = await Promise.all([sb.from('qt_projects').select('name,pa_map').eq('id', p.qt_id).single(), sb.from('qt_items').select('item,unit,mode,qty').eq('project_id', p.qt_id)]);
   if (!qp) return alert('تعذّر قراءة الحصر');
   const sum = {}; (its || []).forEach((x) => { if (x.mode === 'formula') return; const k = x.item.trim() + '|' + x.unit; sum[k] = (sum[k] || 0) + +x.qty; });
+  { const R = qtRepTargets((its || []).filter((x) => x.mode !== 'formula')); if (R.rep > 0 && (R.cut || R.fill)) { (its || []).filter(R.isRep).forEach((x) => { delete sum[x.item.trim() + '|' + x.unit]; }); [R.cut, R.fill].forEach((t) => { if (t) { const k = t.item.trim() + '|' + t.unit; sum[k] = (sum[k] || 0) + R.rep; } }); } }
   const qty = {}; Object.entries(qp.pa_map || {}).forEach(([k, m]) => { if (!m || m.si == null || !(k in sum)) return; qty[m.si] = (qty[m.si] || 0) + sum[k] * (m.k || 1); });
   let ch = 0; Object.entries(qty).forEach(([si, v]) => { const nv = Math.round(v); if (p.qty[si] !== nv) ch++; p.qty[si] = nv; if (+si < PJ_CUS && !p.items.includes(+si)) p.items.push(+si); });
   const { error } = await sb.from('pa_projects').update({ items: p.items, qty: p.qty, updated_at: new Date().toISOString() }).eq('id', p.id);
