@@ -3369,6 +3369,8 @@ function qtAuto(item, groups, mem) {
 function qtAuto0(item, groups, mem) {
   const keys = new Set(groups.map(qtKey));
   if (mem && mem.sel) mem = { ...mem, sel: mem.sel.filter((k) => !QT_XK.test(k)) };
+  // التسويات: لو مفيش هاتش واللوحة فيها سطوح — المسطح = مساحة سطح الفرق (أو أكبر مقارنة)
+  if (/تسوي/.test(item) && !groups.some((g) => g.kind === 'hatch' && g.area > 0)) { const sv = groups.filter((g) => g.kind === 'surface' && g.src !== 'table' && g.area > 0).sort((a, b) => (!a.src) - (!b.src) || b.area - a.area); const v = sv.find((g) => !g.src) || sv[0]; if (v) return { mode: 'area', sel: [qtKey(v)] }; }
   // البردورة: كل خطوط اللوحة على كل اللايرات (البردورة ممكن تبقى متوزعة على أكتر من لاير)
   if (/بردور|بدرور/.test(item)) { const ln = groups.filter((g) => g.kind === 'line' && !QT_BG.test(g.layer) && g.length > 0); if (ln.length) return { mode: 'length', sel: ln.map(qtKey) }; }
   if (QT_EW.test(item)) {
