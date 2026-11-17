@@ -3284,7 +3284,7 @@ function qtDisjoint(groups, em) {
   for (let a = 0; a < c.length; a++) for (let b = 0; b < c.length; b++) {
     if (a === b || cells[a].length > cells[b].length || (cells[a].length === cells[b].length && a > b)) continue;
     const n = cells[a].filter(([x, y]) => on(G[b], x, y)).length;
-    if (n > 0.1 * cells[a].length) return null;
+    if (n > 0.25 * cells[a].length) return null; // حواف المناطق ممكن تلمس بعض في الشبكة
   }
   return c;
 }
