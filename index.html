@@ -922,6 +922,7 @@ body:not(.in) footer{color:#6f84a6}
 #qt .qditems button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 12px;border-radius:10px;border:1px solid rgba(148,173,212,.2);background:rgba(18,38,68,.85);color:#fff;font:inherit;cursor:pointer;text-align:start}
 #qt .qditems button b{font-size:13.5px}#qt .qditems button span{font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums}
 #qt .qditems button.on{border-color:var(--ac,#e9a514);box-shadow:0 0 0 1px var(--ac,#e9a514) inset;background:rgba(233,165,20,.12)}</style>
+<style id="qins3-css">#qt .qinst{margin-top:10px;align-self:flex-start}#qt .qinst.on{background:var(--ac,#e9a514);color:#1c1100;border-color:var(--ac,#e9a514)}#qt .qins[hidden]{display:none}</style>
 <style id="qins2-css">#qt .qinsok.warn{border-color:rgba(245,158,11,.6);background:rgba(245,158,11,.08)}#qt .qinsw{color:#fcd34d;font-weight:700;font-size:13.5px}#qt .qinsg{color:#86efac;font-weight:700;font-size:13.5px}#qt .qinsl2{margin:0;padding-inline-start:18px;color:#cbd5e1;font-size:13px}</style>
 <style id="qins-css">#qt .qins{margin-top:12px;display:flex;flex-direction:column;gap:6px}#qt .qinsl{font-size:12.5px;color:var(--mut);font-weight:700}
 #qt .qinsr{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:10px;align-items:start}@media(max-width:760px){#qt .qinsr{grid-template-columns:1fr}}
@@ -4223,7 +4224,12 @@ async function qtAdd(pre) {
   const ins = pjEl('textarea'); ins.rows = 2; ins.placeholder = 'اكتب اللي محتاجه من اللوحة…';
   const fW = pjEl('div', 'qinsf'), flt = pjEl('input'); flt.type = 'search'; flt.placeholder = '🔍 أسماء السطوح واللايرات';
   const chips = pjEl('div', 'qchips'); chips.appendChild(pjEl('small', '', 'اختار اللوحة وأنا أعرضلك أسماء السطوح واللايرات اللي فيها'));
-  fW.append(flt, chips); insR.append(ins, fW); insW.appendChild(insR); c.appendChild(insW);
+  fW.append(flt, chips); insR.append(ins, fW); insW.appendChild(insR);
+  // التعليمات أوبشن: مقفولة افتراضياً والحسبة بتمشي عادي زي الأول
+  const insT = pjEl('button', 'qbtn sm qinst', '⚙️ تعليمات اللوحة (اختياري)'); insT.type = 'button';
+  insW.hidden = true; c.append(insT, insW);
+  const insOpen = () => insW.hidden === false;
+  insT.onclick = () => { insW.hidden = !insW.hidden; insT.classList.toggle('on', !insW.hidden); const f = fi.files[0]; if (!insW.hidden && f && fi.files.length === 1 && /\.(dwg|dxf)$/i.test(f.name) && f.size <= 400 * 1048576) preRead(f); if (!insW.hidden) ins.focus(); };
   let NAMES = { s: [], l: [] };
   const drawChips = () => {
     const f = flt.value.trim().toLowerCase(); chips.textContent = '';
@@ -4233,7 +4239,7 @@ async function qtAdd(pre) {
     S.forEach((n) => chips.appendChild(mk(n, 's'))); L0.slice(0, 60).forEach((n) => chips.appendChild(mk(n, 'l')));
   };
   flt.oninput = drawChips;
-  if (pre) { try { const { data } = await sb.from('qt_items').select('detail').eq('item', pre).eq('project_id', p.id).order('created_at', { ascending: false }).limit(1); const t = data && data[0] && data[0].detail && data[0].detail.ins; if (t) ins.value = t; } catch (e) { /* */ } }
+  if (pre) { try { const { data } = await sb.from('qt_items').select('detail').eq('item', pre).eq('project_id', p.id).order('created_at', { ascending: false }).limit(1); const t = data && data[0] && data[0].detail && data[0].detail.ins; if (t) { ins.value = t; insW.hidden = false; insT.classList.add('on'); } } catch (e) { /* */ } }
   // بنقرا اللوحة أول ما تختارها (عشان الأسماء) — الكمية مش بتتحسب غير بعد ما تكتب البند وتدوس «حصر اللوحة»
   let PRE = null;
   const preRead = (f) => {
@@ -4285,7 +4291,7 @@ async function qtAdd(pre) {
     PRE = null; // اللوحة دي اتاخدت — لو اخترت نفس الملف تاني يترفع من جديد
     const item = it.value.trim();
     // فيه تعليمات؟ نفهمها ونعرض اللي فهمناه قبل الحفظ
-    const tx = ins.value.trim();
+    const tx = insOpen() ? ins.value.trim() : '';
     if (tx) {
       const I = qtIns(tx, j, item);
       st.textContent = '';
@@ -4316,10 +4322,11 @@ async function qtAdd(pre) {
     if (QT_EW.test(item) && !j.groups.some((g) => g.kind === 'surface')) st.textContent = '⚠️ «' + item + '» بيتحسب من سطح الفرق (Volume Surface) زي Volume Dashboard في Civil 3D، واللوحة دي مفيهاش سطح فرق. ادخل اللوحة اللي فيها الـ Volume Surface.';
     qtPick(res, item, f.name, path, j, null, au || (mem ? { mode: mem.mode, sel: [], th: mem.thickness } : null), true);
   };
-  fi.onchange = () => { sync(); const f = fi.files[0]; if (f && fi.files.length === 1 && /\.(dwg|dxf)$/i.test(f.name) && f.size <= 400 * 1048576) preRead(f); if (pre) go(); };
+  fi.onchange = () => { sync(); const f = fi.files[0]; if (insOpen()) { if (f && fi.files.length === 1 && /\.(dwg|dxf)$/i.test(f.name) && f.size <= 400 * 1048576) preRead(f); if (pre && !ins.value.trim()) go(); return; } go(); };
   goB.onclick = go; it.oninput = sync;
   it.onkeydown = (e) => { if (e.key === 'Enter' && fi.files[0]) go(); };
-  // مفيش حصر تلقائي لما تخرج من خانة البند — عشان تلحق تكتب التعليمات (الحصر بزرار «حصر اللوحة» أو Enter)
+  // زي الأول: لو التعليمات مقفولة، الحصر بيبدأ لوحده أول ما يبقى فيه لوحة واسم بند
+  it.onchange = () => { if (!insOpen() && fi.files[0] && it.value.trim() && !busy && !ran) go(); };
 }
 // ===== كذا لوحة مرة واحدة، والبند بيتختار تلقائي من البنود المتسجلة =====
 const QT_CONC = [
