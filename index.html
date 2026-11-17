@@ -3447,17 +3447,19 @@ const QT_CHUNK = 45 * 1048576;
 function qtParts(path) { const m = /\.gzp(\d+)$/.exec(path || ''); return m ? Array.from({ length: +m[1] }, (_, i) => path + '.' + i) : [path]; }
 function qtRm(paths) { return sb.storage.from('qt').remove([].concat(...paths.map((p) => qtParts(p).concat([p + '.result.json'])))); }
 // قراءة اللوحة: العادية على Vercel، والضخمة (أو اللي وقعت على Vercel) على سيرفر أكبر (GitHub) من غير ما تقفل الصفحة
-const QT_BIG = 200 * 1048576;
+const QT_BIG = 80 * 1048576; // أكبر من كده: على السيرفر الكبير على طول (أسرع من محاولة Vercel الأول)
 async function qtAnalyze(path, size, say) {
   const viaJob = async () => {
     const { data: job, error } = await sb.from('qt_jobs').insert({ path }).select('id').single();
     if (error || !job) return { error: 'تعذّر بدء الحصر على السيرفر الكبير' };
     const t0 = Date.now();
+    let stt = 'pending';
     for (;;) {
-      const m = Math.floor((Date.now() - t0) / 60000);
-      say('اللوحة كبيرة — بتتحصر على سيرفر أكبر، ممكن تاخد من 5 لـ 10 دقايق… (' + m + ' د) — سيب الصفحة مفتوحة');
-      await new Promise((r) => setTimeout(r, 10000));
+      const sec = Math.floor((Date.now() - t0) / 1000), tm = sec < 60 ? sec + ' ث' : Math.floor(sec / 60) + ' د ' + (sec % 60) + ' ث';
+      say((stt === 'running' ? 'السيرفر الكبير بيقرا اللوحة دلوقتي' : 'اللوحة كبيرة — مستنية السيرفر الكبير') + '… (' + tm + ') — عادةً دقيقة أو اتنين، سيب الصفحة مفتوحة');
+      await new Promise((r) => setTimeout(r, 4000));
       const { data: st } = await sb.from('qt_jobs').select('status,error').eq('id', job.id).single();
+      if (st) stt = st.status;
       if (st && st.status === 'done') {
         const { data: f } = await sb.storage.from('qt').download(path + '.result.json');
         if (!f) return { error: 'تعذّر تحميل نتيجة الحصر' };

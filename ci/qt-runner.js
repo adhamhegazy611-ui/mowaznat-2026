@@ -62,7 +62,7 @@ if (require.main === module) (async () => {
   const end = Date.now() + (+process.env.QT_POLL_SEC || 280) * 1000;
   while (Date.now() < end) {
     let c; try { c = await call('claim'); } catch (e) { console.log('claim failed', e.message); await sleep(15000); continue; }
-    if (!c.job) { await sleep(c.retry ? 1000 : 15000); continue; }
+    if (!c.job) { await sleep(c.retry ? 1000 : 5000); continue; }
     console.log('job', c.job.id);
     try { await run(c.job); } catch (e) { console.log('job failed', e.message); try { await call('finish', { id: c.job.id, ok: false, error: String(e.message).slice(0, 300) }); } catch (e2) { /* */ } }
   }
