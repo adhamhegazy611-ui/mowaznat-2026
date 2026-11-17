@@ -30,9 +30,11 @@ async function run(job) {
   });
   global.fetch = realFetch;
   const DBG = [], log0 = console.log; console.log = (...a) => { const t = a.join(' '); if (/^(HT|DJ|KEY)/.test(t) && DBG.length < 80) DBG.push(t.slice(0, 900)); log0(...a); };
-  try { (out.o.groups || []).filter((g) => g.kind === 'hatch').forEach((g) => { const it = g.items || [], neg = it.filter((x) => x.net < 0); const sa = (P) => { let a = 0; for (let i = 0; i < P.length; i++) { const p = P[i], q = P[(i + 1) % P.length]; a += p[0] * q[1] - q[0] * p[1]; } return a / 2; };
-    console.log('HT', g.layer, g.pat, 'n', it.length, 'area', g.area.toFixed(1), 'neg', neg.length, neg.reduce((t, x) => t + x.net, 0).toFixed(1));
-    it.map((x, i) => [x, i]).sort((a, b) => Math.abs(b[0].net) - Math.abs(a[0].net)).slice(0, 4).forEach(([x, i]) => { const gm = g.geom[i]; console.log('HT  item', i, 'net', x.net, 'parts', JSON.stringify(x.parts.slice(0, 6)), 'polys', (gm.polys || []).map((P) => P.length + 'pts sarea=' + sa(P).toFixed(1) + ' bb=' + [Math.min(...P.map((q) => q[0])), Math.min(...P.map((q) => q[1])), Math.max(...P.map((q) => q[0])), Math.max(...P.map((q) => q[1]))].map((v) => v.toFixed(0)).join(',')).slice(0, 6).join(' ; ')); }); }); } catch (e) { console.log('HT fail', e.message); }
+  try { for (const g of (out.o.groups || [])) { if (g.kind !== 'hatch') continue; const it = g.items || []; let nn = 0, ns = 0; for (const x of it) if (x.net < 0) { nn++; ns += x.net; }
+    console.log('HT', g.layer, g.pat, 'n', it.length, 'area', (+g.area).toFixed(1), 'neg', nn, ns.toFixed(1));
+    const idx = it.map((x, i) => i).sort((a, b) => Math.abs(it[b].net) - Math.abs(it[a].net)).slice(0, 3);
+    for (const i of idx) { const x = it[i], gm = g.geom[i] || {}; const ds = []; for (const P of (gm.polys || []).slice(0, 5)) { let a = 0, x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; const n = Math.min(P.length, 300000); for (let k = 0; k < n; k++) { const p0 = P[k], q = P[(k + 1) % n]; a += p0[0] * q[1] - q[0] * p0[1]; if (p0[0] < x0) x0 = p0[0]; if (p0[0] > x1) x1 = p0[0]; if (p0[1] < y0) y0 = p0[1]; if (p0[1] > y1) y1 = p0[1]; } ds.push(P.length + 'pts sa=' + (a / 2).toFixed(1) + ' bb=' + [x0, y0, x1, y1].map((v) => v.toFixed(0)).join(',')); }
+      console.log('HT  item', i, 'net', x.net, 'parts', JSON.stringify((x.parts || []).slice(0, 5)), ds.join(' ; ')); } } } catch (e) { console.log('HT fail', e.message); }
   try { // تشخيص: جمع المقارنات المنفصلة (نفس دالة الصفحة)
     const src = require('fs').readFileSync(require('path').join(__dirname, '../index.html'), 'utf8');
     const qtDisjoint = eval('(' + /function qtDisjoint[\s\S]*?\n}\n/.exec(src)[0] + ')');
