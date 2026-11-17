@@ -909,11 +909,17 @@ body:not(.in) footer{color:#6f84a6}
 <style id="qpdel-css">#qt .qpw{position:relative;display:flex}#qt .qpw>.qproj{flex:1}
 #qt .qpdel{position:absolute;top:10px;inset-inline-end:10px;width:32px;height:32px;border-radius:9px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-size:14px;display:grid;place-items:center;opacity:.75;transition:opacity .15s,background .15s}
 #qt .qpdel:hover,#qt .qpdel:focus-visible{opacity:1;background:#ef4444;color:#fff}</style>
-<style id="qsec-css">#qt button.qls{width:100%;border:0;border-top:1px solid var(--bd);font:inherit;cursor:pointer;text-align:start;padding:16px 18px}
-#qt button.qls:hover{background:linear-gradient(90deg,rgba(233,165,20,.04),rgba(233,165,20,.18))}
-#qt .qls .qchev{margin-inline-start:auto;font-style:normal;font-size:20px;line-height:1;color:var(--ac2);transition:transform .18s;transform:rotate(0deg)}
-#qt .qls[aria-expanded=true] .qchev{transform:rotate(90deg)}
-#qt .qlsb[hidden]{display:none}</style>
+<style id="qsec-css">#qt .qlist.qsecs{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:16px;background:none;border:0;box-shadow:none;overflow:visible;max-width:1180px;backdrop-filter:none}#qt .qlbar{max-width:1180px}
+#qt .qsec{background:rgba(9,22,42,.86);backdrop-filter:blur(10px);border:1px solid var(--bd);border-radius:16px;overflow:hidden;box-shadow:0 14px 34px rgba(2,8,20,.32);align-self:start}
+#qt .qsec{padding:0}#qt .qsec[hidden]{display:none}#qt .qsec>.qls{border-top:0;padding:15px 18px;margin:0}#qt .qsec .qlr{grid-template-columns:minmax(0,1fr) auto;row-gap:2px;padding:12px 18px}#qt .qsec .qlr .ac{grid-column:1/-1;grid-row:2;justify-content:flex-start;margin-inline-start:44px}
+@media (max-width:560px){#qt .qlist.qsecs{grid-template-columns:1fr}}</style>
+<style id="qdt-css">#qt .qdtabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 auto 12px;max-width:1180px}
+#qt .qdtabs button{height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--bd);background:rgba(9,22,42,.8);color:#dbe5f3;font:inherit;font-weight:700;font-size:13.5px;cursor:pointer}
+#qt .qdtabs button.on{background:var(--ac,#e9a514);border-color:var(--ac,#e9a514);color:#1c1100}
+#qt .qditems{display:flex;gap:8px;flex-wrap:wrap;margin:0 auto 14px;max-width:1180px;padding:10px;border-radius:12px;background:rgba(9,22,42,.55);border:1px solid var(--bd)}
+#qt .qditems button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 12px;border-radius:10px;border:1px solid rgba(148,173,212,.2);background:rgba(18,38,68,.85);color:#fff;font:inherit;cursor:pointer;text-align:start}
+#qt .qditems button b{font-size:13.5px}#qt .qditems button span{font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums}
+#qt .qditems button.on{border-color:var(--ac,#e9a514);box-shadow:0 0 0 1px var(--ac,#e9a514) inset;background:rgba(233,165,20,.12)}</style>
 </head>
 <body>
 <div class="scene" aria-hidden="true">
@@ -3685,26 +3691,23 @@ function qtSummary(m) {
   const q = pjEl('input'); q.type = 'search'; q.placeholder = '🔍  دوّر على بند…'; q.className = 'qlq';
   const ad2 = pjEl('button', 'qbtn on', '+ إضافة لوحة'); ad2.type = 'button'; ad2.onclick = () => qtAdd();
   bar.append(q, ad2); m.appendChild(bar);
-  const L = pjEl('div', 'qlist'); m.appendChild(L);
+  const L = pjEl('div', 'qlist qsecs'); m.appendChild(L);
   if (!secs.size) { L.appendChild(pjEl('div', 'qempty', 'لسه مفيش بنود — ارفع أول لوحة.')); return; }
   const rows = [];
   QT_SECS.filter(([k]) => secs.has(k)).forEach(([k, name, ic]) => {
     const list = secs.get(k);
-    // القسم: بتدوس عليه يفتح ويقفل، والبنود جواه
-    QT.open = QT.open || {};
-    const sh = pjEl('button', 'qls'); sh.type = 'button'; sh.setAttribute('aria-expanded', QT.open[k] ? 'true' : 'false');
-    sh.append(pjEl('i', '', ic), pjEl('b', '', name), pjEl('span', '', list.length + (list.length === 1 ? ' بند' : list.length < 11 ? ' بنود' : ' بند')), pjEl('em', 'qchev', '‹'));
-    const box = pjEl('div', 'qlsb'); box.hidden = !QT.open[k];
-    L.append(sh, box);
+    // القسم: كارت زي كروت الصفحة الرئيسية، وبنوده ظاهرة تحته بكمياتها
+    const card = pjEl('div', 'qsec'), sh = pjEl('div', 'qls');
+    sh.append(pjEl('i', '', ic), pjEl('b', '', name), pjEl('span', '', list.length + (list.length === 1 ? ' بند' : list.length < 11 ? ' بنود' : ' بند')));
+    card.appendChild(sh); L.appendChild(card);
     const items = [];
-    list.forEach((G) => { const r = qtRow(G); box.appendChild(r); items.push(r); rows.push([r, G.item]); });
-    sh._items = items; sh._box = box;
-    sh.onclick = () => { QT.open[k] = box.hidden; box.hidden = !box.hidden; sh.setAttribute('aria-expanded', box.hidden ? 'false' : 'true'); };
+    list.forEach((G) => { const r = qtRow(G); card.appendChild(r); items.push(r); rows.push([r, G.item]); });
+    card._items = items;
   });
   q.oninput = () => {
     const f = q.value.trim();
     rows.forEach(([r, t]) => { r.hidden = !!f && !t.includes(f); });
-    L.querySelectorAll('.qls').forEach((h) => { h.hidden = h._items.every((r) => r.hidden); h._box.hidden = f ? h.hidden : h.getAttribute('aria-expanded') !== 'true'; });
+    L.querySelectorAll('.qsec').forEach((c) => { c.hidden = c._items.every((r) => r.hidden); });
   };
 }
 // صف بند: الاسم | الكمية | الوحدة | أوامر
@@ -3766,21 +3769,22 @@ async function qtDetails(m) {
   const { data } = await sb.from('qt_items').select('id,detail').eq('project_id', QT.cur.id);
   const det = {}; (data || []).forEach((x) => { det[x.id] = x.detail; });
   box.textContent = '';
-  let lastSec = null;
-  qtGroups().map((G) => [QT_SECS.findIndex((x) => x === (G.mode === 'formula' ? QT_SECS[QT_SECS.length - 1] : qtSecOf(G.item))), G]).sort((a, b) => a[0] - b[0]).map((p) => p[1]).forEach((G) => {
-    const sc = G.mode === 'formula' ? QT_SECS[QT_SECS.length - 1] : qtSecOf(G.item);
-    if (sc !== lastSec) { lastSec = sc; const hd = pjEl('div', 'qsech'); hd.append(pjEl('i', '', sc[2]), pjEl('h3', '', sc[1])); box.appendChild(hd); }
-    if (G.rows.length < 2) { box.appendChild(qtDetailCard(G.rows[0], det[G.rows[0].id])); return; }
-    const sec = pjEl('div', 'qgrp');
-    const h = pjEl('div', 'qgrph'); h.append(pjEl('h3', '', G.item), pjEl('span', 'qq', qtN(G.qty) + ' ' + G.unit));
-    const pl = pjEl('button', 'qbtn sm', '+ لوحة للبند ده'); pl.type = 'button'; pl.onclick = () => qtAdd(G.item); h.appendChild(pl);
-    const f = pjEl('div', 'qformula'); f.textContent = 'الإجمالي = ' + G.rows.map((y) => qtN(y.qty)).join(' + ') + ' = ' + qtN(G.qty) + ' ' + G.unit + '  (' + G.rows.length + ' لوح)';
-    sec.append(h, f);
-    G.rows.forEach((y, i) => sec.appendChild(qtDetailCard(y, det[y.id], i + 1)));
-    box.appendChild(sec);
-  });
+  // تابات بالأقسام ← البنود كأزرار ← تفاصيل البند المختار بس (من غير ما تنزل لآخر الصفحة)
+  const secOf = (x) => (x.mode === 'formula' ? QT_SECS[QT_SECS.length - 1] : qtSecOf(x.item));
+  const bySec = new Map(); QT.items.forEach((x) => { const k = secOf(x)[0]; if (!bySec.has(k)) bySec.set(k, []); bySec.get(k).push(x); });
+  const secs = QT_SECS.filter(([k]) => bySec.has(k));
+  if (!secs.length) return;
+  if (!bySec.has(QT.dsec)) QT.dsec = secs[0][0];
+  let list = bySec.get(QT.dsec);
+  if (!list.some((x) => x.id === QT.ditem)) QT.ditem = list[0].id;
+  const tb = pjEl('div', 'qdtabs');
+  secs.forEach(([k, name, ic]) => { const b0 = pjEl('button', k === QT.dsec ? 'on' : '', ic + '  ' + name + ' (' + bySec.get(k).length + ')'); b0.type = 'button'; b0.onclick = () => { QT.dsec = k; QT.ditem = null; qtProject(); }; tb.appendChild(b0); });
+  const ib = pjEl('div', 'qditems');
+  list.forEach((x) => { const b0 = pjEl('button', x.id === QT.ditem ? 'on' : ''); b0.type = 'button'; b0.append(pjEl('b', '', x.item), pjEl('span', '', qtN(x.qty) + ' ' + x.unit)); b0.title = (x.file_name || '').replace(/^\d+-/, ''); b0.onclick = () => { QT.ditem = x.id; qtProject(); }; ib.appendChild(b0); });
+  const cur = list.find((x) => x.id === QT.ditem);
+  box.append(tb, ib, qtDetailCard(cur, det[cur.id]));
   // اللوح اللي اترفعت قبل القراءة الكاملة: نعيد قراءتها في الخلفية (الكمية والحسبة زي ما هي)
-  for (const x of QT.items.filter((y) => y.file_path && det[y.id] && det[y.id].groups && !det[y.id].inv)) {
+  for (const x of QT.items.filter((y) => y.id === QT.ditem && y.file_path && det[y.id] && det[y.id].groups && !det[y.id].inv)) {
     if (QT.tab !== 'det') break;
     const card = document.getElementById('qti-' + x.id); if (card) card.classList.add('upd');
     const d2 = await qtRefresh(x, det[x.id]);
@@ -3803,6 +3807,7 @@ async function qtRefresh(x, d) {
   } catch (e) { return null; }
 }
 async function qtShowItem(id) {
+  const x = QT.items.find((y) => y.id === id); if (x) { QT.dsec = (x.mode === 'formula' ? QT_SECS[QT_SECS.length - 1] : qtSecOf(x.item))[0]; QT.ditem = id; }
   QT.tab = 'det'; qtProject();
   setTimeout(() => { const el = document.getElementById('qti-' + id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 600);
 }
