@@ -160,7 +160,8 @@ function hatchOverlap(hatches) {
   return ov;
 }
 function hatchArea(paths) {
-  const areas = paths.map((p) => (p.exact != null && isFinite(p.exact) ? p.exact : Math.abs(sarea(p.pts))));
+  // المساحة «الدقيقة» من الأقواس بنثق فيها بس لو قريبة من مساحة الحدود المرسومة (لو بعيدة = قراية حدود غلط، زي لوحة انترلوك كيان)
+  const areas = paths.map((p) => { const t = Math.abs(sarea(p.pts)); return p.exact != null && isFinite(p.exact) && Math.abs(p.exact - t) <= 0.02 * Math.max(t, 1e-9) + 1e-6 ? p.exact : t; });
   const depth = paths.map((p, j) => { const probe = p.pts.filter((_, i) => i % Math.max(1, Math.floor(p.pts.length / 12)) === 0); return paths.reduce((s, q, m) => { if (m === j) return s; const inn = probe.filter((pt) => inside(pt, q.pts)).length; return s + (inn > probe.length / 2 ? 1 : 0); }, 0); });
   let net = 0; const parts = [];
   paths.forEach((p, j) => { const sg = depth[j] % 2 ? -1 : 1; net += sg * areas[j]; parts.push({ a: areas[j], hole: sg < 0 }); });
