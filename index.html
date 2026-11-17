@@ -3185,8 +3185,15 @@ const QT_RULES = [
 const QT_XK = /^[AB]\|/; // مفاتيح إضافية في sel: B|حجم ردم السطح، A|معامل ردم الإحلال
 const QT_DIG = /حفر|إحلال|احلال/;
 // الحفر بكل أنواعه (عادي/متماسك/صخر/إحلال) والردم: الكمية من سطح الفرق زي Volume Dashboard في Civil 3D
-const QT_EW = /حفر|ردم|ترابي|تراب|مخلف/;
+const QT_EW = /حفر|ردم|ترابي|تراب|مخلف|احلال|إحلال/;
 const qtEwMode = (item) => (/ردم/.test(item) ? 'fill' : 'cut');
+// الكلمة اللي في اسم سطح الفرق (Volume Surface) لكل بند
+const qtVolKw = (item) => (/صخر/.test(item) ? 'ROCK' : /متماسك|عادي|عاديه|عادية/.test(item) ? 'SOIL' : /احلال|إحلال/.test(item) ? 'REP' : /ردم/.test(item) ? 'FILL' : /حفر|قطع|ترابي|تراب/.test(item) ? 'CUT' : null);
+const qtVolName = (g) => String(g.name || (/«(.+)»/.exec(g.layer || '') || [])[1] || '').toUpperCase();
+function qtVolNamed(groups, kw) {
+  const re = new RegExp('(^|[^A-Z])' + kw + '(?![A-Z])');
+  return groups.filter((g) => g.kind === 'surface' && !g.src && g.exact !== false && re.test(qtVolName(g)) && g[kw === 'FILL' ? 'fill' : 'cut'] > 0.5);
+}
 // بند الأساس وحدته م³: مساحة الهاتش × سمك الطبقة. السمك من اسم البند لو مكتوب (زي «أساس 25 سم» أو «سمك 0.30 م»)
 const QT_BASE = /أساس|اساس|إساس|سن\s*6|base\s*course/i;
 function qtThick(item) {
@@ -3234,7 +3241,9 @@ function qtAuto0(item, groups, mem) {
     // الحفر والردم: Surface to Surface بس (مقارنة سطحين بأسمائهم من Civil)
     const em = qtEwMode(item), s2 = groups.filter((g) => g.src === 's2s' && g[em] > 0);
     if (mem && mem.mode === em && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: em, sel: mem.sel.slice(), how: 'mem' };
-    // سطوح الفرق اللي المهندس عاملها في Civil (زي «QTY CUT» و«QTY CUT&FILL»): بنحسب نفس المقارنات Surface to Surface ونجمع القطع
+    // سطوح الفرق في Civil متسمّية باسم البند: CUT حفر · FILL ردم · ROCK صخري · SOIL متماسكة · REP إحلال — لو أكتر من واحد بنجمعهم
+    const kw = qtVolKw(item), vn = kw && qtVolNamed(groups, kw);
+    if (vn && vn.length) { const m = kw === 'FILL' ? 'fill' : 'cut'; return vn.length > 1 ? { mode: m, sel: vn.map(qtKey), merge: true } : { mode: m, sel: [qtKey(vn[0])] }; }
     // المخلفات: الأرض قبل وبعد الإزالة — أكبر قطع
     if (/مخلف/.test(item) && s2.length) { const b = s2.slice().sort((x, y) => y.cut - x.cut)[0]; return { mode: 'cut', sel: [qtKey(b)] }; }
     // اسم البند فيه اسم سطح (زي «حفر عادية» وسطح اسمه «عادية»، أو «صخر» و ROCK)
@@ -3243,7 +3252,7 @@ function qtAuto0(item, groups, mem) {
     const rp = s2.filter((g) => g.rep);
     if (rp.length === 1) return { mode: em, sel: [qtKey(rp[0])] }; // لوحة فيها إحلال: الحفر/الردم = الأساسي + الإحلال
     // لو Civil محفوظ فيه سطوح فرق (محسوبة من نفس المثلثات): هي الرقم الأدق — القطع = مجموعهم، والردم = سطح الفرق اللي فيه الردم
-    const vols = groups.filter((g) => g.kind === 'surface' && !g.src && g.exact !== false);
+    const vols = (kw === 'CUT' || kw === 'FILL') ? groups.filter((g) => g.kind === 'surface' && !g.src && g.exact !== false) : [];
     if (em === 'cut') { const vc = vols.filter((g) => g.cut > 0.5); if (vc.length > 1) return { mode: 'cut', sel: vc.map(qtKey), merge: true }; if (vc.length === 1) return { mode: 'cut', sel: [qtKey(vc[0])] }; }
     if (em === 'fill') { const vf = vols.filter((g) => g.fill > 0.5).sort((x, y) => y.fill - x.fill)[0]; if (vf) return { mode: 'fill', sel: [qtKey(vf)] }; }
     const named = s2.filter(hit);
