@@ -32,6 +32,10 @@ async function run(job) {
   try { // تشخيص: جمع المقارنات المنفصلة (نفس دالة الصفحة)
     const src = require('fs').readFileSync(require('path').join(__dirname, '../index.html'), 'utf8');
     const qtDisjoint = eval('(' + /function qtDisjoint[\s\S]*?\n}\n/.exec(src)[0] + ')');
+    { const c = (out.o.groups || []).filter((g) => g.src === 's2s' && g.cut > 0.5 && g.cut / g.area < 15); const G = c.map((g) => (g.geom || []).find((t) => t && t.t === 'g'));
+      const on = (g, x, y) => { const i = Math.floor((x - g.x0) / g.cs), j = Math.floor((y - g.y0) / g.cs); return i >= 0 && j >= 0 && i < g.nx && j < g.ny && g.z[j * g.nx + i] != null; };
+      const cl = G.map((g) => { const o = []; if (g) for (let j = 0; j < g.ny; j++) for (let i = 0; i < g.nx; i++) if (g.z[j * g.nx + i] != null) o.push([g.x0 + (i + 0.5) * g.cs, g.y0 + (j + 0.5) * g.cs]); return o; });
+      c.forEach((a, ia) => console.log('OV', a.layer, 'cells', cl[ia].length, 'cs', G[ia] && G[ia].cs, c.map((b, ib) => ib === ia || !G[ib] ? '' : Math.round(100 * cl[ia].filter(([x, y]) => on(G[ib], x, y)).length / Math.max(1, cl[ia].length))).join(','))); }
     for (const em of ['cut', 'fill']) { const d = qtDisjoint(out.o.groups || [], em); console.log('DJ', em, d ? d.length + ' parts = ' + d.reduce((t, g) => t + g[em], 0).toFixed(2) : 'null'); }
   } catch (e) { console.log('DJ fail', e.message); }
   // تشخيص: لو فيه عناصر Civil ومطلعش ولا سطح
