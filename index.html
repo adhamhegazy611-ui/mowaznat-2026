@@ -922,6 +922,15 @@ body:not(.in) footer{color:#6f84a6}
 #qt .qditems button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 12px;border-radius:10px;border:1px solid rgba(148,173,212,.2);background:rgba(18,38,68,.85);color:#fff;font:inherit;cursor:pointer;text-align:start}
 #qt .qditems button b{font-size:13.5px}#qt .qditems button span{font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums}
 #qt .qditems button.on{border-color:var(--ac,#e9a514);box-shadow:0 0 0 1px var(--ac,#e9a514) inset;background:rgba(233,165,20,.12)}</style>
+<style id="qins-css">#qt .qins{margin-top:12px;display:flex;flex-direction:column;gap:6px}#qt .qinsl{font-size:12.5px;color:var(--mut);font-weight:700}
+#qt .qinsr{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:10px;align-items:start}@media(max-width:760px){#qt .qinsr{grid-template-columns:1fr}}
+#qt .qins textarea{width:100%;min-height:84px;font:inherit;font-size:14px;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);background:rgba(9,22,42,.7);color:#fff;resize:vertical}
+#qt .qinsf{display:flex;flex-direction:column;gap:6px}#qt .qinsf input{height:38px;border-radius:10px;border:1px solid var(--bd);background:rgba(9,22,42,.7);color:#fff;padding:0 12px;font:inherit}
+#qt .qchips{display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow:auto}#qt .qchips small{color:var(--mut);font-size:12px}
+#qt .qchip{border:1px solid rgba(148,173,212,.25);background:rgba(18,38,68,.9);color:#e2e8f0;border-radius:999px;padding:4px 10px;font:inherit;font-size:12.5px;cursor:pointer}
+#qt .qchip.s{border-color:rgba(245,158,11,.5);color:#fcd34d}#qt .qchip:hover{background:var(--ac,#e9a514);color:#1c1100}
+#qt .qinsok{margin-top:12px;padding:14px 16px;border-radius:12px;border:1px solid rgba(34,197,94,.45);background:rgba(34,197,94,.08);display:flex;flex-direction:column;gap:8px}
+#qt .qinsok.bad{border-color:rgba(239,68,68,.5);background:rgba(239,68,68,.08)}#qt .qinsq{font-size:26px;font-weight:900;color:#fff;font-variant-numeric:tabular-nums}</style>
 </head>
 <body>
 <div class="scene" aria-hidden="true">
@@ -3289,6 +3298,63 @@ function qtDisjoint(groups, em) {
   }
   return c;
 }
+// أسماء السطوح واللايرات اللي في اللوحة (للفلتر)
+function qtNames(j) {
+  const S = new Set(); (j.groups || []).forEach((g) => { if (g.kind !== 'surface') return; if (g.baseName) S.add(g.baseName); if (g.compName) S.add(g.compName); if (!g.src && g.name) S.add(g.name); });
+  const L = new Set(); ((j.inv && j.inv.layers) || []).forEach((l) => { if (l && l.name && (l.hatch || l.line || l.block)) L.add(l.name); });
+  (j.groups || []).forEach((g) => { if (g.kind !== 'surface' && g.layer) L.add(g.layer); });
+  return { s: [...S].sort(), l: [...L].sort() };
+}
+// فهم تعليمات اللوحة: مقارنة سطحين / مسطح سطح / لاير بعينه / استبعاد
+function qtIns(tx, j, item) {
+  const N = qtNames(j), low = (x) => String(x || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const t = low(tx), gs = j.groups || [];
+  const quoted = [...tx.matchAll(/«([^»]+)»/g)].map((m) => m[1].trim());
+  const found = (list) => { const o = []; list.slice().sort((a, b) => b.length - a.length).forEach((n) => { const ln = low(n); if (ln && t.includes(ln) && !o.some((x) => low(x).includes(ln))) o.push(n); }); return o; };
+  const sf = found(N.s), ly = found(N.l);
+  const miss = quoted.filter((q) => !N.s.some((n) => low(n) === low(q)) && !N.l.some((n) => low(n) === low(q)));
+  if (miss.length) return { err: 'ملقتش في اللوحة: ' + miss.map((x) => '«' + x + '»').join('، ') };
+  const ex = /متحسبش|ماتحسبش|متحسبهاش|من غير|ماعدا|ما عدا|استبعد|شيل|بدون/.test(t);
+  const isArea = /مسطح|مساحة|مساحه/.test(t);
+  const em = /ردم/.test(item) ? 'fill' : /ردم/.test(t) ? 'fill' : 'cut';
+  const pairs = gs.filter((g) => g.src === 's2s' || (g.kind === 'surface' && !g.src));
+  if (!ex && sf.length >= 2) {
+    const [a1, b1] = sf.map(low);
+    const g = pairs.find((g) => g.src === 's2s' && ((low(g.baseName) === a1 && low(g.compName) === b1) || (low(g.baseName) === b1 && low(g.compName) === a1)));
+    if (!g) return { err: 'مفيش مقارنة في اللوحة بين «' + sf[0] + '» و«' + sf[1] + '»' };
+    if (isArea) return { a: { mode: 'area', sel: [qtKey(g)] }, msg: 'مسطح المقارنة بين «' + g.baseName + '» و«' + g.compName + '»' };
+    return { a: { mode: em, sel: [qtKey(g)] }, msg: (em === 'fill' ? 'الردم' : 'الحفر') + ' من مقارنة «' + g.baseName + '» بـ «' + g.compName + '»' };
+  }
+  if (!ex && sf.length === 1) {
+    const n = low(sf[0]);
+    if (isArea || !QT_EW.test(item)) {
+      const v = pairs.filter((g) => !g.src && low(g.name) === n)[0];
+      const c = v ? [v] : pairs.filter((g) => g.src === 's2s' && (low(g.baseName) === n || low(g.compName) === n)).sort((x, y) => y.area - x.area);
+      if (!c.length) return { err: 'السطح «' + sf[0] + '» مش داخل في أي مقارنة في اللوحة' };
+      return { a: { mode: 'area', sel: [qtKey(c[0])] }, msg: 'مسطح سطح «' + sf[0] + '»' };
+    }
+    const c = pairs.filter((g) => (!g.src && low(g.name) === n) || (g.src === 's2s' && (low(g.baseName) === n || low(g.compName) === n)));
+    if (c.length === 1) return { a: { mode: em, sel: [qtKey(c[0])] }, msg: (em === 'fill' ? 'الردم' : 'الحفر') + ' من ' + c[0].layer };
+    return { err: 'السطح «' + sf[0] + '» داخل في أكتر من مقارنة — اكتب السطح التاني اللي يتقارن بيه' };
+  }
+  // لايرات: «خد لاير X بس» أو «متحسبش لاير X»
+  const mode0 = (au) => (au && au.mode) || (/بردور|طول|م\.?ط/.test(item + ' ' + t) ? 'length' : 'area');
+  if (ly.length && !ex) {
+    const sel = gs.filter((g) => g.kind !== 'surface' && ly.some((l) => low(l) === low(g.layer)));
+    const au = qtAuto(item, sel, null), md = mode0(au);
+    const a = { mode: md, sel: sel.filter((g) => (md === 'length' ? g.kind === 'line' : md === 'count' ? true : g.kind === 'hatch' || g.kind === 'line')).map(qtKey) };
+    return { a, msg: 'لاير ' + ly.map((x) => '«' + x + '»').join(' + ') + ' بس' };
+  }
+  if (ex && (ly.length || sf.length)) {
+    const bad = (g) => ly.some((l) => low(l) === low(g.layer)) || sf.some((n) => low(g.baseName) === low(n) || low(g.compName) === low(n) || low(g.name) === low(n));
+    const rest = gs.filter((g) => !bad(g));
+    let au = qtAuto(item, rest, null);
+    if (!au && !QT_EW.test(item)) { const md = mode0(null); const sel = rest.filter((g) => g.kind !== 'surface' && (md === 'length' ? g.kind === 'line' : g.kind === 'hatch' || g.kind === 'line')).map(qtKey); if (sel.length) au = { mode: md, sel }; }
+    if (!au) return { err: 'بعد الاستبعاد مقدرتش أحدد البند — قولي تاخد إيه بالظبط' };
+    return { a: au, msg: 'كل حاجة ماعدا ' + [...ly, ...sf].map((x) => '«' + x + '»').join(' و') };
+  }
+  return { err: 'مفهمتش التعليمات — اختار أسماء السطوح أو اللايرات من القايمة' };
+}
 function qtCivChain(groups) {
   const near = (a, b) => Math.abs(a - b) <= Math.max(1, 0.005 * Math.abs(b));
   const vols = groups.filter((g) => g.kind === 'surface' && !g.src && g.cut > 0), s2 = groups.filter((g) => g.src === 's2s' && !g.rep), out = [];
@@ -4113,6 +4179,44 @@ async function qtAdd(pre) {
   const l2 = pjEl('label', 'qf'); l2.appendChild(pjEl('span', '', 'ملف اللوحة (DWG أو DXF)'));
   const fi = pjEl('input'); fi.type = 'file'; fi.accept = '.dwg,.dxf'; fi.multiple = !pre; l2.appendChild(fi);
   row.append(l1, l2); c.appendChild(row);
+  // تعليمات اللوحة (اختياري): بالكلام العادي + فلتر بأسماء السطوح واللايرات اللي في اللوحة
+  const insW = pjEl('div', 'qins');
+  insW.appendChild(pjEl('span', 'qinsl', 'تعليمات اللوحة (اختياري) — زي: «قارن EG بـ ALL MOST7AT» · «مسطح سطح ALL MOST7AT» · «متحسبش لاير MARKING» · «خد لاير CURB بس»'));
+  const insR = pjEl('div', 'qinsr');
+  const ins = pjEl('textarea'); ins.rows = 2; ins.placeholder = 'اكتب اللي محتاجه من اللوحة…';
+  const fW = pjEl('div', 'qinsf'), flt = pjEl('input'); flt.type = 'search'; flt.placeholder = '🔍 أسماء السطوح واللايرات';
+  const chips = pjEl('div', 'qchips'); chips.appendChild(pjEl('small', '', 'اختار اللوحة وأنا أعرضلك أسماء السطوح واللايرات اللي فيها'));
+  fW.append(flt, chips); insR.append(ins, fW); insW.appendChild(insR); c.appendChild(insW);
+  let NAMES = { s: [], l: [] };
+  const drawChips = () => {
+    const f = flt.value.trim().toLowerCase(); chips.textContent = '';
+    const mk = (n, t) => { const b = pjEl('button', 'qchip ' + t, (t === 's' ? '◭ ' : '▤ ') + n); b.type = 'button'; b.title = t === 's' ? 'سطح' : 'لاير'; b.onclick = () => { const v = ins.value, at = ins.selectionStart != null ? ins.selectionStart : v.length; ins.value = v.slice(0, at) + '«' + n + '»' + v.slice(at); ins.focus(); }; return b; };
+    const S = NAMES.s.filter((n) => !f || n.toLowerCase().includes(f)), L0 = NAMES.l.filter((n) => !f || n.toLowerCase().includes(f));
+    if (!S.length && !L0.length) { chips.appendChild(pjEl('small', '', NAMES.s.length || NAMES.l.length ? 'مفيش اسم بالشكل ده' : 'اختار اللوحة وأنا أعرضلك أسماء السطوح واللايرات اللي فيها')); return; }
+    S.forEach((n) => chips.appendChild(mk(n, 's'))); L0.slice(0, 60).forEach((n) => chips.appendChild(mk(n, 'l')));
+  };
+  flt.oninput = drawChips;
+  if (pre) { try { const { data } = await sb.from('qt_items').select('detail').eq('item', pre).eq('project_id', p.id).order('created_at', { ascending: false }).limit(1); const t = data && data[0] && data[0].detail && data[0].detail.ins; if (t) ins.value = t; } catch (e) { /* */ } }
+  // بنقرا اللوحة أول ما تختارها (عشان الأسماء) — الكمية مش بتتحسب غير بعد ما تكتب البند وتدوس «حصر اللوحة»
+  let PRE = null;
+  const preRead = (f) => {
+    const key = f.name + '|' + f.size;
+    if (PRE && PRE.key === key) return PRE.p;
+    chips.textContent = ''; chips.appendChild(pjEl('small', '', '⏳ بقرا اللوحة عشان أعرضلك الأسماء…'));
+    const pr = (async () => {
+      let path = p.id + '/' + Date.now() + '-' + (f.name.replace(/[^\w.\-]+/g, '_').replace(/^_+/, '') || 'drawing.dwg');
+      const up = await qtUpload(path, f, (t) => { chips.textContent = ''; chips.appendChild(pjEl('small', '', '⏳ ' + t)); });
+      if (up.error) return { error: 'تعذّر رفع الملف: ' + up.error.message };
+      path = up.path;
+      const j = await qtAnalyze(path, f.size, (t) => { chips.textContent = ''; chips.appendChild(pjEl('small', '', '⏳ ' + t)); });
+      if (!j.groups) { await qtRm([path]); return { error: j.error || 'تعذّر قراءة اللوحة' }; }
+      qtCF(j);
+      return { path, j };
+    })();
+    PRE = { key, p: pr };
+    pr.then((r) => { if (PRE && PRE.p !== pr) return; if (r.error) { chips.textContent = ''; chips.appendChild(pjEl('small', '', '⚠️ ' + r.error)); PRE = null; return; } NAMES = qtNames(r.j); drawChips(); });
+    return pr;
+  };
   c.appendChild(pjEl('div', 'qhint', 'اكتب اسم البند اللي عايز كميته، واختار اللوحة (أو كذا لوحة لنفس البند)، ودوس «حصر اللوحة». السيستم مش بيشتغل على اللوحة غير بعد ما تكتب البند.'));
   const goB = pjEl('button', 'qbtn on', '⚡ حصر اللوحة'); goB.type = 'button'; goB.disabled = true; c.appendChild(goB);
   const st = pjEl('div', 'qstat'); c.appendChild(st);
@@ -4136,17 +4240,34 @@ async function qtAdd(pre) {
   };
   const go1 = async (f) => {
     res.textContent = ''; fi.disabled = true;
-    st.innerHTML = '<span class="spin"></span> بيرفع اللوحة…';
-    let path = p.id + '/' + Date.now() + '-' + (f.name.replace(/[^\w.\-]+/g, '_').replace(/^_+/, '') || 'drawing.dwg');
-    const up = await qtUpload(path, f, (t) => { st.innerHTML = '<span class="spin"></span> ' + t; });
-    if (up.error) { st.textContent = 'تعذّر رفع الملف: ' + up.error.message; fi.disabled = false; return; }
-    path = up.path;
-    st.innerHTML = '<span class="spin"></span> بيقرا اللوحة ويحصر الكميات…';
-    const j = await qtAnalyze(path, f.size, (t) => { st.innerHTML = '<span class="spin"></span> ' + t; });
+    st.innerHTML = '<span class="spin"></span> بيقرا اللوحة…';
+    const rr = await preRead(f);
     fi.disabled = false;
-    if (!j.groups) { st.textContent = '⚠️ ' + (j.error || 'تعذّر قراءة اللوحة'); await qtRm([path]); return; }
-    qtCF(j);
+    if (rr.error) { st.textContent = '⚠️ ' + rr.error; return; }
+    const path = rr.path, j = rr.j;
+    PRE = null; // اللوحة دي اتاخدت — لو اخترت نفس الملف تاني يترفع من جديد
     const item = it.value.trim();
+    // فيه تعليمات؟ نفهمها ونعرض اللي فهمناه قبل الحفظ
+    const tx = ins.value.trim();
+    if (tx) {
+      const I = qtIns(tx, j, item);
+      st.textContent = '';
+      const bx = pjEl('div', 'qinsok');
+      if (I.err) {
+        bx.classList.add('bad'); bx.appendChild(pjEl('b', '', '⚠️ ' + I.err));
+        bx.appendChild(pjEl('div', 'qhint', 'اختار الاسم الصح من الأسماء اللي تحت خانة التعليمات، وعدّل التعليمات ودوس «حصر اللوحة» تاني.'));
+        res.appendChild(bx); PRE = { key: f.name + '|' + f.size, p: Promise.resolve(rr) }; return;
+      }
+      const q = qtQty(j.groups, I.a);
+      bx.append(pjEl('b', '', 'فهمت: ' + I.msg), pjEl('div', 'qinsq', (q == null ? '—' : qtN(q)) + ' ' + QT_MODES[I.a.mode][1]));
+      const ok = pjEl('button', 'qbtn on', '✓ تمام، احفظ'); ok.type = 'button';
+      const ed = pjEl('button', 'qbtn', '✎ عدّل التعليمات'); ed.type = 'button';
+      ok.onclick = async () => { ok.disabled = true; st.innerHTML = '<span class="spin"></span> بيحفظ…'; const row = await qtSave(item, f.name, path, j, { ...I.a, ins: tx }, q); if (row) { QT.flash = row.id; QT.tab = 'sum'; qtProject(); } else { ok.disabled = false; st.textContent = 'تعذّر الحفظ'; } };
+      ed.onclick = () => { res.textContent = ''; PRE = { key: f.name + '|' + f.size, p: Promise.resolve(rr) }; ins.focus(); };
+      const bb = pjEl('div', 'hb'); bb.append(ok, ed); bx.appendChild(bb); res.appendChild(bx);
+      if (q == null || !(q > 0)) bx.appendChild(pjEl('div', 'qhint', 'الكمية طالعة صفر — راجع التعليمات.'));
+      return;
+    }
     let mem = null;
     try { const { data } = await sb.from('qt_items').select('mode,sel,thickness').eq('item', item).order('created_at', { ascending: false }).limit(1); mem = data && data[0]; } catch (e) { /* */ }
     const au = qtAuto(item, j.groups, mem), q = au && qtQty(j.groups, au);
@@ -4155,9 +4276,10 @@ async function qtAdd(pre) {
     if (QT_EW.test(item) && !j.groups.some((g) => g.kind === 'surface')) st.textContent = '⚠️ «' + item + '» بيتحسب من سطح الفرق (Volume Surface) زي Volume Dashboard في Civil 3D، واللوحة دي مفيهاش سطح فرق. ادخل اللوحة اللي فيها الـ Volume Surface.';
     qtPick(res, item, f.name, path, j, null, au || (mem ? { mode: mem.mode, sel: [], th: mem.thickness } : null), true);
   };
-  fi.onchange = go; goB.onclick = go; it.oninput = sync;
+  fi.onchange = () => { sync(); const f = fi.files[0]; if (f && fi.files.length === 1 && /\.(dwg|dxf)$/i.test(f.name) && f.size <= 400 * 1048576) preRead(f); if (pre) go(); };
+  goB.onclick = go; it.oninput = sync;
   it.onkeydown = (e) => { if (e.key === 'Enter' && fi.files[0]) go(); };
-  it.onchange = () => { if (fi.files[0] && it.value.trim() && !busy && !ran) go(); };
+  // مفيش حصر تلقائي لما تخرج من خانة البند — عشان تلحق تكتب التعليمات (الحصر بزرار «حصر اللوحة» أو Enter)
 }
 // ===== كذا لوحة مرة واحدة، والبند بيتختار تلقائي من البنود المتسجلة =====
 const QT_CONC = [
@@ -4340,7 +4462,7 @@ async function qtSave(item, fname, path, R, a, q, existing) {
   const sl = qtSlim(groups, sel, R.inv), keep = sl.keep;
   let extra = [];
   if (a.mode === 'fill') { const old = existing && (existing.sel || []).find((k) => /^A\|/.test(k)); extra = ['B|' + (+q.toFixed(3))].concat(old ? [old] : []); }
-  const row = { item, unit: QT_MODES[a.mode][1], mode: a.mode, thickness: a.mode === 'volume' ? a.th : null, qty: +q.toFixed(3), sel: [...sel, ...extra], detail: { groups: keep, bbox: R.bbox, warnings: R.warnings || [], only: a.only || null, inv: sl.inv, _cf: 1, rock: a.rock || null, merge: a.merge || null } };
+  const row = { item, unit: QT_MODES[a.mode][1], mode: a.mode, thickness: a.mode === 'volume' ? a.th : null, qty: +q.toFixed(3), sel: [...sel, ...extra], detail: { groups: keep, bbox: R.bbox, warnings: R.warnings || [], only: a.only || null, inv: sl.inv, _cf: 1, rock: a.rock || null, merge: a.merge || null, ins: a.ins || null } };
   const cols = 'id,item,unit,mode,thickness,qty,file_name,file_path,sel,note,sort,created_at';
   let res;
   if (existing) res = await sb.from('qt_items').update(row).eq('id', existing.id).select(cols).single();
