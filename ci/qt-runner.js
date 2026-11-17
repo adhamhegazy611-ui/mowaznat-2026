@@ -29,6 +29,7 @@ async function run(job) {
     handler({ method: 'POST', headers: { authorization: 'Bearer runner' }, body: { path: job.path }, query: {} }, res).catch((e) => resolve({ c: 500, o: { error: String(e && e.message || e) } }));
   });
   global.fetch = realFetch;
+  const DBG = [], log0 = console.log; console.log = (...a) => { const t = a.join(' '); if (/^(HT|DJ|KEY)/.test(t) && DBG.length < 80) DBG.push(t.slice(0, 900)); log0(...a); };
   try { (out.o.groups || []).filter((g) => g.kind === 'hatch').forEach((g) => { const it = g.items || [], neg = it.filter((x) => x.net < 0); const sa = (P) => { let a = 0; for (let i = 0; i < P.length; i++) { const p = P[i], q = P[(i + 1) % P.length]; a += p[0] * q[1] - q[0] * p[1]; } return a / 2; };
     console.log('HT', g.layer, g.pat, 'n', it.length, 'area', g.area.toFixed(1), 'neg', neg.length, neg.reduce((t, x) => t + x.net, 0).toFixed(1));
     it.map((x, i) => [x, i]).sort((a, b) => Math.abs(b[0].net) - Math.abs(a[0].net)).slice(0, 4).forEach(([x, i]) => { const gm = g.geom[i]; console.log('HT  item', i, 'net', x.net, 'parts', JSON.stringify(x.parts.slice(0, 6)), 'polys', (gm.polys || []).map((P) => P.length + 'pts sarea=' + sa(P).toFixed(1) + ' bb=' + [Math.min(...P.map((q) => q[0])), Math.min(...P.map((q) => q[1])), Math.max(...P.map((q) => q[0])), Math.max(...P.map((q) => q[1]))].map((v) => v.toFixed(0)).join(',')).slice(0, 6).join(' ; ')); }); }); } catch (e) { console.log('HT fail', e.message); }
@@ -58,7 +59,7 @@ async function run(job) {
   if (!up.ok) return call('finish', { id: job.id, ok: false, error: 'رفع النتيجة ' + up.status });
   // ملخص صغير للمجموعات (من غير الرسم) — للمراجعة من قاعدة البيانات
   const summary = (out.o.groups || []).slice(0, 400).map((g) => ({ kind: g.kind, layer: g.layer, pat: g.pat, color: g.color, n: g.n, area: g.area && +g.area.toFixed(3), length: g.length && +g.length.toFixed(3), paint: g.paint && +g.paint.toFixed(3), cut: g.cut && +g.cut.toFixed(2), fill: g.fill && +g.fill.toFixed(2), src: g.src, baseName: g.baseName, compName: g.compName, baseArea: g.baseArea, compArea: g.compArea, hid: g.hid, blk: g.blk, overlap: g.overlap, parts: g.items ? g.items.length : undefined }));
-  return call('finish', { id: job.id, ok: true, summary: { groups: summary, warnings: out.o.warnings, bbox: out.o.bbox, inv: out.o.inv && { types: out.o.inv.types, civil: out.o.inv.civil, layerCount: out.o.inv.layerCount, texts: (out.o.inv.texts || []).slice(0, 150).map((t) => t.t) } } });
+  return call('finish', { id: job.id, ok: true, summary: { dbg: (console.log = log0, DBG), groups: summary, warnings: out.o.warnings, bbox: out.o.bbox, inv: out.o.inv && { types: out.o.inv.types, civil: out.o.inv.civil, layerCount: out.o.inv.layerCount, texts: (out.o.inv.texts || []).slice(0, 150).map((t) => t.t) } } });
 }
 module.exports = { run, setCall: (f) => { call = f; } };
 if (require.main === module) (async () => {
