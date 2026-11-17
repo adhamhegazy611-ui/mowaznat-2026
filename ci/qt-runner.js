@@ -29,12 +29,6 @@ async function run(job) {
     handler({ method: 'POST', headers: { authorization: 'Bearer runner' }, body: { path: job.path }, query: {} }, res).catch((e) => resolve({ c: 500, o: { error: String(e && e.message || e) } }));
   });
   global.fetch = realFetch;
-  const DBG = [], log0 = console.log; console.log = (...a) => { const t = a.join(' '); if (/^(HT|DJ|KEY)/.test(t) && DBG.length < 80) DBG.push(t.slice(0, 900)); log0(...a); };
-  try { for (const g of (out.o.groups || [])) { if (g.kind !== 'hatch') continue; const it = g.items || []; let nn = 0, ns = 0; for (const x of it) if (x.net < 0) { nn++; ns += x.net; }
-    console.log('HT', g.layer, g.pat, 'n', it.length, 'area', (+g.area).toFixed(1), 'neg', nn, ns.toFixed(1));
-    const idx = it.map((x, i) => i).sort((a, b) => Math.abs(it[b].net) - Math.abs(it[a].net)).slice(0, 3);
-    for (const i of idx) { const x = it[i], gm = g.geom[i] || {}; const ds = []; for (const P of (gm.polys || []).slice(0, 5)) { let a = 0, x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; const n = Math.min(P.length, 300000); for (let k = 0; k < n; k++) { const p0 = P[k], q = P[(k + 1) % n]; a += p0[0] * q[1] - q[0] * p0[1]; if (p0[0] < x0) x0 = p0[0]; if (p0[0] > x1) x1 = p0[0]; if (p0[1] < y0) y0 = p0[1]; if (p0[1] > y1) y1 = p0[1]; } ds.push(P.length + 'pts sa=' + (a / 2).toFixed(1) + ' bb=' + [x0, y0, x1, y1].map((v) => v.toFixed(0)).join(',')); }
-      console.log('HT  item', i, 'net', x.net, 'parts', JSON.stringify((x.parts || []).slice(0, 5)), ds.join(' ; ')); } } } catch (e) { console.log('HT fail', e.message); }
   try { // تشخيص: جمع المقارنات المنفصلة (نفس دالة الصفحة)
     const src = require('fs').readFileSync(require('path').join(__dirname, '../index.html'), 'utf8');
     const qtDisjoint = eval('(' + /function qtDisjoint[\s\S]*?\n}\n/.exec(src)[0] + ')');
@@ -61,7 +55,7 @@ async function run(job) {
   if (!up.ok) return call('finish', { id: job.id, ok: false, error: 'رفع النتيجة ' + up.status });
   // ملخص صغير للمجموعات (من غير الرسم) — للمراجعة من قاعدة البيانات
   const summary = (out.o.groups || []).slice(0, 400).map((g) => ({ kind: g.kind, layer: g.layer, pat: g.pat, color: g.color, n: g.n, area: g.area && +g.area.toFixed(3), length: g.length && +g.length.toFixed(3), paint: g.paint && +g.paint.toFixed(3), cut: g.cut && +g.cut.toFixed(2), fill: g.fill && +g.fill.toFixed(2), src: g.src, baseName: g.baseName, compName: g.compName, baseArea: g.baseArea, compArea: g.compArea, hid: g.hid, blk: g.blk, overlap: g.overlap, parts: g.items ? g.items.length : undefined }));
-  return call('finish', { id: job.id, ok: true, summary: { dbg: (console.log = log0, DBG), groups: summary, warnings: out.o.warnings, bbox: out.o.bbox, inv: out.o.inv && { types: out.o.inv.types, civil: out.o.inv.civil, layerCount: out.o.inv.layerCount, texts: (out.o.inv.texts || []).slice(0, 150).map((t) => t.t) } } });
+  return call('finish', { id: job.id, ok: true, summary: { groups: summary, warnings: out.o.warnings, bbox: out.o.bbox, inv: out.o.inv && { types: out.o.inv.types, civil: out.o.inv.civil, layerCount: out.o.inv.layerCount, texts: (out.o.inv.texts || []).slice(0, 150).map((t) => t.t) } } });
 }
 module.exports = { run, setCall: (f) => { call = f; } };
 if (require.main === module) (async () => {
