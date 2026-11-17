@@ -1,9 +1,10 @@
 # سيرفر اللوح الضخمة لحصر الكميات (tasmemat): بياخد الشغل من طابور qt_jobs ويحصره بذاكرة أكبر من Vercel.
+# بيفضل شغال ~55 دقيقة يستنى لوح جديدة (الريبو public = دقايق Actions مجانية)، وكل 10 دقايق جدول يشغّل واحد جديد لو مفيش
 # الكود في فرع portal-site (ci/qt-runner.js). التحقق بـ GitHub OIDC — مفيش أسرار.
 name: qt-runner
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/10 * * * *'
   workflow_dispatch:
 permissions:
   id-token: write
@@ -14,7 +15,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,4 +28,4 @@ jobs:
         env:
           QT_HEAP: '12000'
           QT_TMUL: '6'
-          QT_POLL_SEC: '280'
+          QT_POLL_SEC: '3300'
