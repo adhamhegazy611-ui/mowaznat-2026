@@ -4072,7 +4072,7 @@ async function qtAdd(pre) {
   const l2 = pjEl('label', 'qf'); l2.appendChild(pjEl('span', '', 'ملف اللوحة (DWG أو DXF)'));
   const fi = pjEl('input'); fi.type = 'file'; fi.accept = '.dwg,.dxf'; fi.multiple = !pre; l2.appendChild(fi);
   row.append(l1, l2); c.appendChild(row);
-  if (!pre) c.appendChild(pjEl('div', 'qhint', 'تقدر تختار لوحة أو كذا لوحة مرة واحدة. لو سبت البند فاضي، السيستم بيختار البند لكل لوحة من البنود المتسجلة (من اسم الملف، أو لوحة شبهها اتحصرت قبل كده، أو أسماء الطبقات) وانت تراجع قبل الحفظ.'));
+  c.appendChild(pjEl('div', 'qhint', 'اكتب اسم البند اللي عايز كميته، واختار اللوحة (أو كذا لوحة لنفس البند)، ودوس «حصر اللوحة». السيستم مش بيشتغل على اللوحة غير بعد ما تكتب البند.'));
   const goB = pjEl('button', 'qbtn on', '⚡ حصر اللوحة'); goB.type = 'button'; goB.disabled = true; c.appendChild(goB);
   const st = pjEl('div', 'qstat'); c.appendChild(st);
   m.appendChild(c);
@@ -4083,7 +4083,9 @@ async function qtAdd(pre) {
   const sync = () => { goB.disabled = busy || !fi.files[0] || !it.value.trim(); };
   const go = async () => {
     const f = fi.files[0]; sync(); if (!f || busy) return;
-    if (!pre && (fi.files.length > 1 || !it.value.trim())) { const fs0 = [...fi.files].filter((x) => /\.(dwg|dxf)$/i.test(x.name) && x.size <= 400 * 1048576); if (!fs0.length) { st.textContent = 'الملفات لازم تكون DWG أو DXF وأقل من 400 ميجا'; return; } return qtBatch(fs0, it.value.trim()); }
+    // مفيش شغل على اللوحة غير لما تكتب اسم البند — والكمية بتطلع للاسم اللي كتبته
+    if (!it.value.trim()) { st.textContent = '✍️ اكتب اسم البند الأول، وبعدين دوس «حصر اللوحة»'; it.focus(); return; }
+    if (!pre && fi.files.length > 1) { const fs0 = [...fi.files].filter((x) => /\.(dwg|dxf)$/i.test(x.name) && x.size <= 400 * 1048576); if (!fs0.length) { st.textContent = 'الملفات لازم تكون DWG أو DXF وأقل من 400 ميجا'; return; } return qtBatch(fs0, it.value.trim()); }
     if (!it.value.trim()) { st.textContent = 'اكتب اسم البند وبعدين دوس «حصر اللوحة»'; it.focus(); return; }
     if (f.size > 400 * 1048576) { st.textContent = 'الملف أكبر من 400 ميجا'; return; }
     if (!/\.(dwg|dxf)$/i.test(f.name)) { st.textContent = 'الملف لازم يكون DWG أو DXF'; return; }
@@ -4154,7 +4156,7 @@ function qtItemGuess(fname, j, H) {
 }
 async function qtBatch(files, forced) {
   const p = QT.cur; const m = qtMain(p.name + ' — ' + files.length + ' لوحة', qtProject);
-  const head = pjEl('div', 'qcard'); head.appendChild(pjEl('h3', '', files.length + ' لوحة — البند بيتختار تلقائي'));
+  const head = pjEl('div', 'qcard'); head.appendChild(pjEl('h3', '', files.length + ' لوحة — ' + (forced ? 'بند «' + forced + '»' : 'البند بيتختار تلقائي')));
   head.appendChild(pjEl('div', 'qhint', 'راجع البند والكمية لكل لوحة. تقدر تغيّر البند من الخانة، والكمية بتتحسب تاني على طول.'));
   const dl = pjEl('datalist'); dl.id = 'qtBatchDL'; head.appendChild(dl);
   m.appendChild(head);
