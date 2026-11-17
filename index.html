@@ -909,6 +909,11 @@ body:not(.in) footer{color:#6f84a6}
 <style id="qpdel-css">#qt .qpw{position:relative;display:flex}#qt .qpw>.qproj{flex:1}
 #qt .qpdel{position:absolute;top:10px;inset-inline-end:10px;width:32px;height:32px;border-radius:9px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-size:14px;display:grid;place-items:center;opacity:.75;transition:opacity .15s,background .15s}
 #qt .qpdel:hover,#qt .qpdel:focus-visible{opacity:1;background:#ef4444;color:#fff}</style>
+<style id="qsec-css">#qt button.qls{width:100%;border:0;border-top:1px solid var(--bd);font:inherit;cursor:pointer;text-align:start;padding:16px 18px}
+#qt button.qls:hover{background:linear-gradient(90deg,rgba(233,165,20,.04),rgba(233,165,20,.18))}
+#qt .qls .qchev{margin-inline-start:auto;font-style:normal;font-size:20px;line-height:1;color:var(--ac2);transition:transform .18s;transform:rotate(0deg)}
+#qt .qls[aria-expanded=true] .qchev{transform:rotate(90deg)}
+#qt .qlsb[hidden]{display:none}</style>
 </head>
 <body>
 <div class="scene" aria-hidden="true">
@@ -3661,11 +3666,11 @@ const QT_ICON = { manual: '✎', area: '▦', volume: '⬛', section: '◩', len
 // الأقسام الرئيسية (بالترتيب) — البند بيتحط في قسمه من اسمه
 const QT_SECS = [
   ['kasht', 'أعمال الكشط والإزالة', '⛏', /كشط|إزال|ازال|تكسير|هدم|تطهير/],
-  ['hafr', 'أعمال الحفر', '▼', /حفر/],
+  ['hafr', 'أعمال الحفر', '▼', /حفر|قطع/],
   ['radm', 'أعمال الردم', '▲', /ردم|إحلال|احلال|طبان|تسوية|ترابي/],
   ['sen', 'أعمال طبقات الأساس (السن)', '▤', /سن ?\d|سن\b|أساس|اساس|FDR|دبش|مثبت/i],
   ['asph', 'أعمال الأسفلت', '▬', /أسفلت|اسفلت|تشريب|لاصق|MC|RC|رابط|سطحي|مطب/i],
-  ['rasf', 'أعمال الأرصفة والبردورات', '▦', /بردور|انترلوك|إنترلوك|رصف|رصيف|بلاط|قدمة|نيوجيرسي|نيوجرسي|نيوجرسى|نبوجرسى|كيستون|دكة|خرسان/],
+  ['rasf', 'الأعمال التكميلية (بردورات وأرصفة ونيوجيرسي)', '▦', /بردور|انترلوك|إنترلوك|رصف|رصيف|بلاط|قدم|قدد|نيوجيرسي|نيوجرسي|نيوجرسى|نبوجرسى|كيستون|دكة|خرسان/],
   ['sena', 'الأعمال الصناعية والصرف', '◫', /عداي|عبار|ماسور|برابخ|برب|غرف|غرفة|بلاع|منهول|صرف/],
   ['mark', 'أعمال التخطيط والأمان', '┅', /تخطيط|دهان|علامات|لوحات|عواكس|متاريس|كابولي|جانتري|حواجز/],
   ['etc', 'أعمال أخرى', '•', /./],
@@ -3673,7 +3678,8 @@ const QT_SECS = [
 const qtSecOf = (item) => (QT_SECS.find((x) => x[3].test(item)) || QT_SECS[QT_SECS.length - 1]);
 function qtSummary(m) {
   const secs = new Map();
-  qtGroups().forEach((G) => { const k = G.mode === 'formula' ? 'etc' : qtSecOf(G.item)[0]; if (!secs.has(k)) secs.set(k, []); secs.get(k).push(G); });
+  // كل لوحة بكميتها لوحدها — مفيش جمع لكميات لوح على بعض
+  qtGroups().flatMap((G) => (G.rows.length > 1 ? G.rows.map((x) => ({ ...G, rows: [x], qty: +x.qty })) : [G])).forEach((G) => { const k = G.mode === 'formula' ? 'etc' : qtSecOf(G.item)[0]; if (!secs.has(k)) secs.set(k, []); secs.get(k).push(G); });
   // شريط: بحث + إضافة
   const bar = pjEl('div', 'qlbar');
   const q = pjEl('input'); q.type = 'search'; q.placeholder = '🔍  دوّر على بند…'; q.className = 'qlq';
@@ -3684,16 +3690,21 @@ function qtSummary(m) {
   const rows = [];
   QT_SECS.filter(([k]) => secs.has(k)).forEach(([k, name, ic]) => {
     const list = secs.get(k);
-    const sh = pjEl('div', 'qls'); sh.append(pjEl('i', '', ic), pjEl('b', '', name), pjEl('span', '', list.length + (list.length === 1 ? ' بند' : list.length < 11 ? ' بنود' : ' بند')));
-    L.appendChild(sh);
+    // القسم: بتدوس عليه يفتح ويقفل، والبنود جواه
+    QT.open = QT.open || {};
+    const sh = pjEl('button', 'qls'); sh.type = 'button'; sh.setAttribute('aria-expanded', QT.open[k] ? 'true' : 'false');
+    sh.append(pjEl('i', '', ic), pjEl('b', '', name), pjEl('span', '', list.length + (list.length === 1 ? ' بند' : list.length < 11 ? ' بنود' : ' بند')), pjEl('em', 'qchev', '‹'));
+    const box = pjEl('div', 'qlsb'); box.hidden = !QT.open[k];
+    L.append(sh, box);
     const items = [];
-    list.forEach((G) => { const r = qtRow(G); L.appendChild(r); items.push(r); rows.push([r, G.item]); });
-    sh._items = items;
+    list.forEach((G) => { const r = qtRow(G); box.appendChild(r); items.push(r); rows.push([r, G.item]); });
+    sh._items = items; sh._box = box;
+    sh.onclick = () => { QT.open[k] = box.hidden; box.hidden = !box.hidden; sh.setAttribute('aria-expanded', box.hidden ? 'false' : 'true'); };
   });
   q.oninput = () => {
     const f = q.value.trim();
     rows.forEach(([r, t]) => { r.hidden = !!f && !t.includes(f); });
-    L.querySelectorAll('.qls').forEach((h) => { h.hidden = h._items.every((r) => r.hidden); });
+    L.querySelectorAll('.qls').forEach((h) => { h.hidden = h._items.every((r) => r.hidden); h._box.hidden = f ? h.hidden : h.getAttribute('aria-expanded') !== 'true'; });
   };
 }
 // صف بند: الاسم | الكمية | الوحدة | أوامر
