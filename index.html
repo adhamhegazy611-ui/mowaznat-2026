@@ -3303,6 +3303,8 @@ function qtAuto(item, groups, mem) {
 function qtAuto0(item, groups, mem) {
   const keys = new Set(groups.map(qtKey));
   if (mem && mem.sel) mem = { ...mem, sel: mem.sel.filter((k) => !QT_XK.test(k)) };
+  // البردورة: كل خطوط اللوحة على كل اللايرات (البردورة ممكن تبقى متوزعة على أكتر من لاير)
+  if (/بردور|بدرور/.test(item)) { const ln = groups.filter((g) => g.kind === 'line' && !QT_BG.test(g.layer) && g.length > 0); if (ln.length) return { mode: 'length', sel: ln.map(qtKey) }; }
   if (QT_EW.test(item)) {
     // الحفر والردم: Surface to Surface بس (مقارنة سطحين بأسمائهم من Civil)
     const em = qtEwMode(item), s2 = groups.filter((g) => g.src === 's2s' && g[em] > 0);
