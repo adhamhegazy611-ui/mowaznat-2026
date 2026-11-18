@@ -302,6 +302,12 @@ function surfaceGroups(src, origin) {
       zmin: +B.zmin.toFixed(3), zmax: +B.zmax.toFixed(3), items: [], ext: g.ext, geom: g.geom,
     });
   });
+  // كل سطح لوحده بمسطحه (زي سطح «مسطح التطهير») — بيانات بس، مش بيدخل في حفر/ردم
+  tins.forEach((S0, i) => {
+    const g = grid(S0.tin.V, flat3(S0.tin.T));
+    out.push({ key: 'ST|' + S0.handle, kind: 'surface', src: 'tin', layer: S0.name ? 'سطح «' + S0.name + '»' : 'سطح ' + (i + 1), name: S0.name || null, handle: S0.handle,
+      n: S0.points, tris: S0.tin.T.length, area: +S0.area.toFixed(3), fill: 0, cut: 0, length: 0, paint: 0, zmin: +S0.zmin.toFixed(3), zmax: +S0.zmax.toFixed(3), items: [], ext: g.ext, geom: g.geom });
+  });
   return { groups: out, other, tins: tins.length };
 }
 

@@ -3324,7 +3324,7 @@ function qtDisjoint(groups, em) {
 }
 // أسماء السطوح واللايرات اللي في اللوحة (للفلتر)
 function qtNames(j) {
-  const S = new Set(); (j.groups || []).forEach((g) => { if (g.kind !== 'surface') return; if (g.baseName) S.add(g.baseName); if (g.compName) S.add(g.compName); if (!g.src && g.name) S.add(g.name); });
+  const S = new Set(); (j.groups || []).forEach((g) => { if (g.kind !== 'surface') return; if (g.baseName) S.add(g.baseName); if (g.compName) S.add(g.compName); if ((!g.src || g.src === 'tin') && g.name) S.add(g.name); });
   const L = new Set(); ((j.inv && j.inv.layers) || []).forEach((l) => { if (l && l.name && (l.hatch || l.line || l.block)) L.add(l.name); });
   (j.groups || []).forEach((g) => { if (g.kind !== 'surface' && g.layer) L.add(g.layer); });
   return { s: [...S].sort(), l: [...L].sort() };
@@ -3342,7 +3342,7 @@ function qtIns(tx, j, item) {
   const isArea = /مسطح|مساحة|مساحه/.test(t);
   const em = /ردم/.test(item) ? 'fill' : /ردم/.test(t) ? 'fill' : 'cut';
   const pairs = gs.filter((g) => g.src === 's2s' || (g.kind === 'surface' && !g.src));
-  const surfOf = (nm) => { const n = low(nm), v = pairs.find((g) => !g.src && low(g.name) === n); if (v) return v; return pairs.filter((g) => g.src === 's2s' && (low(g.baseName) === n || low(g.compName) === n)).sort((x, y) => y.area - x.area)[0]; };
+  const surfOf = (nm) => { const n = low(nm), t0 = gs.find((g) => g.src === 'tin' && low(g.name) === n); if (t0) return t0; const v = pairs.find((g) => !g.src && low(g.name) === n); if (v) return v; return pairs.filter((g) => g.src === 's2s' && (low(g.baseName) === n || low(g.compName) === n)).sort((x, y) => y.area - x.area)[0]; };
   const nameOf = (g) => (g.src ? g.layer : '«' + g.name + '»');
   // مسطح سطح أو أكتر (A + B + C …): كل سطح بمساحته، ونشوف لو فيه سطوح راكبة على بعض
   if (!ex && sf.length && (isArea || !QT_EW.test(item))) {
