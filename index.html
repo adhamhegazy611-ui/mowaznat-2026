@@ -3427,6 +3427,12 @@ function qtAuto(item, groups, mem) {
 function qtAuto0(item, groups, mem) {
   const keys = new Set(groups.map(qtKey));
   if (mem && mem.sel) mem = { ...mem, sel: mem.sel.filter((k) => !QT_XK.test(k)) };
+  // سطح Civil اسمه فيه نفس كلمة البند (زي «تطهير» و«مسطحات التطهير»): المسطح = مسطح السطح ده
+  if (!QT_EW.test(item)) {
+    const nw = (x) => String(x || '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').toLowerCase().split(/[^\p{L}\p{N}]+/u).map((w) => w.replace(/^(وال|بال|لل|ال)/, '').replace(/(ات|ات)$/, '')).filter((w) => w.length >= 3 && !/^(مسطح|سطح|surface|اعمال|عمل|بند)$/.test(w));
+    const iw = nw(item); const tn = groups.filter((g) => g.src === 'tin' && g.area > 0 && nw(g.name).some((w) => iw.some((v) => v === w || (v.length >= 4 && (w.includes(v) || v.includes(w))))));
+    if (tn.length === 1) return { mode: 'area', sel: [qtKey(tn[0])] };
+  }
   // التسويات: لو مفيش هاتش واللوحة فيها سطوح — المسطح = مساحة سطح الفرق (أو أكبر مقارنة)
   if (/تسوي/.test(item) && !groups.some((g) => g.kind === 'hatch' && g.area > 0)) { const sv = groups.filter((g) => g.kind === 'surface' && g.src !== 'table' && g.area > 0).sort((a, b) => (!a.src) - (!b.src) || b.area - a.area); const v = sv.find((g) => !g.src) || sv[0]; if (v) return { mode: 'area', sel: [qtKey(v)] }; }
   // البردورة: كل خطوط اللوحة على كل اللايرات (البردورة ممكن تبقى متوزعة على أكتر من لاير)
