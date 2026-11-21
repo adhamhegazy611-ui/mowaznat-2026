@@ -933,6 +933,47 @@ body:not(.in) footer{color:#6f84a6}
 #qt .qchip.s{border-color:rgba(245,158,11,.5);color:#fcd34d}#qt .qchip:hover{background:var(--ac,#e9a514);color:#1c1100}
 #qt .qinsok{margin-top:12px;padding:14px 16px;border-radius:12px;border:1px solid rgba(34,197,94,.45);background:rgba(34,197,94,.08);display:flex;flex-direction:column;gap:8px}
 #qt .qinsok.bad{border-color:rgba(239,68,68,.5);background:rgba(239,68,68,.08)}#qt .qinsq{font-size:26px;font-weight:900;color:#fff;font-variant-numeric:tabular-nums}</style>
+<style id="shell-css">
+/* ===== شريط جانبي ثابت للبوابة ===== */
+:root{--sbw:256px;--sb1:#0a1a33;--sb2:#0d2242;--sbac:#d4a53c;--sbtx:#c9d6ea;--sbmut:#7f93b3}
+#side{position:fixed;top:0;bottom:0;right:0;width:var(--sbw);z-index:80;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--sb1),var(--sb2));border-left:1px solid rgba(255,255,255,.07);box-shadow:-10px 0 30px rgba(2,8,20,.35);color:var(--sbtx)}
+#side.hidden{display:none}
+#side .sbb{display:flex;align-items:center;gap:12px;padding:20px 18px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
+#side .sbb i{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(145deg,#e2bf68,#b8892a);color:#0a1a33;font-style:normal;font-weight:900;font-size:18px;box-shadow:0 6px 16px rgba(212,165,60,.3)}
+#side .sbb b{display:block;color:#fff;font-size:16px;font-weight:800;line-height:1.3}#side .sbb span{font-size:12px;color:var(--sbmut)}
+#side nav{flex:1;overflow:auto;padding:14px 10px}
+#side .sbs{font-size:11.5px;font-weight:800;letter-spacing:.4px;color:var(--sbmut);padding:16px 12px 6px}
+#side .sbi{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;margin:2px 0;border:0;border-radius:10px;background:none;color:var(--sbtx);font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;text-align:start;position:relative;transition:background .15s,color .15s}
+#side .sbi .si{width:32px;height:32px;flex:0 0 32px;border-radius:9px;display:grid;place-items:center;background:rgba(255,255,255,.06);color:#e2bf68}
+#side .sbi .si svg{width:18px;height:18px}
+#side .sbi:hover{background:rgba(255,255,255,.06);color:#fff}
+#side .sbi.on{background:rgba(212,165,60,.14);color:#fff}
+#side .sbi.on:before{content:"";position:absolute;inset-inline-start:-10px;top:8px;bottom:8px;width:4px;border-radius:0 4px 4px 0;background:var(--sbac)}
+#side .sbi.on .si{background:var(--sbac);color:#0a1a33}
+#side .sbi .ext{margin-inline-start:auto;font-size:12px;color:var(--sbmut)}
+#side .sbf{padding:14px 14px 18px;border-top:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;gap:8px}
+#side .sbu{display:flex;align-items:center;gap:10px}#side .sbu .av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#1c3a66;color:#fff;font-weight:800}
+#side .sbu b{color:#fff;font-size:13.5px;display:block}#side .sbu small{color:var(--sbmut);font-size:11.5px}
+#side .sbf button{height:36px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--sbtx);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+#side .sbf button:hover{background:rgba(255,255,255,.1);color:#fff}
+#side .sbf .rq .n{background:#ef4444;color:#fff;border-radius:999px;padding:0 7px;margin-inline-start:6px;font-size:11px}
+body.shell .top{display:none}
+body.shell main#apps,body.shell footer{margin-right:var(--sbw)}
+body.shell #qt,body.shell #pa,body.shell #view{right:var(--sbw)}
+body.shell #qtBack,body.shell #paBack,body.shell #vBack{display:none}
+#sbTg{display:none}
+@media (max-width:900px){
+ #side{transform:translateX(100%);transition:transform .25s}
+ body.sbopen #side{transform:none}
+ body.shell main#apps,body.shell footer{margin-right:0}
+ body.shell #qt,body.shell #pa,body.shell #view{right:0}
+ body.shell #qtBack,body.shell #paBack,body.shell #vBack{display:inline-flex}
+ #sbTg{display:grid;place-items:center;position:fixed;top:10px;right:10px;z-index:90;width:42px;height:42px;border-radius:11px;border:1px solid rgba(255,255,255,.15);background:#0a1a33;color:#e2bf68;font-size:20px;cursor:pointer}
+ body:not(.shell) #sbTg{display:none}
+ body.viewing #sbTg{top:auto;bottom:14px}
+ body.shell main#apps{padding-top:56px}
+}
+</style>
 </head>
 <body>
 <div class="scene" aria-hidden="true">
@@ -959,6 +1000,14 @@ body:not(.in) footer{color:#6f84a6}
   </svg>
 </div>
 
+<aside id="side" class="hidden" aria-label="القائمة">
+  <div class="sbb"><i>م</i><div><b>مكتب التصميمات</b><span>بوابة الأنظمة</span></div></div>
+  <nav id="sideNav"></nav>
+  <div class="sbf"><div class="sbu"><div class="av" id="sbAv">؟</div><div><b id="sbName"></b><small id="sbRole">مستخدم</small></div></div>
+    <button type="button" class="rq hidden" id="sbReq">طلبات الحسابات<span class="n hidden" id="sbReqN"></span></button>
+    <button type="button" id="sbOut">خروج</button></div>
+</aside>
+<button type="button" id="sbTg" aria-label="القائمة">☰</button>
 <div class="top"><div class="in">
   <div class="mark"><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path d="M7 29 L13 3 M25 29 L19 3" stroke="#fff" stroke-width="2.6" fill="none"/><path d="M16 7v4M16 15v4M16 23v4" stroke="#f5c542" stroke-width="2.6"/></svg></div>
   <div class="brand"><b>مكتب التصميمات</b><span>بوابة الأنظمة</span></div>
@@ -5258,6 +5307,48 @@ async function hubLink() {
 $('qtBack').onclick = () => { if (history.state && history.state.qt) history.back(); else closeQT(); };
 addEventListener('popstate', (e) => { if (!(e.state && e.state.qt)) closeQT(); });
 
+
+/* ===== الشريط الجانبي: كل الأنظمة في مكان واحد ===== */
+(function () {
+  const side = $('side'), nav = $('sideNav');
+  const HOME = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>';
+  let active = 'home';
+  const vis = (id) => $(id) && !$(id).classList.contains('hidden');
+  const closeAll = () => { if (vis('view')) closeApp(); if (vis('qt')) closeQT(); if (vis('pa')) closePA(); };
+  const icOf = (a) => { const i = a && a.querySelector('.ic'); return i ? i.innerHTML : ''; };
+  const build = () => {
+    nav.textContent = '';
+    const sec = (t) => nav.appendChild(pjEl('div', 'sbs', t));
+    const item = (k, t, ic, go, ext) => { const b = pjEl('button', 'sbi' + (k === active ? ' on' : '')); b.type = 'button'; b.dataset.k = k; const si = pjEl('span', 'si'); si.innerHTML = ic; b.append(si, pjEl('span', '', t)); if (ext) b.appendChild(pjEl('span', 'ext', '↗')); b.onclick = () => { document.body.classList.remove('sbopen'); go(); setActive(k); }; nav.appendChild(b); };
+    item('home', 'الرئيسية', HOME, closeAll);
+    const tools = [['hubCard', 'hub'], ['qtCard', 'qt'], ['paCard', 'pa']].filter(([id]) => !$(id).hidden);
+    if (tools.length) { sec('أدوات المكتب'); tools.forEach(([id, k]) => { const a = $(id); item(k, a.querySelector('h2').textContent, icOf(a), () => { closeAll(); a.click(); }); }); }
+    sec('الأنظمة');
+    document.querySelectorAll('#apps [data-sso]').forEach((a, i) => item('app' + i, a.querySelector('h2').textContent, icOf(a), () => { if (vis('qt')) closeQT(); if (vis('pa')) closePA(); a.click(); }));
+  };
+  const setActive = (k) => { active = k; nav.querySelectorAll('.sbi').forEach((b) => b.classList.toggle('on', b.dataset.k === k)); };
+  // لما شاشة تتقفل من جوه (زرار رجوع) نرجّع «الرئيسية»
+  // القايمة بتعلّم الشاشة المفتوحة حتى لو اتفتحت من الكروت
+  const cur = () => vis('pa') ? 'pa' : vis('qt') ? (typeof QT_FROM !== 'undefined' && QT_FROM === 'hubCard' ? 'hub' : 'qt') : vis('view') ? 'app' + (typeof CUR === 'number' ? CUR : 0) : 'home';
+  let tmo = 0; new MutationObserver(() => { clearTimeout(tmo); tmo = setTimeout(() => { const k = cur(); if (k !== active) setActive(k); }, 50); }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'], childList: false });
+  new MutationObserver(() => { const k = cur(); if (k !== active) setActive(k); }).observe($('qtTitle'), { childList: true, characterData: true, subtree: true });
+  // الصلاحيات بتتحدد بعد الدخول (الكروت بتظهر/تستخبى) — نعيد بناء القايمة
+  ['hubCard', 'qtCard', 'paCard'].forEach((id) => new MutationObserver(build).observe($(id), { attributes: true, attributeFilter: ['hidden'] }));
+  const sync = () => {
+    const inn = document.body.classList.contains('in');
+    side.classList.toggle('hidden', !inn); document.body.classList.toggle('shell', inn);
+    const nm = $('uName').textContent || ''; $('sbName').textContent = nm; $('sbAv').textContent = (nm[0] || '؟').toUpperCase();
+    $('sbRole').textContent = typeof IS_ADMIN !== 'undefined' && IS_ADMIN ? 'مسؤول' : 'مستخدم';
+    $('sbReq').classList.toggle('hidden', $('reqBtn').classList.contains('hidden'));
+    const n = $('reqN'); $('sbReqN').textContent = n.textContent; $('sbReqN').classList.toggle('hidden', n.classList.contains('hidden'));
+  };
+  new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  new MutationObserver(sync).observe($('who'), { subtree: true, childList: true, characterData: true, attributes: true });
+  $('sbOut').onclick = () => $('out').click();
+  $('sbReq').onclick = () => $('reqBtn').click();
+  $('sbTg').onclick = () => document.body.classList.toggle('sbopen');
+  build(); sync();
+})();
 </script>
 </body>
 </html>
