@@ -980,6 +980,242 @@ body.shell footer{color:var(--mut2)}
  #side .sbi span:not(.si){display:none}#side .sbi{padding:0 10px}
 }
 </style>
+<style id="light-css">body.shell #qt .vbar{flex:none;height:46px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--navy);color:#1f2a1a;box-shadow:inset 0 -3px 0 #3f5a2a}
+body.shell #qt .vbar button{background:#eef2e6;border:1px solid rgba(255,255,255,.25);color:#1f2a1a;border-radius:9px;padding:5px 12px;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
+body.shell #qt .qhero{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;background:linear-gradient(135deg,#3f5a2a,#134e4a);color:#1f2a1a;border-radius:18px;padding:20px 22px;margin-bottom:16px}
+body.shell #qt .qhero p{margin:0;max-width:640px;color:#1f2a1a;font-size:13.5px;line-height:1.7}
+body.shell #qt .qhero .chip{display:inline-block;background:#eef2e6;border-radius:99px;padding:3px 10px;font-size:12px;font-weight:700}
+body.shell #qt .qbtn{border:1px solid #d7deea;background:#fff;color:#3f5a2a;border-radius:10px;padding:8px 14px;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
+body.shell #qt .qbtn.on{background:#3f5a2a;color:#ffffff;border-color:#3f5a2a}
+body.shell #qt .qhero .qbtn{background:#eef2e6;color:#1f2a1a;border-color:#f4f6ef}
+body.shell #qt .qhero .qbtn.on{background:#fff;color:#3f5a2a;border-color:#fff}
+body.shell #qt .qbtn.danger{color:#1f2a1a!important}
+body.shell #qt .qproj:hover{border-color:#3f5a2a;box-shadow:0 6px 18px rgba(15,118,110,.12)}
+body.shell #qt .qproj b{font-size:15px;color:#3f5a2a}
+body.shell #qt .qproj small{font-size:11.5px;color:#1f2a1a}
+body.shell #qt .qcard h3{margin:0 0 10px;font-size:16px;color:#3f5a2a}
+body.shell #qt .qtabs button.on{background:#3f5a2a;color:#ffffff;border-color:#3f5a2a}
+body.shell #qt table.qt td.big{font-size:15px;color:#3f5a2a}
+body.shell #qt .qlink{border:0;background:none;color:#3f5a2a;font:inherit;font-weight:800;cursor:pointer;padding:2px 6px}
+body.shell #qt .qstat{margin-top:10px;font-weight:700;color:#3f5a2a;min-height:20px}
+body.shell #qt .spin{display:inline-block;width:14px;height:14px;border:2px solid #cbd5e1;border-top-color:#3f5a2a;border-radius:50%;animation:qspin .8s linear infinite;vertical-align:-2px;margin-inline-end:6px}
+body.shell #qt .qmodes button.on{background:#3f5a2a;color:#ffffff;border-color:#3f5a2a}
+body.shell #qt .qgi.on{border-color:#3f5a2a;background:#f0fdfa}
+body.shell #qt .qtotal{display:flex;align-items:center;flex-wrap:wrap;gap:8px;background:#3f5a2a;color:#ffffff;border-radius:12px;padding:12px 14px;margin-top:10px;font-weight:700}
+body.shell #qt .qtotal .qbtn:not(.on){background:transparent;color:#1f2a1a;border-color:#f4f6ef}
+body.shell #qt .qdh .qq{font-size:18px;font-weight:800;color:#3f5a2a}
+body.shell #qt .qsub{font-size:12px;color:#1f2a1a;margin:-6px 0 10px}
+body.shell #qt table.qt td.it{font-weight:800;color:#3f5a2a;font-size:14.5px}
+body.shell #qt .qformula{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:10px 12px;font-weight:800;color:#3f5a2a;font-size:13.5px}
+body.shell #qt{--nv:#3f5a2a;--nv2:#3f5a2a;--ac:#55703a;--ac2:#55703a;--bd:#e1e6ee;--mut:#6b7a90;--txt:#13233b;--bg2:#f3f5f9;
+  background:linear-gradient(#ffffff 1px,transparent 1px) 0 0/28px 28px,linear-gradient(90deg,#ffffff 1px,transparent 1px) 0 0/28px 28px,#eef1f6;color:var(--txt)}
+body.shell #qt .vbar{height:52px;background:var(--nv);box-shadow:0 2px 0 var(--ac),0 6px 18px #ffffff}
+body.shell #qt .vbar button:hover{background:#f4f6ef}
+body.shell #qt .qhero{position:relative;overflow:hidden;border-radius:16px;padding:22px 24px;margin-bottom:18px;border:0;color:#1f2a1a;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='220' viewBox='0 0 520 220'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.07'%3E%3Cpath d='M-20 180C80 150 140 90 260 96s200-60 300-90'/%3E%3Cpath d='M-20 200C90 170 150 112 262 118s210-58 300-88'/%3E%3Cpath d='M-20 160C70 128 130 68 258 74s190-62 302-92'/%3E%3Cpath d='M-20 140C60 106 120 46 256 52s180-64 304-94'/%3E%3C/g%3E%3C/svg%3E") left bottom/auto 100% no-repeat,linear-gradient(120deg,var(--nv) 0%,var(--nv2) 100%);box-shadow:0 10px 30px #ffffff}
+body.shell #qt .qhero p{color:#1f2a1a}
+body.shell #qt .qhero .chip{background:rgba(85,112,58,.16);color:var(--ac2);border:1px solid rgba(85,112,58,.35)}
+body.shell #qt .qhero .qbtn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);color:#1f2a1a}
+body.shell #qt .qhero .qbtn:hover{background:#eef2e6}
+body.shell #qt .qhero .qbtn.on{background:var(--ac);border-color:var(--ac);color:#ffffff}
+body.shell #qt .qhero .qbtn.danger{color:#1f2a1a!important;border-color:rgba(252,165,165,.35)}
+body.shell #qt .qbtn.on{background:var(--nv);border-color:var(--nv);color:#1f2a1a}
+body.shell #qt .qtabs{display:inline-flex;gap:0;background:#fff;border:1px solid var(--bd);border-radius:12px;padding:4px;margin-bottom:16px;box-shadow:0 1px 2px #ffffff}
+body.shell #qt .qtabs button.on{background:var(--nv);color:#1f2a1a}
+body.shell #qt .qproj{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:16px 18px;box-shadow:0 1px 2px #ffffff;transition:transform .15s,box-shadow .15s,border-color .15s;position:relative;overflow:hidden}
+body.shell #qt .qproj:hover{transform:translateY(-2px);border-color:#cdd5e1;box-shadow:0 12px 26px #ffffff}
+body.shell #qt .qcard{background:#fff;border:1px solid var(--bd);border-radius:16px;box-shadow:0 1px 2px #ffffff,0 8px 24px #ffffff}
+body.shell #qt .qtile{--mc:#0e7c86;--ms:#e3f3f4;position:relative;background:#fff;border:1px solid var(--bd);border-radius:16px;padding:16px 18px 12px;box-shadow:0 1px 2px #ffffff;transition:transform .15s,box-shadow .15s;overflow:hidden}
+body.shell #qt .qtile:hover{transform:translateY(-2px);box-shadow:0 14px 30px #ffffff}
+body.shell #qt .qadd{display:grid;place-items:center;align-content:center;gap:8px;min-height:160px;border:1.5px dashed #b9c3d1;border-radius:16px;color:var(--nv2);background:#f4f6ef;cursor:pointer;font:inherit;font-weight:800;transition:all .15s}
+body.shell #qt .qadd span{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--nv);color:#1f2a1a;font-size:26px;line-height:1}
+body.shell #qt .qadd:hover span{background:var(--ac);color:#ffffff}
+body.shell #qt .qgrph{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 -14px 14px;padding:12px 16px;background:var(--nv);color:#1f2a1a}
+body.shell #qt .qgrph .qq{background:var(--ac);color:#ffffff;border-radius:9px;padding:3px 10px;font-weight:800;font-variant-numeric:tabular-nums}
+body.shell #qt .qgrph .qbtn{background:#f4f6ef;border-color:rgba(255,255,255,.25);color:#1f2a1a}
+body.shell #qt .qtotal .qbtn.on{background:var(--ac);border-color:var(--ac);color:#ffffff}
+body.shell #qt .qmodes button.on{background:var(--nv);border-color:var(--nv);color:#1f2a1a}
+body.shell #qt .qdh .qq{color:#1f2a1a;background:var(--nv);border:0;border-radius:10px;padding:4px 12px;font-size:17px;font-variant-numeric:tabular-nums}
+body.shell #qt .qf input:focus,body.shell #qt .qinvq:focus{outline:2px solid rgba(85,112,58,.35);border-color:var(--ac)}
+body.shell #qt{--txt:#e6edf7;--mut:#93a6c2;--bd:#dfe6d2;--bg2:#f4f6ef;--card:#ffffff;--card2:#ffffff;
+  background:radial-gradient(1100px 700px at 80% -10%,#1f4275 0%,transparent 60%),radial-gradient(900px 600px at 0% 110%,#17345e 0%,transparent 55%),linear-gradient(160deg,#ffffff 0%,#ffffff 60%,#ffffff 100%);color:var(--txt)}
+body.shell #qt .vbar{background:#ffffff;backdrop-filter:blur(8px)}
+body.shell #qt .qhero{background:linear-gradient(120deg,#ffffff,rgba(19,53,95,.88));border:1px solid var(--bd);backdrop-filter:blur(6px);box-shadow:0 1px 2px rgba(40,55,25,.05),0 8px 22px rgba(40,55,25,.07)}
+body.shell #qt .qcard,body.shell #qt .qproj,body.shell #qt .qtile{background:var(--card);border:1px solid var(--bd);backdrop-filter:blur(10px);box-shadow:0 1px 2px rgba(40,55,25,.05),0 8px 22px rgba(40,55,25,.07);color:var(--txt)}
+body.shell #qt .qtile:hover,body.shell #qt .qproj:hover{box-shadow:0 1px 2px rgba(40,55,25,.05),0 8px 22px rgba(40,55,25,.07);border-color:#dfe6d2}
+body.shell #qt .qcard h3,body.shell #qt .qproj b,body.shell #qt .qtile .tn,body.shell #qt .qdh h3,body.shell #qt details.qinv summary,body.shell #qt ul.qinvtx b{color:#1f2a1a}
+body.shell #qt .qproj span{color:#1f2a1a}
+body.shell #qt .qtile .tq b{color:#1f2a1a}
+body.shell #qt .qlink{color:#1f2a1a}
+body.shell #qt .qlink.red{color:#1f2a1a}
+body.shell #qt .qadd{background:#ffffff;border-color:#dfe6d2;color:#1f2a1a}
+body.shell #qt .qadd span{background:var(--ac);color:#ffffff}
+body.shell #qt .qadd:hover{background:rgba(85,112,58,.08);border-color:var(--ac);color:var(--ac2)}
+body.shell #qt .qtabs button.on{background:var(--ac);color:#ffffff}
+body.shell #qt .qbtn:hover{background:#eef2e6;border-color:#dfe6d2}
+body.shell #qt .qbtn.on{background:var(--ac);border-color:var(--ac);color:#ffffff}
+body.shell #qt .qcard .qbtn.danger{color:#1f2a1a!important;border-color:rgba(252,165,165,.3)}
+body.shell #qt .qdh .qq{background:var(--ac);color:#ffffff}
+body.shell #qt .qg li.plus{color:#1f2a1a}
+body.shell #qt .qg li.minus{color:#1f2a1a}
+body.shell #qt .qg li.net{color:#1f2a1a}
+body.shell #qt .qformula{background:rgba(85,112,58,.08);border-color:var(--bd);border-inline-start-color:var(--ac);color:#1f2a1a}
+body.shell #qt .qinvt th{background:#ffffff;color:#1f2a1a;border-bottom-color:var(--bd)}
+body.shell #qt .qinvt td{border-top-color:#dfe6d2}
+body.shell #qt .qinvq,body.shell #qt .qf input,body.shell #qt .qf select{background:#ffffff;border-color:var(--bd);color:#1f2a1a}
+body.shell #qt .qf{color:#1f2a1a}
+body.shell #qt ul.qinvtx li{border-bottom-color:#dfe6d2}
+body.shell #qt .qhint{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.3);color:#1f2a1a}
+body.shell #qt .qwarn{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);color:#1f2a1a}
+body.shell #qt .qmodes button.on{background:var(--ac);border-color:var(--ac);color:#ffffff}
+body.shell #qt .qgi.on{background:rgba(85,112,58,.1);border-color:var(--ac)}
+body.shell #qt .qtotal{background:#ffffff;border:1px solid var(--bd)}
+body.shell #qt .qgrp{background:#ffffff;border-color:var(--bd)}
+body.shell #qt .qgrph{background:#ffffff}
+body.shell #qt .qbtn.gold2{background:linear-gradient(180deg,#55703a,#55703a);border-color:#55703a;color:#ffffff;font-weight:800}
+body.shell .pjpick .pjpl .g{position:sticky;top:0;background:#3f5a2a;color:#ffffff;font-weight:800;font-size:12.5px;padding:6px 10px}
+body.shell .qbud .qball{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13px;font-weight:700;color:#3f5a2a}
+body.shell .qbud .qbt th{position:sticky;top:0;background:#3f5a2a;color:#ffffff;padding:8px;font-weight:700;text-align:start;z-index:1}
+body.shell .qbud .qbt td.n b{display:block;color:#3f5a2a}
+body.shell .qbud .qbt td.q,body.shell .qbud .qbt td.r{white-space:nowrap;font-weight:800;font-variant-numeric:tabular-nums;color:#3f5a2a}
+body.shell #qt .qlq{flex:1;min-width:0;background:#ffffff;border:1px solid var(--bd);border-radius:12px;padding:10px 14px;font:inherit;font-size:14px;color:#1f2a1a}
+body.shell #qt .qlq:focus{outline:2px solid rgba(85,112,58,.35);border-color:var(--ac)}
+body.shell #qt .qlist{background:#ffffff;border:1px solid var(--bd);border-radius:16px;overflow:hidden;backdrop-filter:blur(10px);box-shadow:0 1px 2px rgba(40,55,25,.05),0 8px 22px rgba(40,55,25,.07)}
+body.shell #qt .qls{display:flex;align-items:center;gap:10px;padding:13px 18px 10px;background:linear-gradient(90deg,rgba(85,112,58,0),rgba(85,112,58,.10));border-top:1px solid var(--bd);box-shadow:inset -3px 0 0 var(--ac);color:#1f2a1a}
+body.shell #qt .qls i{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:rgba(85,112,58,.14);color:var(--ac2);font-style:normal;font-size:13px}
+body.shell #qt .qlr{--mc:#14b8c4;display:grid;grid-template-columns:minmax(0,1fr) auto 150px;align-items:center;gap:12px;padding:11px 18px;border-top:1px solid #dfe6d2;cursor:pointer;transition:background .12s}
+body.shell #qt .qlr:hover,body.shell #qt .qlr:focus-visible{background:#f4f6ef;outline:0}
+body.shell #qt .qlr .tt b{font-size:15px;font-weight:700;color:#1f2a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.shell #qt .qlr .qv b{font-size:22px;font-weight:800;color:#1f2a1a;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+body.shell #qt .qsec{background:#ffffff;border:1px solid var(--bd);border-radius:18px;padding:14px 14px 16px;backdrop-filter:blur(8px);box-shadow:0 14px 34px rgba(0,0,0,.28)}
+body.shell #qt .qtiles.stack .qtile{padding:12px 14px 10px;box-shadow:none;background:#ffffff}
+body.shell #qt .qsech{display:flex;align-items:center;gap:10px;margin:6px 2px 12px;padding-bottom:8px;border-bottom:1px solid #dfe6d2}
+body.shell #qt .qsech i{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:rgba(85,112,58,.14);color:var(--ac2);font-style:normal;font-size:14px;flex:none}
+body.shell #qt .qsech h3{margin:0;font-size:17px;font-weight:800;color:#1f2a1a;letter-spacing:.2px}
+body.shell #qt .qsech .n{font-size:12px;font-weight:700;color:var(--mut);background:#f4f6ef;border:1px solid var(--bd);border-radius:20px;padding:1px 10px}
+body.shell #qt table.qt th{background:#ffffff;color:#1f2a1a;border-color:var(--bd)}
+body.shell #qt table.qt td{border-color:#dfe6d2}
+body.shell #pa table.pjform tr.part td{background:#3f5a2a;color:#ffffff;font-weight:800;font-size:15px;letter-spacing:.3px}
+body.shell #pa nav .pjh button.pjhome{background:#fff;border:1px solid #d7deea;color:#3f5a2a;font-weight:800;text-align:center;border-radius:10px;margin-bottom:10px;width:100%}
+body.shell #pa .pjwh .ord{background:#3f5a2a;color:#ffffff;border-radius:8px;padding:4px 12px;font-weight:800;font-size:13.5px;white-space:nowrap}
+body.shell #pa .pjwh b{font-size:15.5px;color:#3f5a2a;flex:1}
+body.shell #pa button.pjwi{border:1px solid #d7deea;background:#fff;border-radius:99px;padding:5px 12px;font:inherit;font-size:13px;cursor:pointer;color:#3f5a2a}
+body.shell #pa button.pjwi.in{background:#3f5a2a;color:#ffffff;border-color:#3f5a2a}
+body.shell .pjm button.pjeqo b{display:block;font-size:14px;color:#3f5a2a}
+body.shell .pjm button.pjeqo small{display:block;font-size:11.5px;color:#1f2a1a}
+body.shell #pa .pjeqs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;font-size:12.5px;color:#1f2a1a;width:100%}
+body.shell #pa .pjeqs .chip2{background:#eef2e6;border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:2px 4px 2px 10px;color:#1f2a1a}
+body.shell #pa .pjeqs .chip2 button{border:0;background:none;color:#1f2a1a;cursor:pointer;font-weight:800;padding:0 4px}
+body.shell #pa .pjkind.on{border-style:solid;border-color:#3f5a2a;background:#3f5a2a;color:#ffffff}
+body.shell #pa .pjkband{display:flex;align-items:center;gap:10px;margin:18px 0 8px;padding:10px 16px;border-radius:12px;background:#e8eef7;color:#3f5a2a;font-weight:800;font-size:16px}
+body.shell #pa .pjseg button.on{background:#3f5a2a;color:#ffffff}
+body.shell #pa .vbar .paur button{background:#eef2e6;border:1px solid rgba(255,255,255,.25);color:#1f2a1a;border-radius:8px;padding:4px 10px;cursor:pointer;font:inherit;font-size:12.5px;font-weight:700}
+body.shell #pa nav .pjh .row2 button{flex:1;text-align:center;font-weight:800;font-size:12.5px;padding:8px 6px;border-radius:10px;background:#3f5a2a;color:#ffffff;border:0}
+body.shell #pa nav .pjh .row2 button:hover{background:#3f5a2a}
+body.shell #pa .pjcard h3{margin:0 0 2px;font-size:16px;color:#3f5a2a}
+body.shell #pa table.pjt th{background:#eaf0f9;color:#3f5a2a;font-weight:800;padding:8px 10px;text-align:right;font-size:12.5px}
+body.shell #pa table.pjt tr.grp th{background:#3f5a2a;color:#ffffff;font-size:13px;text-align:right;padding:7px 10px}
+body.shell #pa .pjboq th{background:#3f5a2a;color:#ffffff;font-weight:800;font-size:13px;padding:10px 8px;text-align:center;position:sticky;top:0}
+body.shell #pa .pjboq td.b{font-weight:800;color:#3f5a2a}
+body.shell #pa .pjboq tr.tot td{background:#eef2f7;font-weight:800;font-size:14.5px;color:#3f5a2a}
+body.shell #pa nav .pjh button.pjgo{background:linear-gradient(135deg,#9a3412,#c2501f);color:#1f2a1a;font-weight:800;text-align:center;border-radius:10px}
+body.shell #pa nav .pjh .pjn{font-weight:800;color:#3f5a2a;font-size:14px;margin:0 4px 2px}
+body.shell #pa .pjbtn{border:1px solid #d7deea;background:#fff;color:#3f5a2a;border-radius:10px;padding:8px 14px;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
+body.shell #pa .pjbtn.on{background:#3f5a2a;color:#ffffff;border-color:#3f5a2a}
+body.shell #pa .pjc b{font-size:15.5px;color:#3f5a2a;line-height:1.5}
+body.shell #pa .pjc .a button:hover{background:#f1f5f9;color:#3f5a2a}
+body.shell .pjm{position:fixed;inset:0;z-index:10000;background:#ffffff;display:grid;place-items:center;padding:16px}
+body.shell .pjm .hd b{display:block;font-size:17px;color:#3f5a2a}
+body.shell .pjm .ok{background:#3f5a2a;color:#ffffff;border:0;border-radius:10px;padding:9px 20px;font:inherit;font-weight:800;cursor:pointer}
+body.shell .pjm .it input{width:17px;height:17px;accent-color:#3f5a2a;flex:none}
+body.shell .pjm .tl button{border:1px solid #d7deea;background:#fff;border-radius:8px;padding:4px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#3f5a2a}
+body.shell #pa .vbar{flex:none;height:46px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--navy);color:#1f2a1a;box-shadow:inset 0 -3px 0 #9a3412}
+body.shell #pa .vbar button{background:#eef2e6;border:1px solid rgba(255,255,255,.25);color:#1f2a1a;border-radius:9px;padding:5px 12px;cursor:pointer;font-size:13px;font-weight:700}
+body.shell #pa .vbar input{margin-inline-start:auto;width:min(260px,40vw);border:1px solid #f4f6ef;background:#eef2e6;color:#1f2a1a;border-radius:9px;padding:6px 12px;font:inherit;font-size:13px}
+body.shell #pa .vbar input::placeholder{color:#1f2a1a}
+body.shell #pa{--pn:#3f5a2a;--pn2:#3f5a2a;--pg:#c8a24a;--pt:#1e293b;--pm:#64748b;background:#eef2f7}
+body.shell #pa nav button.on{background:var(--pn);color:#1f2a1a;font-weight:700}
+body.shell #pa .hero2{background:linear-gradient(135deg,var(--pn) 0%,var(--pn2) 100%);color:#1f2a1a;border-radius:18px;padding:22px 26px;margin-bottom:16px;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;box-shadow:0 10px 30px rgba(15,39,71,.25);position:relative;overflow:hidden}
+body.shell #pa .hero2 p{margin:6px 0 0;color:#1f2a1a;font-size:14px;line-height:1.7}
+body.shell #pa .hero2 button{border:1px solid #f4f6ef;background:#eef2e6;color:#1f2a1a;border-radius:10px;padding:7px 16px;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
+body.shell .pjtoast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:10000;background:#3f5a2a;color:#ffffff;font-weight:700;font-size:14px;padding:11px 18px;border-radius:12px;box-shadow:0 1px 2px rgba(40,55,25,.05),0 8px 22px rgba(40,55,25,.07);max-width:min(720px,92vw);text-align:center;transition:opacity .5s}
+body.shell #pa .pinfo{position:sticky;bottom:12px;z-index:6;margin:14px 0 0;background:linear-gradient(135deg,#3f5a2a,#16365f);color:#1f2a1a;border-radius:16px;padding:14px 18px;box-shadow:0 14px 40px rgba(15,39,71,.4);max-height:44vh;overflow:auto;line-height:1.9}
+body.shell #pa .pinfo .pv{font-weight:800;font-size:18px;color:#1f2a1a;direction:ltr}
+body.shell #pa .pinfo .px{border:0;background:#eef2e6;color:#1f2a1a;border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:14px}
+body.shell #pa .pinfo .pn{font-size:13px;color:#1f2a1a;margin:2px 0}
+body.shell #pa .pinfo .op{color:#1f2a1a;font-weight:800;margin:0 3px}
+body.shell #pa .pinfo .sm{font-size:12px;color:#1f2a1a}
+body.shell #pa .pinfo .ch{display:inline-flex;gap:8px;align-items:center;background:#eef2e6;border:1px solid rgba(255,255,255,.28);color:#1f2a1a;border-radius:10px;padding:2px 10px;margin:2px 3px;cursor:pointer;font:inherit;font-size:13px}
+body.shell #pa .pinfo .ch b{color:#1f2a1a;direction:ltr}
+body.shell #pa .pinfo .pr{font-family:ui-monospace,monospace;font-size:11.5px;color:#1f2a1a;margin-top:6px;word-break:break-all}
+body.shell #pa .pc.on{background:#3f5a2a;color:#ffffff;border-color:#3f5a2a}
+body.shell #pa .pt th{position:sticky;top:0;background:#3f5a2a;color:#ffffff;padding:12px 10px;font-size:13px;font-weight:800;text-align:center;z-index:2}
+body.shell #pa .pt tr.sec td{background:#e9eef7;color:#3f5a2a;font-weight:800;text-align:right;padding:8px 14px;font-size:13.5px;border-bottom:1px solid #d5dbe5}
+body.shell #pa .pt td.pr b{font-size:17px;color:#3f5a2a;direction:ltr;display:inline-block;background:#fff7d6;border:1px solid #f0d98a;border-radius:10px;padding:4px 12px}
+body.shell #pa h2.ren{cursor:text;display:table;border-bottom:1px dashed #f4f6ef}
+body.shell #pa h2.ren:hover{border-bottom-color:#92400e}
+body.shell #pa .tw td.r-ttl{background:linear-gradient(135deg,#3f5a2a,#1d4a86);color:#1f2a1a;font-weight:800}
+body.shell #pa .tw td.r-hd{background:#eaf0f9;color:#3f5a2a;font-weight:800;font-size:13px}
+body.shell #pa .tw td.r-dk{background:#3f5a2a;color:#ffffff;font-weight:800}
+body.shell #pa .pro td.c-h1{background:#3f5a2a;color:#ffffff;font-weight:800;font-size:13px;text-align:center;border-bottom-color:#3f5a2a;border-inline-start:1px solid #eef2e6}
+body.shell #pa .pro td.c-ttl{background:linear-gradient(135deg,#3f5a2a,#1d4a86);color:#1f2a1a;font-weight:800;font-size:16px;text-align:center;padding:15px 16px;border-bottom:0}
+body.shell #pa .pro td.c-h2{background:#e9eef7;color:#3f5a2a;font-weight:800;font-size:13.5px}
+body.shell #pa .pro td.in{font-weight:700;color:#3f5a2a;font-variant-numeric:tabular-nums}
+body.shell #pa .pro td.c-h1.in,body.shell #pa .pro td.c-ttl.in{color:#1f2a1a}
+body.shell #pa nav{position:absolute;z-index:3;inset-block:46px 0;inset-inline-start:0;width:82%;box-shadow:0 1px 2px rgba(40,55,25,.05),0 8px 22px rgba(40,55,25,.07);display:none}
+body.shell #view .vbar{flex:none;height:46px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--navy);color:#1f2a1a}
+body.shell #view .vbar button{background:#eef2e6;border:1px solid rgba(255,255,255,.25);color:#1f2a1a;border-radius:9px;padding:5px 12px;cursor:pointer;font-size:13px;font-weight:700}
+body.shell #view .vbar button:hover{background:#eef2e6}
+body.shell #view .vbar .sw button{font-weight:600;background:transparent;border-color:#eef2e6;color:#1f2a1a}
+body.shell #qt .hlink{background:none;border:0;color:#1f2a1a;font:inherit;cursor:pointer;text-decoration:underline;padding:0;text-align:right}
+body.shell #qt .qpdel:hover,body.shell #qt .qpdel:focus-visible{opacity:1;background:#ef4444;color:#1f2a1a}
+body.shell #qt .qsec{background:#ffffff;backdrop-filter:blur(10px);border:1px solid var(--bd);border-radius:16px;overflow:hidden;box-shadow:0 14px 34px rgba(2,8,20,.32);align-self:start}
+body.shell #qt .qlr.rep .tt b:after{content:"  ↺ من لوحة الإحلال";font-size:11px;color:#1f2a1a;font-weight:700}
+body.shell #qt .qsectot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 18px;border-top:1px dashed rgba(85,112,58,.45);background:rgba(85,112,58,.08)}
+body.shell #qt .qsectot span{color:#1f2a1a;font-size:13px;font-weight:700}
+body.shell #qt .qdtabs button{height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--bd);background:#ffffff;color:#1f2a1a;font:inherit;font-weight:700;font-size:13.5px;cursor:pointer}
+body.shell #qt .qdtabs button.on{background:var(--ac,#55703a);border-color:var(--ac,#55703a);color:#1f2a1a}
+body.shell #qt .qditems{display:flex;gap:8px;flex-wrap:wrap;margin:0 auto 14px;max-width:1180px;padding:10px;border-radius:12px;background:#ffffff;border:1px solid var(--bd)}
+body.shell #qt .qditems button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 12px;border-radius:10px;border:1px solid #dfe6d2;background:#ffffff;color:#1f2a1a;font:inherit;cursor:pointer;text-align:start}
+body.shell #qt .qditems button.on{border-color:var(--ac,#55703a);box-shadow:0 0 0 1px var(--ac,#55703a) inset;background:rgba(85,112,58,.12)}
+body.shell #qt .qinst.on{background:var(--ac,#55703a);color:#1f2a1a;border-color:var(--ac,#55703a)}
+body.shell #qt .qinsw{color:#1f2a1a;font-weight:700;font-size:13.5px}
+body.shell #qt .qinsg{color:#1f2a1a;font-weight:700;font-size:13.5px}
+body.shell #qt .qinsl2{margin:0;padding-inline-start:18px;color:#1f2a1a;font-size:13px}
+body.shell #qt .qins textarea{width:100%;min-height:84px;font:inherit;font-size:14px;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);background:#ffffff;color:#1f2a1a;resize:vertical}
+body.shell #qt .qinsf input{height:38px;border-radius:10px;border:1px solid var(--bd);background:#ffffff;color:#1f2a1a;padding:0 12px;font:inherit}
+body.shell #qt .qchip{border:1px solid #dfe6d2;background:#ffffff;color:#1f2a1a;border-radius:999px;padding:4px 10px;font:inherit;font-size:12.5px;cursor:pointer}
+body.shell #qt .qchip.s{border-color:rgba(245,158,11,.5);color:#1f2a1a}
+body.shell #qt .qchip:hover{background:var(--ac,#55703a);color:#1f2a1a}
+body.shell #qt .qinsq{font-size:26px;font-weight:900;color:#1f2a1a;font-variant-numeric:tabular-nums}
+body.shell #qt{--txt:#1f2a1a;--mut:#6b7462;--bd:#dfe6d2;--bg2:#f4f6ef;--card:#fff;--card2:#f7f8f3;--ac:#55703a;--ac2:#6b8a49;--ink:#1f2a1a;background:#f5f6f1!important;color:#1f2a1a}
+body.shell #qt .qscene{display:none}
+body.shell #qt .vbar,body.shell #pa .vbar{background:#fff!important;color:#1f2a1a;box-shadow:0 1px 0 #dfe6d2!important;backdrop-filter:none}
+body.shell #qt .vbar b,body.shell #pa .vbar b{color:#1f2a1a}
+body.shell #qt .vbar button,body.shell #pa .vbar button{color:#3f5a2a;border-color:#dfe6d2;background:#fff}
+body.shell #qt .qhero{background:#fff!important;border:1px solid #dfe6d2!important;box-shadow:0 8px 22px rgba(40,55,25,.07)!important}
+body.shell #qt .qhero *{color:#1f2a1a}
+body.shell #qt .qcard,body.shell #qt .qproj,body.shell #qt .qtile,body.shell #qt .qsec,body.shell #qt .qlist{backdrop-filter:none}
+body.shell #qt input,body.shell #qt select,body.shell #qt textarea{background:#fff!important;color:#1f2a1a!important;border-color:#cfd8c0!important}
+body.shell #qt .qsvg{border-color:#dfe6d2}
+body.shell #pa{--pn:#3f5a2a;--pn2:#55703a;--pg:#6b8a49;background:#f5f6f1}
+body.shell #qt .qbtn.on,body.shell #qt .qbtn.gold2,body.shell #qt .qtabs button.on,body.shell #qt .qmodes button.on{color:#fff!important}
+body.shell #qt summary{color:#3f5a2a}
+body.shell #qt .qtotal{background:#f1f5ea!important;color:#1f2a1a!important;border:1px solid #cfd8c0!important}
+body.shell #qt .qtotal b{color:#3f5a2a!important}
+body.shell #qt .qtotal .qbtn:not(.on){color:#1f2a1a!important;border-color:#cfd8c0!important;background:#fff!important}
+body.shell #qt .qtotal .qbtn.on{background:#55703a!important;border-color:#55703a!important;color:#fff!important}
+body.shell #qt .qcard{color:#1f2a1a}
+/* شاشة الدخول فاتحة كمان */
+body:not(.in) .scene{display:none}
+body:not(.in){background:#f5f6f1}
+body:not(.in) .top .brand b{color:#1f2a1a}body:not(.in) .top .brand span{color:#6b7462}
+body:not(.in) .top .mark{background:#55703a;border-color:#55703a}
+body:not(.in) .auth .box{border:1px solid #dfe6d2;box-shadow:0 10px 30px rgba(40,55,25,.08)}
+body:not(.in) .auth .btn{background:#55703a}body:not(.in) .auth .btn:hover{background:#3f5a2a}
+body:not(.in) .auth .tabs button.on{color:#3f5a2a;border-color:#55703a}
+body:not(.in) footer{color:#6b7462}
+</style>
 </head>
 <body>
 <div class="scene" aria-hidden="true">
