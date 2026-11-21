@@ -4012,7 +4012,7 @@ function qtDetailCard(x, d, no) {
   if (!d) { c.appendChild(pjEl('div', 'qempty', 'مفيش تفاصيل.')); return c; }
   const wrap = pjEl('div', 'qdet');
   const selS = new Set(x.sel || []), mine = (d.groups || []).filter((g) => selS.has(qtKey(g)));
-  wrap.appendChild(qtSvg(mine.length ? mine : d.groups || [], selS, d.bbox, null, x.mode));
+  wrap.appendChild(qtSvg(d.groups || [], selS, d.bbox, d.inv || null, x.mode)); // اللوحة كلها زي الأصل، والمحسوب متعلّم
   const side = pjEl('div');
   (d.groups || []).filter((g) => (x.sel || []).includes(qtKey(g))).forEach((g) => side.appendChild(qtGroupDetail(g, x.mode, x.thickness)));
   const fp = qtFillParts(x);
@@ -4161,14 +4161,20 @@ function qtSvg(groups, sel, bbox, inv, mode) {
   const g0 = E('g', { transform: `translate(0 ${Hb}) scale(1 -1)` }); svg.appendChild(g0);
   const layerCol = {}; ((inv && inv.layers) || []).forEach((l) => { layerCol[l.name] = l.color; });
   const order = groups.slice().sort((a, b) => (sel.has(qtKey(a)) ? 1 : 0) - (sel.has(qtKey(b)) ? 1 : 0));
+  const anyOn = groups.some((g) => sel.has(qtKey(g)));
   order.forEach((g) => {
     const on = sel.has(qtKey(g)), col = on ? '#f5b301' : qtCad(g.color), op = g.hid ? .3 : 1;
     (g.geom || []).forEach((e) => {
       if (e.t === 'g') {
-        const zs = e.z.filter((v) => v != null), mx = Math.max(1, ...zs.map(Math.abs)); const path = {};
-        e.z.forEach((v, k) => { if (v == null || (on && mode === 'cut' && v >= 0) || (on && mode === 'fill' && v <= 0)) return; const lv = Math.min(4, Math.ceil(Math.abs(v) / mx * 4.0001)), key = (v >= 0 ? 'f' : 'c') + lv; const x = e.x0 + (k % e.nx) * e.cs, y = e.y0 + Math.floor(k / e.nx) * e.cs; path[key] = (path[key] || '') + 'M' + x.toFixed(2) + ' ' + y.toFixed(2) + 'h' + e.cs + 'v' + e.cs + 'h' + (-e.cs) + 'Z'; });
-        const F = ['#fff3c4', '#ffd75e', '#f5b301', '#e07b00'], C = ['#cfe6ff', '#8cc4ff', '#3d8bfd', '#1f5fd1'];
-        Object.entries(path).forEach(([k, d]) => g0.appendChild(E('path', { d, fill: (k[0] === 'f' ? F : C)[+k[1] - 1], 'fill-opacity': on ? '.9' : '.35' })));
+        if (!on && anyOn) return; // السطوح اللي مش محسوبة مابتترسمش (عشان اللوحة تبان زي الأصل)
+        // السطح كصورة ناعمة (ألوان متدرجة حسب العمق): أزرق = حفر، أصفر/برتقالي = ردم
+        const zs = e.z.filter((v) => v != null), mx = Math.max(1, ...zs.map(Math.abs));
+        const cv = document.createElement('canvas'); cv.width = e.nx; cv.height = e.ny; const cx = cv.getContext('2d'), im = cx.createImageData(e.nx, e.ny);
+        const lerp = (A, B, t) => A.map((v, i) => Math.round(v + (B[i] - v) * t));
+        const CUT = [[207, 230, 255], [31, 95, 209]], FIL = [[255, 243, 196], [224, 123, 0]];
+        e.z.forEach((v, k) => { if (v == null || (on && mode === 'cut' && v >= 0) || (on && mode === 'fill' && v <= 0)) return; const t = Math.min(1, Math.sqrt(Math.abs(v) / mx)); const c = lerp(...(v >= 0 ? FIL : CUT), t); const i = k * 4; im.data[i] = c[0]; im.data[i + 1] = c[1]; im.data[i + 2] = c[2]; im.data[i + 3] = 235; });
+        cx.putImageData(im, 0, 0);
+        g0.appendChild(E('image', { href: cv.toDataURL(), x: e.x0, y: e.y0, width: e.nx * e.cs, height: e.ny * e.cs, preserveAspectRatio: 'none', opacity: on ? .85 : .35, style: 'image-rendering:auto' }));
       } else if (e.t === 'h') {
         g0.appendChild(E('path', { d: e.polys.map((q) => 'M' + q.map((v) => v[0] + ' ' + v[1]).join('L') + 'Z').join(''), 'fill-rule': 'evenodd', fill: col, 'fill-opacity': on ? .55 : .16 * op, stroke: col, 'stroke-opacity': on ? 1 : .7 * op, 'stroke-width': on ? 1.6 : .7, 'vector-effect': 'non-scaling-stroke', class: on ? 'on' : '' }));
       } else if (e.t === 'l') {
@@ -4181,7 +4187,7 @@ function qtSvg(groups, sel, bbox, inv, mode) {
   // عناصر Civil 3D (مكانها والمستطيل اللي حواليها)
   const civ = ((inv && inv.civ) || []).filter((c) => { const w = c.box[2] - c.box[0], h = c.box[3] - c.box[1]; return w * h > 1 && inB([c.box[0], c.box[1]], BIG) && inB([c.box[2], c.box[3]], BIG); });
   const fsz = Math.max(bw, bh) / 110;
-  civ.forEach((c) => {
+  if (false) civ.forEach((c) => { // عناصر Civil (محاور/كوريدور) مابتترسمش كمستطيلات — مش موجودة كده في اللوحة الأصلية
     const w = c.box[2] - c.box[0], h = c.box[3] - c.box[1];
     if (c.cls === 'CogoPoint') { g0.appendChild(E('circle', { cx: (c.box[0] + c.box[2]) / 2, cy: (c.box[1] + c.box[3]) / 2, r: fsz * .25, fill: '#7dd3fc', 'fill-opacity': .8 })); return; }
     g0.appendChild(E('rect', { x: c.box[0], y: c.box[1], width: w, height: h, fill: 'none', stroke: '#7dd3fc', 'stroke-opacity': .55, 'stroke-dasharray': '6 5', 'stroke-width': 1, 'vector-effect': 'non-scaling-stroke' }));
@@ -4570,7 +4576,7 @@ function qtCheck(R, s2G) {
 }
 function qtPick(box, item, fname, path, R, existing, start, isNew) {
   // الحفر والردم: بيظهر Surface to Surface بس، وباقي البنود: الهاتشات والخطوط والبلوكات بس (من غير السطوح)
-  const s2G = (R.groups || []).filter((g) => g.src === 's2s' || (g.kind === 'surface' && !g.src && g.exact !== false)), otherG = (R.groups || []).filter((g) => g.kind !== 'surface');
+  const s2G = (R.groups || []).filter((g) => g.src === 's2s' || (g.kind === 'surface' && !g.src && g.exact !== false)), otherG = (R.groups || []).filter((g) => g.kind !== 'surface' || g.src === 'tin');
   const ewItem = QT_EW.test(item);
   const ROCK = { rows: (existing && existing._rock) || [], file: '' }; // قطاعات الصخر من تقرير الجسات
   const merge = !!((start && start.merge) || (existing && existing.detail && existing.detail.merge)); // أكتر من مقارنة بتتجمع في بند واحد (مراحل القطع)
@@ -4584,7 +4590,7 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
   const tot = pjEl('div', 'qtotal');
   const draw = () => {
     groups = mode === 'cut' || mode === 'fill' ? s2G : otherG;
-    svgBox.textContent = ''; svgBox.appendChild(qtSvg(groups, sel, R.bbox, R.inv));
+    svgBox.textContent = ''; svgBox.appendChild(qtSvg(mode === 'cut' || mode === 'fill' ? otherG.concat(s2G) : groups, sel, R.bbox, R.inv, mode));
     side.textContent = '';
     side.appendChild(pjEl('div', 'qhint', QT_BASE.test(item) && mode === 'volume' ? 'بند الأساس وحدته م³ = مساحة الهاتش × سمك الطبقة. ' + (th ? 'السمك ' + qtN(th, 2) + ' م' : 'اكتب سمك الطبقة بالمتر (مثلاً 0.25)') + (sel.size ? '' : ' وعلّم على الهاتش.') : isNew ? 'مقدرتش أحدد «' + item + '» لوحدي في اللوحة دي. علّم على الحاجة اللي تتحسب، وهفتكرها للبند ده بعد كده.' : 'علّم على الحاجة اللي تتحسب واختار نوع الكمية.'));
     const ml = pjEl('div', 'qmodes');
