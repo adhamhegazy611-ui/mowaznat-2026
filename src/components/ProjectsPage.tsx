@@ -38,7 +38,9 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
   const [colsMenu, setColsMenu] = useState<DOMRect | null>(null)
   const [editing, setEditing] = useState<Project | Omit<Project, 'id'> | null>(null)
 
-  const visible = COLUMNS.filter((c) => !hidden.includes(c.key))
+  // حسابات الكتايب (عرض بس): من غير أعمدة المقايسات المتوقفة واللي تم تسليمها
+  const RO_HIDE = canEdit ? [] : ['stopped_count', 'delivered_count']
+  const visible = COLUMNS.filter((c) => !hidden.includes(c.key) && !RO_HIDE.includes(c.key))
 
   // رقم «م» = ترتيب المشروع في القائمة كلها (زي معادلة =A3+1 في الشيت)
   const seqOf = useMemo(() => {
@@ -208,8 +210,8 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
 
       <div className="kpis">
         <Kpi k="عدد المشروعات" v={kpi.count} on={quick === null} onClick={() => setQuick(null)} />
-        <Kpi k="المقايسات المتوقفة" v={kpi.stopped} q="stopped" quick={quick} setQuick={setQuick} />
-        <Kpi k="مقايسات تم تسليمها" v={kpi.delivered} q="delivered" quick={quick} setQuick={setQuick} />
+        {canEdit && <Kpi k="المقايسات المتوقفة" v={kpi.stopped} q="stopped" quick={quick} setQuick={setQuick} />}
+        {canEdit && <Kpi k="مقايسات تم تسليمها" v={kpi.delivered} q="delivered" quick={quick} setQuick={setQuick} />}
         <Kpi k="لوحات ✓" v={kpi.marks.st_drawings} of={kpi.count} q="st_drawings" quick={quick} setQuick={setQuick} />
         <Kpi k="موازنة ✓" v={kpi.marks.st_budget} of={kpi.count} q="st_budget" quick={quick} setQuick={setQuick} />
         <Kpi k="الموازنة موجودة" v={kpi.budgetFound} of={kpi.count} q="budget" quick={quick} setQuick={setQuick} />
@@ -307,7 +309,7 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
           </thead>
           <tbody>
             {rows.map((p) => (
-              <tr key={p.id} onClick={() => setEditing(p)}>
+              <tr key={p.id} className={canEdit ? undefined : 'ro'} onClick={() => { if (canEdit) setEditing(p) }}>
                 {visible.map((c, i) => {
                   const st = cellStyle(p, c)
                   const cls = ['c-' + c.kind, i === 0 ? 'sticky-1' : c.key === 'name' ? 'sticky-2' : '']
@@ -378,7 +380,7 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
           <div className="pop" style={{ width: 340, top: colsMenu.bottom + 4, left: Math.max(8, Math.min(colsMenu.left, window.innerWidth - 348)) }}>
             <div style={{ fontWeight: 800, marginBottom: 8 }}>الأعمدة الظاهرة</div>
             <div className="cols-menu">
-              {COLUMNS.filter((c) => c.key !== 'sort_order' && c.key !== 'name').map((c) => (
+              {COLUMNS.filter((c) => c.key !== 'sort_order' && c.key !== 'name' && !RO_HIDE.includes(c.key)).map((c) => (
                 <label key={c.key}>
                   <input type="checkbox" checked={!hidden.includes(c.key)} onChange={(e) => setColHidden(c.key, !e.target.checked)} />
                   {c.label}

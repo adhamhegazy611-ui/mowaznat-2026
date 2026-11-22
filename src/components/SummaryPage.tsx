@@ -7,6 +7,8 @@ interface Props {
   reviewers: Reviewer[]
   onPick: (filter: { key: 'reviewer' | 'battalion' | 'action_taken'; values: string[] }) => void
   onQuick: (q: QuickKey | null) => void
+  /** حسابات الكتايب (عرض بس): من غير المقايسات المتوقفة واللي تم تسليمها */
+  canEdit?: boolean
 }
 
 const STAGES = [
@@ -14,7 +16,7 @@ const STAGES = [
   ['st_budget', 'موازنة'],
 ] as const
 
-export default function SummaryPage({ projects, reviewers, onPick, onQuick }: Props) {
+export default function SummaryPage({ projects, reviewers, onPick, onQuick, canEdit = true }: Props) {
   const t = computeTotals(projects)
 
   const byReviewer = useMemo(() => {
@@ -69,8 +71,8 @@ export default function SummaryPage({ projects, reviewers, onPick, onQuick }: Pr
 
       <div className="kpis">
         <Card k="عدد المشروعات" v={t.count} onClick={() => onQuick(null)} />
-        <Card k="المقايسات المتوقفة" v={t.stopped} onClick={() => onQuick('stopped')} />
-        <Card k="مقايسات تم تسليمها" v={t.delivered} onClick={() => onQuick('delivered')} />
+        {canEdit && <Card k="المقايسات المتوقفة" v={t.stopped} onClick={() => onQuick('stopped')} />}
+        {canEdit && <Card k="مقايسات تم تسليمها" v={t.delivered} onClick={() => onQuick('delivered')} />}
         <Card k="الموازنة موجودة" v={t.budgetFound} of={t.count} onClick={() => onQuick('budget')} />
         <Card k="شامل (مليون)" v={fmtNum(t.incl, 1)} onClick={() => onQuick('incl')} />
         <Card k="غير شامل (مليون)" v={fmtNum(t.excl, 1)} onClick={() => onQuick('excl')} />
@@ -78,7 +80,7 @@ export default function SummaryPage({ projects, reviewers, onPick, onQuick }: Pr
 
       <div className="section-title"><h2>تفاصيل الكتايب</h2></div>
       <div className="panel">
-        <GroupTable rows={byBattalion} first="ك" onPick={(v) => onPick({ key: 'battalion', values: [v || BLANK] })} />
+        <GroupTable full={canEdit} rows={byBattalion} first="ك" onPick={(v) => onPick({ key: 'battalion', values: [v || BLANK] })} />
       </div>
 
       <div className="section-title"><h2>تقدّم المراحل</h2><span>نسبة المشروعات اللي المرحلة دي فيها ✓</span></div>
@@ -117,7 +119,7 @@ export default function SummaryPage({ projects, reviewers, onPick, onQuick }: Pr
 
       <div className="section-title"><h2>حسب المراجع</h2><span>اضغط على الاسم يفتح مشروعاته</span></div>
       <div className="panel">
-        <GroupTable rows={byReviewer} first="المراجع" onPick={(v) => onPick({ key: 'reviewer', values: [v || BLANK] })} />
+        <GroupTable full={canEdit} rows={byReviewer} first="المراجع" onPick={(v) => onPick({ key: 'reviewer', values: [v || BLANK] })} />
       </div>
 
     </>
@@ -140,7 +142,7 @@ function BarList({ items, onPick }: { items: { label: string; n: number; key: st
 }
 
 type Row = ReturnType<typeof computeTotals> & { name: string; key: string }
-function GroupTable({ rows, first, onPick }: { rows: Row[]; first: string; onPick: (v: string) => void }) {
+function GroupTable({ rows, first, onPick, full }: { rows: Row[]; first: string; onPick: (v: string) => void; full: boolean }) {
   return (
     <div className="table-scroll">
       <table className="plain">
@@ -148,8 +150,8 @@ function GroupTable({ rows, first, onPick }: { rows: Row[]; first: string; onPic
           <tr>
             <th>{first}</th>
             <th>المشروعات</th>
-            <th>المتوقفة</th>
-            <th>تم تسليمها</th>
+            {full && <th>المتوقفة</th>}
+            {full && <th>تم تسليمها</th>}
             <th>لوحات ✓</th>
             <th>موازنة ✓</th>
             <th>ذاتي ✓</th>
@@ -163,8 +165,8 @@ function GroupTable({ rows, first, onPick }: { rows: Row[]; first: string; onPic
             <tr key={r.name} className="click" onClick={() => onPick(r.key)}>
               <td><b>{r.name}</b></td>
               <td>{r.count}</td>
-              <td>{r.stopped}</td>
-              <td>{r.delivered}</td>
+              {full && <td>{r.stopped}</td>}
+              {full && <td>{r.delivered}</td>}
               <td>{r.marks.st_drawings}</td>
               <td>{r.marks.st_budget}</td>
               <td>{r.marks.st_self}</td>

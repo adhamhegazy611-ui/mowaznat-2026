@@ -407,3 +407,4 @@ label.zero { display: flex; gap: 8px; align-items: center; margin-top: 12px; fon
 .sv-msg.err { color:#c0392b; }
 .sv-t { border-collapse:collapse; table-layout:fixed; font-size:12.5px; min-width:100%; width:max-content; }
 .sv-t td { border:1px solid #dfe5e1; padding:3px 6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle; color:#14231a; }
+.sheet tbody tr.ro { cursor: default; }

@@ -169,6 +169,7 @@ export default function App() {
           <SummaryPage
             projects={projects}
             reviewers={reviewers}
+            canEdit={canEdit}
             onPick={({ key, values }) => {
               setPreset({ filters: { [key]: values }, n: preset.n + 1 })
               go('projects')
