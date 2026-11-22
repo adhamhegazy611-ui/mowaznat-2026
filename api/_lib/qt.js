@@ -159,12 +159,14 @@ function hatchOverlap(hatches) {
   }
   return ov;
 }
-function hatchArea(paths) {
+function hatchArea(paths, style) {
+  // زي AutoCAD: حدود الكتابة جوه الهاتش (Textbox) مش مساحة، وستايل الجزر (75): 0 Normal بالتبادل، 1 Outer الجزيرة اللي جوه جزيرة متتملاش، 2 Ignore الحدود الخارجية بس
+  paths = paths.filter((p) => !(p.flag & 8));
   // المساحة «الدقيقة» من الأقواس بنثق فيها بس لو قريبة من مساحة الحدود المرسومة (لو بعيدة = قراية حدود غلط، زي لوحة انترلوك كيان)
   const areas = paths.map((p) => { const t = Math.abs(sarea(p.pts)); return p.exact != null && isFinite(p.exact) && Math.abs(p.exact - t) <= 0.02 * Math.max(t, 1e-9) + 1e-6 ? p.exact : t; });
   const depth = paths.map((p, j) => { const probe = p.pts.filter((_, i) => i % Math.max(1, Math.floor(p.pts.length / 12)) === 0); return paths.reduce((s, q, m) => { if (m === j) return s; const inn = probe.filter((pt) => inside(pt, q.pts)).length; return s + (inn > probe.length / 2 ? 1 : 0); }, 0); });
   let net = 0; const parts = [];
-  paths.forEach((p, j) => { const sg = depth[j] % 2 ? -1 : 1; net += sg * areas[j]; parts.push({ a: areas[j], hole: sg < 0 }); });
+  paths.forEach((p, j) => { const d = depth[j]; const sg = style === 2 ? (d === 0 ? 1 : 0) : style === 1 ? (d === 0 ? 1 : d === 1 ? -1 : 0) : (d % 2 ? -1 : 1); net += sg * areas[j]; if (sg) parts.push({ a: areas[j], hole: sg < 0 }); });
   return { net, parts, depth };
 }
 
@@ -252,11 +254,11 @@ function analyze(text, latin1) {
         const pat = d['2'] || 'SOLID';
         const paths = hatchPaths(eg); if (!paths.length) { lv.other++; continue; }
         paths.forEach((p) => { p.pts = p.pts.map((q) => app(Te, q)); if (p.exact != null) p.exact *= dt; });
-        const h = hatchArea(paths);
+        const h = hatchArea(paths, +(d['75'] || 0));
         const gr = G(`H|${layer}|${pat}|${color}${sfx}`, { kind: 'hatch', layer, pat, color, hex: aciHex(color), hid, ...extra });
         gr.n++; gr.area += h.net; lv.hatch++; lv.harea += h.net;
         gr.items.push({ net: +h.net.toFixed(3), parts: h.parts.map((p) => ({ a: +p.a.toFixed(3), hole: p.hole })) });
-        gr.geom.push({ t: 'h', polys: paths.map((p) => p.pts) });
+        gr.geom.push({ t: 'h', polys: paths.filter((p) => !(p.flag & 8)).map((p) => p.pts) });
         continue;
       }
       if (e.t === 'INSERT') {

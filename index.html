@@ -3715,6 +3715,9 @@ function qtAuto(item, groups, mem) {
   if (top.length < groups.length && !(mem && mem.sel && mem.sel.some((k) => k.includes('|@')))) { const r = qtAuto0(item, top, mem); if (r) return r; }
   return qtAuto0(item, groups.filter((g) => !g.hid).length ? groups.filter((g) => !g.hid) : groups, mem);
 }
+// الهاتش ممكن يبقى متوزع على أكتر من لاير: ناخد كل الهاتشات اللي بنفس اللون على كل اللايرات (زي Select Similar في AutoCAD)
+function qtExpHatch(groups, sel) { const out = new Set(sel); groups.forEach((g) => { if (g.kind === 'hatch' && sel.includes(qtKey(g))) qtSameColor(groups, g).forEach((x) => out.add(qtKey(x))); }); return [...out]; }
+function qtSameColor(groups, h) { return groups.filter((g) => g.kind === 'hatch' && g.area > 0 && g.color === h.color && !g.hid && !!g.blk === !!h.blk); }
 function qtAuto0(item, groups, mem) {
   const keys = new Set(groups.map(qtKey));
   if (mem && mem.sel) mem = { ...mem, sel: mem.sel.filter((k) => !QT_XK.test(k)) };
@@ -3759,12 +3762,12 @@ function qtAuto0(item, groups, mem) {
   }
   if (QT_BASE.test(item)) {   // أساس: دايماً حجم = مساحة الهاتش × السمك
     const th0 = qtThick(item) || (mem && mem.thickness ? +mem.thickness : null);
-    if (mem && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: 'volume', sel: mem.sel.slice(), th: th0, how: 'mem' };
+    if (mem && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: 'volume', sel: qtExpHatch(groups, mem.sel), th: th0, how: 'mem' };
     const hb = groups.filter((g) => g.kind === 'hatch' && g.area > 0 && !g.blk && !g.hid).sort((a, b) => b.area - a.area);
     const h0 = hb[0] || groups.filter((g) => g.kind === 'hatch' && g.area > 0).sort((a, b) => b.area - a.area)[0];
-    return h0 ? { mode: 'volume', sel: [qtKey(h0)], th: th0 } : { mode: 'volume', sel: [], th: th0 };
+    return h0 ? { mode: 'volume', sel: qtSameColor(groups, h0).map(qtKey), th: th0 } : { mode: 'volume', sel: [], th: th0 };
   }
-  if (mem && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: mem.mode, sel: mem.sel.slice(), th: mem.thickness ? +mem.thickness : null, how: 'mem', only: mem.mode === 'count' ? ((QT_RULES.find(([re]) => re.test(item)) || [])[2] || null) : null };
+  if (mem && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: mem.mode, sel: (mem.mode === 'area' || mem.mode === 'volume') ? qtExpHatch(groups, mem.sel) : mem.sel.slice(), th: mem.thickness ? +mem.thickness : null, how: 'mem', only: mem.mode === 'count' ? ((QT_RULES.find(([re]) => re.test(item)) || [])[2] || null) : null };
   const rule = QT_RULES.find(([re]) => re.test(item)) || [null, null];
   const [, rmode, hint] = rule;
   const hs = groups.filter((g) => g.kind === 'hatch' && g.area > 0).sort((a, b) => b.area - a.area);
@@ -3773,7 +3776,7 @@ function qtAuto0(item, groups, mem) {
   const bs = groups.filter((g) => g.kind === 'block' && !QT_BG.test(g.layer)).sort((a, b) => b.n - a.n);
   const th = mem && mem.thickness ? +mem.thickness : null;
   const mode0 = rmode || (hs.length && hs[0].area > 20 ? 'area' : fg.length ? 'length' : bs.length ? 'count' : 'area');
-  if (mode0 === 'area') { if (hs.length) return { mode: th && mem.mode === 'volume' ? 'volume' : 'area', sel: [qtKey(hs[0])], th }; const cl = fg.find((g) => g.area > 0); return cl ? { mode: 'area', sel: [qtKey(cl)], th } : null; }
+  if (mode0 === 'area') { if (hs.length) return { mode: th && mem.mode === 'volume' ? 'volume' : 'area', sel: qtSameColor(groups, hs[0]).map(qtKey), th }; const cl = fg.find((g) => g.area > 0); return cl ? { mode: 'area', sel: [qtKey(cl)], th } : null; }
   if (mode0 === 'section') { const h = hs[0], l = fg[0]; return h && l ? { mode: 'section', sel: [qtKey(h), qtKey(l)] } : null; }
   if (mode0 === 'length') {
     if (hint === 'mark') { const mk = ls.filter((g) => /MARK|تخطيط/i.test(g.layer) || (g.lt || []).some((x) => x !== 'CONTINUOUS')).sort((a, b) => b.length - a.length)[0]; if (mk) return { mode: 'length', sel: [qtKey(mk)] }; }
