@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { isUrl, openSheet } from '../lib/files'
+import { viewSheet } from './SheetViewer'
 import {
   ACTION_SUGGESTIONS,
   BUDGET_STATUS_SUGGESTIONS,
@@ -327,7 +328,7 @@ export default function ProjectForm({ initial, reviewers, projects, canEdit, isA
                         <span className="file-link xls"><span className="fi">XLS</span>{sheetFile.name} — هيترفع لما تحفظ</span>
                       ) : d.sheet_path && !dropSheet ? (
                         <a className="file-link xls" href="#" title="فتح الشيت"
-                          onClick={(e) => { e.preventDefault(); openSheet(d.sheet_path!, d.sheet_name).catch((x) => setErr((x as Error).message)) }}>
+                          onClick={(e) => { e.preventDefault(); if (ro) viewSheet(d.sheet_path!, d.sheet_name); else openSheet(d.sheet_path!, d.sheet_name).catch((x) => setErr((x as Error).message)) }}>
                           <span className="fi">XLS</span>{d.sheet_name || 'فتح الشيت'}
                         </a>
                       ) : (

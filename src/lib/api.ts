@@ -67,7 +67,7 @@ export interface Api {
 
   /** شيت الموازنة كملف على الموقع: رفع / لينك فتح / حذف */
   uploadSheet(projectId: number, file: File): Promise<string>
-  sheetUrl(path: string, name: string): Promise<string>
+  sheetUrl(path: string, name: string, download?: boolean): Promise<string>
   removeSheet(path: string): Promise<void>
 }
 
@@ -226,8 +226,8 @@ function supabaseApi(sb: SupabaseClient): Api {
       if (error) throw new Error(/row-level|policy|unauthorized/i.test(error.message) ? 'مش مسموحلك ترفع شيت للمشروع ده' : error.message)
       return path
     },
-    async sheetUrl(path, name) {
-      const { data, error } = await sb.storage.from('mz').createSignedUrl(path, 600, { download: name || true })
+    async sheetUrl(path, name, download = true) {
+      const { data, error } = await sb.storage.from('mz').createSignedUrl(path, 600, download ? { download: name || true } : undefined)
       if (error || !data) throw new Error('مقدرتش أفتح الشيت: ' + (error?.message ?? ''))
       return data.signedUrl
     },
