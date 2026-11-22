@@ -90,7 +90,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (page === 'history' && session) api.listHistory().then(setHistory).catch(() => setHistory([]))
+    if (page === 'history' && session && (session.role === 'admin' || session.role === 'editor')) api.listHistory().then(setHistory).catch(() => setHistory([]))
   }, [page, session, projects])
 
   const go = (p: Page) => {
@@ -140,7 +140,7 @@ export default function App() {
         <nav className="nav">
           <button className={page === 'projects' ? 'active' : ''} onClick={() => go('projects')}>مشروعات الطرق</button>
           <button className={page === 'summary' ? 'active' : ''} onClick={() => go('summary')}>الملخص</button>
-          <button className={page === 'history' ? 'active' : ''} onClick={() => go('history')}>سجل التعديلات</button>
+          {canEdit && <button className={page === 'history' ? 'active' : ''} onClick={() => go('history')}>سجل التعديلات</button>}
           {isAdmin && (
             <button className={page === 'admin' ? 'active' : ''} onClick={() => go('admin')}>الإدارة</button>
           )}
@@ -179,7 +179,7 @@ export default function App() {
               go('projects')
             }}
           />
-        ) : page === 'history' ? (
+        ) : page === 'history' && canEdit ? (
           <>
             <div className="page-head"><h1>سجل التعديلات</h1><span className="sub">آخر ٣٠٠ تعديل — مين عدّل إيه وإمتى</span></div>
             <div className="card">{history == null ? <div className="spinner">جاري التحميل…</div> : <HistoryList items={history} />}</div>
