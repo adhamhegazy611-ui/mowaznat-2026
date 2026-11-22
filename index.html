@@ -5596,5 +5596,39 @@ addEventListener('popstate', (e) => { if (!(e.state && e.state.qt)) closeQT(); }
   build(); sync();
 })();
 </script>
+<script id="contrast-fix">
+/* أي كلام فوق خلفية غامقة (الهيدر الأخضر وغيره) يبقى أبيض أوتوماتيك */
+(function(){
+  function rgb(str){var m=str&&str.match(/rgba?\(([^)]+)\)/);if(!m)return null;var p=m[1].split(/[ ,\/]+/).filter(Boolean).map(parseFloat);if(p.length>3&&p[3]<0.5)return null;return p;}
+  function lum(p){var f=function(v){v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4)};return 0.2126*f(p[0])+0.7152*f(p[1])+0.0722*f(p[2]);}
+  var memo=null;
+  function bgOf(el){
+    if(!el||el.nodeType!==1)return [255,255,255];
+    if(memo.has(el))return memo.get(el);
+    var cs=getComputedStyle(el),r=rgb(cs.backgroundColor);
+    if(!r){var bi=cs.backgroundImage;if(bi&&bi.indexOf('gradient')>=0)r=rgb(bi);}
+    if(!r)r=bgOf(el.parentElement);
+    memo.set(el,r);return r;
+  }
+  function hasText(el){for(var n=el.firstChild;n;n=n.nextSibling)if(n.nodeType===3&&n.nodeValue.trim())return true;return false;}
+  var busy=false;
+  function run(){
+    busy=false;if(!document.body||!document.body.classList.contains('shell'))return;
+    memo=new Map();    var els=document.body.querySelectorAll('*');
+    for(var i=0;i<els.length;i++){
+      var el=els[i];if(el.closest('svg,canvas,iframe'))continue;
+      var tag=el.tagName;var isInput=tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA';
+      if(isInput||!hasText(el))continue;
+      if(el.offsetParent===null&&getComputedStyle(el).position!=='fixed')continue;
+      var dark=lum(bgOf(el))<0.25;
+      if(dark){var c=rgb(getComputedStyle(el).color);if(c&&lum(c)<0.4){el.style.setProperty('color','#ffffff','important');el.dataset.cfx='1';}}
+      else if(el.dataset.cfx){el.style.removeProperty('color');delete el.dataset.cfx;}
+    }
+  }
+  function sched(){if(busy)return;busy=true;setTimeout(function(){requestAnimationFrame(run)},150);}
+  new MutationObserver(function(ms){for(var i=0;i<ms.length;i++){var t=ms[i].target;if(!(ms[i].type==='attributes'&&t.dataset&&t.dataset.cfx!==undefined&&ms[i].attributeName==='style')){sched();return;}}}).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style']});
+  window.addEventListener('load',sched);sched();
+})();
+</script>
 </body>
 </html>
