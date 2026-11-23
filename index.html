@@ -3558,7 +3558,7 @@ const QT_RULES = [
 const QT_XK = /^[ABQ]\|/; // مفاتيح إضافية في sel: B|حجم ردم السطح، A|معامل ردم الإحلال
 const QT_DIG = /حفر|إحلال|احلال/;
 // الحفر بكل أنواعه (عادي/متماسك/صخر/إحلال) والردم: الكمية من سطح الفرق زي Volume Dashboard في Civil 3D
-const QT_EW = /حفر|ردم|ترابي|تراب|مخلف|احلال|إحلال/;
+const QT_EW = /حفر|ردم|ترابي|تراب|مخلف|احلال|إحلال|قطع(?!.*(أسفلت|اسفلت|بلاط|بردور|خرسان|منشار))/;
 const qtEwMode = (item) => (/ردم/.test(item) ? 'fill' : 'cut');
 // الكلمة اللي في اسم سطح الفرق (Volume Surface) لكل بند
 const qtVolKw = (item) => (/صخر/.test(item) ? 'ROCK' : /متماسك|عادي|عاديه|عادية/.test(item) ? 'SOIL' : /احلال|إحلال/.test(item) ? 'REP' : /ردم/.test(item) ? 'FILL' : /حفر|قطع|ترابي|تراب/.test(item) ? 'CUT' : null);
