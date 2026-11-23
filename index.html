@@ -4136,7 +4136,7 @@ const qtSecOf = (item) => (QT_SECS.find((x) => x[3].test(item)) || QT_SECS[QT_SE
 function qtSummary(m) {
   // شكل بسيط: خانة إضافة بند فوق، وتحتها جدول واحد بالبنود وكمياتها — الدوس على البند بيفتح اللوحة
   const ab = pjEl('div', 'qsadd');
-  const nm = pjEl('input'); nm.type = 'text'; nm.placeholder = 'اسم البند (مثلاً: حفر تربة عادية)'; nm.setAttribute('list', 'qtSumDL');
+  const nm = pjEl('input'); nm.type = 'text'; nm.placeholder = 'اسم البند (مثلاً: حفر تربة عادية)'; /* من غير اقتراحات — البند بيتكتب بإيدك */ nm.autocomplete = 'off';
   const dl = pjEl('datalist'); dl.id = 'qtSumDL'; [...new Set(QT.items.map((x) => x.item).concat(QT_ITEMS))].forEach((v) => { const o = pjEl('option'); o.value = v; dl.appendChild(o); });
   const fi = pjEl('input'); fi.type = 'file'; fi.accept = '.dwg,.dxf'; fi.hidden = true;
   const fb = pjEl('button', 'qbtn on', '⬆ اختار اللوحة'); fb.type = 'button';
@@ -4598,7 +4598,7 @@ async function qtAdd(pre, files0) {
   c.appendChild(pjEl('h3', '', 'لوحة جديدة'));
   const row = pjEl('div', 'qrow');
   const l1 = pjEl('label', 'qf'); l1.appendChild(pjEl('span', '', 'البند'));
-  const it = pjEl('input'); it.type = 'text'; it.placeholder = 'مثلاً كشط أسفلت'; it.setAttribute('list', 'qtItemsDL');
+  const it = pjEl('input'); it.type = 'text'; it.placeholder = 'مثلاً كشط أسفلت'; /* من غير اقتراحات — البند بيتكتب بإيدك */ it.autocomplete = 'off';
   const dl = pjEl('datalist'); dl.id = 'qtItemsDL';
   const fillDL = (sys) => { dl.textContent = ''; const seen = new Set(); [[QT.items.map((x) => x.item), 'في المشروع'], [QT_ITEMS, 'بنود الحصر'], ...(sys || [])].forEach(([vs, g]) => vs.forEach((v) => { v = (v || '').trim(); if (!v || seen.has(v)) return; seen.add(v); const o = pjEl('option'); o.value = v; o.label = g; dl.appendChild(o); })); };
   fillDL(); qtSysItems().then((sys) => sys && fillDL(sys));
@@ -4778,7 +4778,7 @@ async function qtBatch(files, forced) {
     const c = pjEl('div', 'qcard'), top = pjEl('div', 'hrow');
     const inc = pjEl('input'); inc.type = 'checkbox'; inc.checked = true; inc.title = 'تتحفظ ولا لا';
     top.append(inc, pjEl('b', '', f.name), pjEl('small', '', '(' + (f.size / 1048576).toFixed(1) + ' ميجا)'));
-    const it = pjEl('input'); it.type = 'text'; it.setAttribute('list', 'qtBatchDL'); it.placeholder = 'البند'; it.disabled = true;
+    const it = pjEl('input'); it.type = 'text'; /* من غير اقتراحات — البند بيتكتب بإيدك */ it.autocomplete = 'off'; it.placeholder = 'البند'; it.disabled = true;
     it.style.cssText = 'flex:1;min-width:180px;padding:8px 10px;border-radius:10px;border:1px solid var(--bd,#cbd5e1);font:inherit;background:transparent;color:inherit';
     const r2 = pjEl('div', 'hrow'); r2.append(pjEl('span', '', 'البند:'), it);
     const why = pjEl('div', 'qhint'), qv = pjEl('div', 'qstat'), box = pjEl('div');
@@ -5009,7 +5009,7 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
     const box2 = pjEl('div'); box2.style.cssText = 'display:grid;gap:8px;width:100%';
     rows.forEach((r) => {
       const ln = pjEl('div'); ln.style.cssText = 'display:flex;gap:8px;align-items:center;flex-wrap:wrap';
-      const inp = pjEl('input'); inp.type = 'text'; inp.value = names[r.k]; inp.placeholder = 'اسم البند (مثلاً حفر عادية)'; inp.setAttribute('list', 'qtItemsDL');
+      const inp = pjEl('input'); inp.type = 'text'; inp.value = names[r.k]; inp.placeholder = 'اسم البند (مثلاً حفر عادية)'; /* من غير اقتراحات — البند بيتكتب بإيدك */ inp.autocomplete = 'off';
       inp.style.cssText = 'flex:1;min-width:160px;padding:8px 10px;border-radius:10px;border:1px solid rgba(148,163,184,.45);font:inherit;font-weight:800;background:transparent;color:inherit';
       inp.oninput = () => { names[r.k] = inp.value; upd(); const tl = box2.lastChild; if (split && tl && tl.firstChild) tl.firstChild.textContent = 'الإجمالي (' + rows.map((x) => String(names[x.k] || '').trim() || '؟').join(' + ') + ') ='; };
       ln.append(inp, pjEl('span', '', '='), pjEl('b', '', r.q == null ? '—' : qtN(r.q)), pjEl('span', '', u));
