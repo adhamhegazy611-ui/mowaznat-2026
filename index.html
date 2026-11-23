@@ -4145,7 +4145,8 @@ function qtSummary(m) {
   nm.oninput = () => { hint.textContent = 'والرقم يطلع على طول'; hint.classList.remove('err'); };
   nm.onkeydown = (e) => { if (e.key === 'Enter') fb.click(); };
   fi.onchange = () => { if (fi.files.length) qtAdd(nm.value.trim(), fi.files); };
-  ab.append(nm, dl, fb, fi, hint); m.appendChild(ab);
+  const sb2 = pjEl('button', 'qbtn', 'Σ جمع بنود'); sb2.type = 'button'; sb2.title = 'بند جديد = مجموع كميات بندين أو أكتر'; sb2.onclick = () => qtFxDlg();
+  ab.append(nm, dl, fb, fi, hint, sb2); m.appendChild(ab);
   const GS = qtGroups().flatMap((G) => (G.rows.length > 1 && G.mode !== 'formula' ? G.rows.map((x) => ({ ...G, rows: [x], qty: +x.qty })) : [G]));
   if (!GS.length) { m.appendChild(pjEl('div', 'qempty', 'لسه مفيش بنود — اكتب اسم البند واختار اللوحة.')); return; }
   const ord = (G) => QT_SECS.findIndex((x) => x[0] === (G.mode === 'formula' ? 'etc' : qtSecOf(G.item)[0]));
@@ -4180,7 +4181,10 @@ function qtSummary(m) {
   if (q) q.oninput = () => { const f = q.value.trim(); rows.forEach(([r, t]) => { r.hidden = !!f && !t.includes(f); }); };
 }
 // خانة السمك في بنود الحفر والردم: لو اتكتب سمك → الكمية = الحجم × السمك (بعد ما توافق على الرقم)
-const qtOrigQ = (x) => { const k = (x.sel || []).find((y) => /^Q\|/.test(y)); return k ? +k.slice(2) : null; };
+const qtOrigQ = (x) => { const k = (x.sel || []).find((y) => /^Q\|/.test(y)); return k ? +k.split('|')[1] : null; };
+const qtOrigU = (x) => { const k = (x.sel || []).find((y) => /^Q\|/.test(y)); return k ? (k.split('|')[2] || x.unit) : x.unit; };
+// البنود اللي ليها خانة سمك: الحفر/القطع والردم والإحلال والسن والأسفلت
+const qtHasTh = (x) => x && x.mode !== 'formula' && ['hafr', 'radm', 'ehlal', 'sen', 'asph'].includes(qtSecOf(x.item)[0]);
 async function qtItemArea(x) {
   const { data } = await sb.from('qt_items').select('detail').eq('id', x.id).maybeSingle();
   const gs = (data && data.detail && data.detail.groups) || [], sel = new Set(x.sel || []), seen = new Set(); let a = 0;
@@ -4188,7 +4192,7 @@ async function qtItemArea(x) {
   return a;
 }
 function qtThField(x) {
-  const w = pjEl('label', 'qth'); w.title = 'لو كتبت سمك: الكمية = الحجم × السمك';
+  const w = pjEl('label', 'qth'); w.title = 'لو كتبت سمك: الكمية الموجودة × السمك';
   const on = qtOrigQ(x) != null && +x.thickness > 0;
   const inp = pjEl('input'); inp.type = 'text'; inp.inputMode = 'decimal'; inp.placeholder = '—'; inp.value = on ? String(+x.thickness) : '';
   w.append(pjEl('span', '', 'سمك'), inp, pjEl('span', '', 'م'));
@@ -4199,15 +4203,16 @@ function qtThField(x) {
     const o = qtOrigQ(x);
     if (!raw) {   // مسح السمك → ترجع الكمية الأصلية
       if (o == null) return;
-      x.sel = (x.sel || []).filter((k) => !/^Q\|/.test(k)); x.thickness = null; x.qty = o;
-      await sb.from('qt_items').update({ sel: x.sel, thickness: null, qty: o }).eq('id', x.id); await qtRecalc(); qtProject(); return;
+      const u0 = qtOrigU(x); x.sel = (x.sel || []).filter((k) => !/^Q\|/.test(k)); x.thickness = null; x.qty = o; x.unit = u0;
+      await sb.from('qt_items').update({ sel: x.sel, thickness: null, qty: o, unit: u0 }).eq('id', x.id); await qtRecalc(); qtProject(); return;
     }
     let t = parseFloat(raw); if (!(t > 0)) { alert('اكتب السمك بالمتر (مثلاً 0.30)'); inp.value = on ? String(+x.thickness) : ''; return; }
     if (/سم|cm/i.test(raw) || t > 3) t = t / 100;
-    const cur = o != null ? o : +x.qty, q = +(cur * t).toFixed(3);
-    if (!confirm('«' + x.item + '»\n\nالحجم ' + qtN(cur) + ' م³ × السمك ' + qtN(t, 3) + ' = ' + qtN(q) + ' م³\n\nتطبق؟')) { inp.value = on ? String(+x.thickness) : ''; return; }
-    x.sel = (x.sel || []).filter((k) => !/^Q\|/.test(k)).concat(['Q|' + cur]); x.thickness = t; x.qty = q;
-    const { error } = await sb.from('qt_items').update({ sel: x.sel, thickness: t, qty: q }).eq('id', x.id);
+    const cur = o != null ? o : +x.qty, u0 = o != null ? qtOrigU(x) : x.unit, q = +(cur * t).toFixed(3);
+    const u1 = /م²|م2/.test(u0) ? 'م³' : u0;
+    if (!confirm('«' + x.item + '»\n\n' + qtN(cur) + ' ' + u0 + ' × السمك ' + qtN(t, 3) + ' م = ' + qtN(q) + ' ' + u1 + '\n\nتطبق؟')) { inp.value = on ? String(+x.thickness) : ''; return; }
+    x.sel = (x.sel || []).filter((k) => !/^Q\|/.test(k)).concat(['Q|' + cur + '|' + u0]); x.thickness = t; x.qty = q; x.unit = u1;
+    const { error } = await sb.from('qt_items').update({ sel: x.sel, thickness: t, qty: q, unit: u1 }).eq('id', x.id);
     if (error) { alert('تعذّر الحفظ: ' + error.message); return; }
     QT.flash = x.id; qtProject();
   };
@@ -4291,7 +4296,7 @@ async function qtDetails(m) {
   const tl = pjEl('div', 'qitl'); tl.append(pjEl('h2', '', cur.item), pjEl('div', 'qiq', qtN(+cur.qty) + ' ' + cur.unit));
   top.appendChild(tl);
   const acts = pjEl('div', 'qiac');
-  if (QT_EW.test(cur.item) && cur.mode !== 'formula' && cur.mode !== 'manual') acts.appendChild(qtThField(cur));
+  if (qtHasTh(cur)) acts.appendChild(qtThField(cur));
   const ab = (t, c, f) => { const b0 = pjEl('button', 'qbtn sm' + (c ? ' ' + c : ''), t); b0.type = 'button'; b0.onclick = f; acts.appendChild(b0); };
   ab('✎ الاسم', '', () => qtRename(G));
   if (cur.mode !== 'formula') ab('+ لوحة لنفس البند', '', () => qtAdd(cur.item));
