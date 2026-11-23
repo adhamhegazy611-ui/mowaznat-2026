@@ -4178,7 +4178,7 @@ function qtSummary(m) {
   };
 }
 // صف بند: الاسم | الكمية | الوحدة | أوامر
-// خانة السمك في بنود الحفر والردم: لو اتكتب سمك → الكمية = مسطح البند في اللوحة × السمك (بعد ما توافق على الرقم)
+// خانة السمك في بنود الحفر والردم: لو اتكتب سمك → الكمية = الحجم × السمك (بعد ما توافق على الرقم)
 const qtOrigQ = (x) => { const k = (x.sel || []).find((y) => /^Q\|/.test(y)); return k ? +k.slice(2) : null; };
 async function qtItemArea(x) {
   const { data } = await sb.from('qt_items').select('detail').eq('id', x.id).maybeSingle();
@@ -4187,7 +4187,7 @@ async function qtItemArea(x) {
   return a;
 }
 function qtThField(x) {
-  const w = pjEl('label', 'qth'); w.title = 'لو كتبت سمك: الكمية = مسطح البند × السمك';
+  const w = pjEl('label', 'qth'); w.title = 'لو كتبت سمك: الكمية = الحجم × السمك';
   const on = qtOrigQ(x) != null && +x.thickness > 0;
   const inp = pjEl('input'); inp.type = 'text'; inp.inputMode = 'decimal'; inp.placeholder = '—'; inp.value = on ? String(+x.thickness) : '';
   w.append(pjEl('span', '', 'سمك'), inp, pjEl('span', '', 'م'));
@@ -4203,12 +4203,8 @@ function qtThField(x) {
     }
     let t = parseFloat(raw); if (!(t > 0)) { alert('اكتب السمك بالمتر (مثلاً 0.30)'); inp.value = on ? String(+x.thickness) : ''; return; }
     if (/سم|cm/i.test(raw) || t > 3) t = t / 100;
-    inp.disabled = true; let a = 0;
-    try { a = await qtItemArea(x); } catch (e) { /* */ }
-    inp.disabled = false;
-    if (!(a > 0)) { alert('مش لاقي مسطح للبند ده في اللوحة'); inp.value = on ? String(+x.thickness) : ''; return; }
-    const q = +(a * t).toFixed(3), cur = o != null ? o : +x.qty;
-    if (!confirm('«' + x.item + '»\n\nالمسطح ' + qtN(a) + ' م² × السمك ' + qtN(t, 3) + ' م = ' + qtN(q) + ' م³\n(الكمية من غير سمك: ' + qtN(cur) + ' م³)\n\nتطبق؟')) { inp.value = on ? String(+x.thickness) : ''; return; }
+    const cur = o != null ? o : +x.qty, q = +(cur * t).toFixed(3);
+    if (!confirm('«' + x.item + '»\n\nالحجم ' + qtN(cur) + ' م³ × السمك ' + qtN(t, 3) + ' = ' + qtN(q) + ' م³\n\nتطبق؟')) { inp.value = on ? String(+x.thickness) : ''; return; }
     x.sel = (x.sel || []).filter((k) => !/^Q\|/.test(k)).concat(['Q|' + cur]); x.thickness = t; x.qty = q;
     const { error } = await sb.from('qt_items').update({ sel: x.sel, thickness: t, qty: q }).eq('id', x.id);
     if (error) { alert('تعذّر الحفظ: ' + error.message); return; }
