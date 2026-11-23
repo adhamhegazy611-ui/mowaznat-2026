@@ -4165,7 +4165,7 @@ function qtSummary(m) {
   fi.onchange = () => { if (fi.files.length) qtAdd(nm.value.trim(), fi.files); };
   const sb2 = pjEl('button', 'qbtn', 'Σ جمع بنود'); sb2.type = 'button'; sb2.title = 'بند جديد = مجموع كميات بندين أو أكتر'; sb2.onclick = () => qtFxDlg();
   ab.append(nm, dl, fb, fi, hint, sb2); m.appendChild(ab);
-  const GS = qtGroups().flatMap((G) => (G.rows.length > 1 && G.mode !== 'formula' ? G.rows.map((x) => ({ ...G, rows: [x], qty: +x.qty })) : [G]));
+  const GS = qtGroups(); // البند الواحد سطر واحد (لو ليه كذا لوحة بتتجمع، والتفاصيل لما تدوس عليه)
   if (!GS.length) { m.appendChild(pjEl('div', 'qempty', 'لسه مفيش بنود — اكتب اسم البند واختار اللوحة.')); return; }
   const ord = (G) => QT_SECS.findIndex((x) => x[0] === (G.mode === 'formula' ? 'etc' : qtSecOf(G.item)[0]));
   GS.sort((a, b) => ord(a) - ord(b));
@@ -4178,7 +4178,7 @@ function qtSummary(m) {
     const x = G.rows[0];
     const r = pjEl('div', 'qsr'); r.tabIndex = 0;
     const n = pjEl('span', 'n'); n.appendChild(pjEl('b', '', x.item));
-    const sub = x.mode === 'manual' ? 'يدوي' : x.mode === 'formula' ? 'محسوب من بنود' : (x.file_name || '').replace(/^\d+-/, '');
+    const sub = G.rows.length > 1 ? G.rows.length + ' لوح' : x.mode === 'manual' ? 'يدوي' : x.mode === 'formula' ? 'محسوب من بنود' : (x.file_name || '').replace(/^\d+-/, '');
     if (sub) n.appendChild(pjEl('small', '', sub + (qtOrigQ(x) != null && +x.thickness > 0 ? ' · × سمك ' + qtN(+x.thickness, 3) : '')));
     r.append(n, pjEl('span', 'v', qtN(G.qty)), pjEl('span', 'u', x.unit));
     const open = () => { QT.tab = 'det'; QT.ditem = x.id; QT.dsec = (x.mode === 'formula' ? QT_SECS[QT_SECS.length - 1] : qtSecOf(x.item))[0]; qtProject(); window.scrollTo(0, 0); };
@@ -4311,20 +4311,20 @@ async function qtDetails(m) {
   const cur = list.find((x) => x.id === QT.ditem);
   const G = qtGroupOf(cur) || { item: cur.item, rows: [cur], qty: +cur.qty, unit: cur.unit, mode: cur.mode };
   const top = pjEl('div', 'qitop');
-  const tl = pjEl('div', 'qitl'); tl.append(pjEl('h2', '', cur.item), pjEl('div', 'qiq', qtN(+cur.qty) + ' ' + cur.unit));
+  const tl = pjEl('div', 'qitl'); tl.append(pjEl('h2', '', cur.item), pjEl('div', 'qiq', qtN(+G.qty) + ' ' + cur.unit + (G.rows.length > 1 ? '  (' + G.rows.length + ' لوح)' : '')));
   top.appendChild(tl);
   const acts = pjEl('div', 'qiac');
-  if (qtHasTh(cur)) acts.appendChild(qtThField(cur));
+  if (qtHasTh(cur) && G.rows.length === 1) acts.appendChild(qtThField(cur));
   const ab = (t, c, f) => { const b0 = pjEl('button', 'qbtn sm' + (c ? ' ' + c : ''), t); b0.type = 'button'; b0.onclick = f; acts.appendChild(b0); };
   ab('✎ الاسم', '', () => qtRename(G));
   if (cur.mode !== 'formula') ab('+ لوحة لنفس البند', '', () => qtAdd(cur.item));
   ab('حذف', 'danger', async () => {
-    if (!confirm('حذف بند «' + cur.item + '»؟')) return;
-    if (cur.file_path) await qtRm([cur.file_path]);
-    await sb.from('qt_items').delete().eq('id', cur.id); QT.items = QT.items.filter((y) => y.id !== cur.id); await qtRecalc(); QT.tab = 'sum'; QT.ditem = null; qtProject();
+    if (!confirm('حذف بند «' + cur.item + '»' + (G.rows.length > 1 ? ' بكل لوحه (' + G.rows.length + ')' : '') + '؟')) return;
+    const paths = G.rows.map((y) => y.file_path).filter(Boolean); if (paths.length) await qtRm(paths);
+    const ids = G.rows.map((y) => y.id); await sb.from('qt_items').delete().in('id', ids); QT.items = QT.items.filter((y) => !ids.includes(y.id)); await qtRecalc(); QT.tab = 'sum'; QT.ditem = null; qtProject();
   });
   top.appendChild(acts);
-  box.append(top, qtDetailCard(cur, det[cur.id]));
+  box.append(top, ...G.rows.map((y, i) => qtDetailCard(y, det[y.id], G.rows.length > 1 ? i + 1 : undefined)));
   // اللوح اللي اترفعت قبل القراءة الكاملة: نعيد قراءتها في الخلفية (الكمية والحسبة زي ما هي)
   for (const x of QT.items.filter((y) => y.id === QT.ditem && y.file_path && det[y.id] && det[y.id].groups && !det[y.id].inv)) {
     if (QT.tab !== 'det') break;
