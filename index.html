@@ -3737,6 +3737,19 @@ function qtAuto0(item, groups, mem) {
     // سطوح الفرق في Civil متسمّية باسم البند: CUT حفر · FILL ردم · ROCK صخري · SOIL متماسكة · REP إحلال — لو أكتر من واحد بنجمعهم
     const kw = qtVolKw(item), vn = kw && qtVolNamed(groups, kw);
     if (vn && vn.length) { const m = kw === 'FILL' ? 'fill' : 'cut'; return vn.length > 1 ? { mode: m, sel: vn.map(qtKey), merge: true } : { mode: m, sel: [qtKey(vn[0])] }; }
+    // جدول Cut/Fill من Civil في اللوحة: الكمية = اللي Civil مطلّعه (سطر الجدول اللي اسمه زي البند، وإلا إجمالي الجدول)
+    if (!/احلال|إحلال|مخلف/.test(item)) {
+      const T = groups.filter((g) => g.src === 'table' && g[em] > 0);
+      if (T.length) {
+        const tot = T.find((g) => /^إجمالي جدول/.test(g.layer)), parts = T.filter((g) => g !== tot);
+        const tw = qtNorm(item).replace(/حفر|ردم|قطع|اعمال|في|تربه|ارض|كميه|كمية|سطحيه|سطحية/g, ' ').split(/\s+/).filter((w) => w.length >= 3);
+        const sc = parts.map((g) => { const nm = qtNorm(g.layer.replace(/\(جدول Civil\)/, '')); return tw.filter((w) => nm.includes(w)).length; }), best = Math.max(0, ...sc);
+        const pm = best > 0 ? parts.filter((_, i) => sc[i] === best) : [];
+        if (pm.length === 1) return { mode: em, sel: [qtKey(pm[0])], how: 'table' };
+        if (tot) return { mode: em, sel: [qtKey(tot)], how: 'table' };
+        if (parts.length) return { mode: em, sel: parts.map(qtKey), merge: true, how: 'table' };
+      }
+    }
     // المخلفات: الأرض قبل وبعد الإزالة — أكبر قطع
     if (/مخلف/.test(item) && s2.length) { const b = s2.slice().sort((x, y) => y.cut - x.cut)[0]; return { mode: 'cut', sel: [qtKey(b)] }; }
     // اسم البند فيه اسم سطح (زي «حفر عادية» وسطح اسمه «عادية»، أو «صخر» و ROCK)
@@ -3864,7 +3877,12 @@ function qtQty(groups, a) {
   if (a.mode === 'section') { const h = gs.filter((g) => g.kind === 'hatch'), l = gs.filter((g) => g.kind === 'line'); if (!h.length || !l.length) return null; return h.reduce((s, g) => s + g.area, 0) * l.reduce((s, g) => s + g.length, 0); }
   if (a.mode === 'length') return sum((g) => g.length);
   if (a.mode === 'paint') return sum((g) => g.paint);
-  if (a.mode === 'fill' || a.mode === 'cut') { const ss = gs.filter((g) => g.kind === 'surface'); return ss.length ? ss.reduce((s, g) => s + g[a.mode], 0) : null; }
+  if (a.mode === 'fill' || a.mode === 'cut') {
+    // نفس الكمية متحسبة مرتين (سطح فرق + مقارنة سطحين لنفس الحتة): بتتعد مرة واحدة
+    const ss = gs.filter((g) => g.kind === 'surface'), used = [];
+    ss.forEach((g) => { const v = +g[a.mode] || 0; if (v > 0 && used.some((u) => Math.abs(u - v) <= Math.max(0.05, v * 1e-4))) return; used.push(v); });
+    return ss.length ? used.reduce((s, v) => s + v, 0) : null;
+  }
   if (a.only) return sum((g) => g.items.length ? g.items.filter((it) => (a.only === 'closed' ? it.closed : !it.closed)).length : g.n);
   return sum((g) => g.n);
 }
@@ -4945,7 +4963,7 @@ function qtPick(box, item, fname, path, R, existing, start, isNew) {
   const s2G = (R.groups || []).filter((g) => g.src === 's2s' || (g.kind === 'surface' && !g.src && g.exact !== false)), otherG = (R.groups || []).filter((g) => g.kind !== 'surface' || g.src === 'tin');
   const ewItem = QT_EW.test(item);
   const ROCK = { rows: (existing && existing._rock) || [], file: '' }; // قطاعات الصخر من تقرير الجسات
-  const merge = !!((start && start.merge) || (existing && existing.detail && existing.detail.merge)); // أكتر من مقارنة بتتجمع في بند واحد (مراحل القطع)
+  const merge = true; // كل اللي اتحسب من اللوحة بيتحفظ بند واحد باسم البند اللي كتبته // أكتر من مقارنة بتتجمع في بند واحد (مراحل القطع)
   let sel = new Set((start && start.sel) || (existing && existing.sel) || []), mode = (start && start.mode) || (existing && existing.mode) || 'area';
   if (ewItem && mode !== 'cut' && mode !== 'fill') mode = qtEwMode(item);
   let groups = mode === 'cut' || mode === 'fill' ? s2G : otherG;
