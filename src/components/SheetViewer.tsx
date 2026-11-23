@@ -1,5 +1,6 @@
 // عرض شيت الموازنة جوه الموقع للقراءة بس (حسابات الكتايب): من غير تنزيل ومن غير تعديل
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { ZoomBar, useZoom } from './ZoomBar'
 import { createRoot } from 'react-dom/client'
 import { api } from '../lib/api'
 
@@ -140,6 +141,10 @@ function Viewer({ path, name, onClose }: { path: string; name: string; onClose: 
   const [sheets, setSheets] = useState<Sheet[] | null>(null)
   const [err, setErr] = useState('')
   const [i, setI] = useState(0)
+  const [z, setZ] = useZoom('sv')
+  const body = useRef<HTMLDivElement>(null)
+  const tbl = useRef<HTMLTableElement>(null)
+  const fit = () => { const b = body.current, t = tbl.current; if (b && t) setZ((b.clientWidth - 8) / (t.scrollWidth || 1)) }
   useEffect(() => {
     let dead = false
     ;(async () => {
@@ -161,14 +166,17 @@ function Viewer({ path, name, onClose }: { path: string; name: string; onClose: 
         <div className="sv-hd">
           <span className="file-link xls" style={{ pointerEvents: 'none' }}><span className="fi">XLS</span>{name || 'شيت الموازنة'}</span>
           <span className="sv-ro">👁 عرض بس</span>
-          <button className="btn small" onClick={onClose}>إغلاق ✕</button>
+          <div style={{ marginInlineStart: 'auto', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            <ZoomBar z={z} set={setZ} fit={fit} />
+            <button className="btn small" style={{ marginInlineStart: 0 }} onClick={onClose}>إغلاق ✕</button>
+          </div>
         </div>
         {sheets && sheets.length > 1 && (
           <div className="sv-tabs">{sheets.map((s, k) => <button key={k} className={k === i ? 'on' : ''} onClick={() => setI(k)}>{s.name}</button>)}</div>
         )}
-        <div className="sv-body">
+        <div className="sv-body" ref={body}>
           {err ? <div className="sv-msg err">{err}</div> : !sh ? <div className="sv-msg">جاري فتح الشيت…</div> : (
-            <table className="sv-t" dir={sh.rtl ? 'rtl' : 'ltr'}>
+            <table className="sv-t" ref={tbl} dir={sh.rtl ? 'rtl' : 'ltr'} style={{ zoom: z } as CSSProperties}>
               <colgroup>{sh.widths.map((w, k) => <col key={k} style={{ width: w }} />)}</colgroup>
               <tbody>
                 {sh.rows.map((r, ri) => (
