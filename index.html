@@ -909,7 +909,7 @@ body:not(.in) footer{color:#6f84a6}
 <style id="qpdel-css">#qt .qpw{position:relative;display:flex}#qt .qpw>.qproj{flex:1}
 #qt .qpdel{position:absolute;top:10px;inset-inline-end:10px;width:32px;height:32px;border-radius:9px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-size:14px;display:grid;place-items:center;opacity:.75;transition:opacity .15s,background .15s}
 #qt .qpdel:hover,#qt .qpdel:focus-visible{opacity:1;background:#ef4444;color:#fff}</style>
-<style id="qsec-css">#qt .qth{display:inline-flex;align-items:center;gap:5px;margin-top:5px;font-size:12px;font-weight:700;color:var(--mu,#6b7462)}#qt .qth input{width:62px;height:26px;padding:0 6px;border:1px solid #c9d3bf;border-radius:7px;background:#fff;color:#1f2a16;font:inherit;font-size:13px;text-align:center}#qt .qth input:focus{outline:2px solid #5a6b2e;border-color:#5a6b2e}#qt .qlist.qsecs{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:16px;background:none;border:0;box-shadow:none;overflow:visible;max-width:1180px;backdrop-filter:none}#qt .qlbar{max-width:1180px}
+<style id="qsec-css">#qt .qsadd{display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:1000px;margin:0 auto 14px;background:#eef3e4;border:1px solid #c9d6ad;border-radius:14px;padding:12px 14px}#qt .qsadd input[type=text]{flex:1;min-width:220px;height:42px;border:1px solid #c9d3bf;border-radius:10px;padding:0 12px;background:#fff;color:#1f2a16;font:inherit;font-size:15px}#qt .qsah{font-size:12.5px;color:#4a5a2a;font-weight:600}#qt .qsah.err{color:#b42318}#qt .qsq{display:block;max-width:1000px;margin:0 auto 10px;width:100%}#qt .qst{max-width:1000px;margin:0 auto;background:#fff;border:1px solid #dfe5d6;border-radius:14px;overflow:hidden}#qt .qsr{display:grid;grid-template-columns:minmax(0,1fr) 150px 52px;align-items:center;gap:8px;padding:12px 18px;border-top:1px solid #eef1e8;cursor:pointer;color:#1f2a16}#qt .qsr:hover{background:#f6f8f1}#qt .qsr.flash{background:#fbf3dc}#qt .qsr[hidden]{display:none}#qt .qsr.qsh{border-top:0;background:#f3f5ee;color:#6b7462;font-size:13px;font-weight:700;cursor:default;padding:9px 18px}#qt .qsr .n b{display:block;font-size:15px;font-weight:700}#qt .qsr .n small{display:block;color:#7a8470;font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#qt .qsr .v{text-align:left;font-size:17px;font-weight:800;direction:ltr;font-variant-numeric:tabular-nums}#qt .qsr .u{color:#6b7462;font-size:13px}#qt .qstot{max-width:1000px;margin:10px auto 0;display:grid;gap:4px;font-weight:700;color:#3b4a1e;font-size:14px;padding:10px 18px;background:#eef3e4;border-radius:12px}#qt .qback{margin:0 0 12px}#qt .qitop{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#fff;border:1px solid #dfe5d6;border-radius:14px;padding:14px 18px;margin-bottom:12px}#qt .qitl{flex:1;min-width:200px}#qt .qitl h2{margin:0;font-size:20px;color:#1f2a16}#qt .qiq{font-size:22px;font-weight:800;color:#3b6d11;margin-top:2px}#qt .qiac{display:flex;gap:8px;align-items:center;flex-wrap:wrap}#qt .qiac .qth{margin:0}#qt .qitop+.qcard>.qdh>h3,#qt .qitop+.qcard>.qdh>.qq{display:none}#qt .qth{display:inline-flex;align-items:center;gap:5px;margin-top:5px;font-size:12px;font-weight:700;color:var(--mu,#6b7462)}#qt .qth input{width:62px;height:26px;padding:0 6px;border:1px solid #c9d3bf;border-radius:7px;background:#fff;color:#1f2a16;font:inherit;font-size:13px;text-align:center}#qt .qth input:focus{outline:2px solid #5a6b2e;border-color:#5a6b2e}#qt .qlist.qsecs{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:16px;background:none;border:0;box-shadow:none;overflow:visible;max-width:1180px;backdrop-filter:none}#qt .qlbar{max-width:1180px}
 #qt .qsec{background:rgba(9,22,42,.86);backdrop-filter:blur(10px);border:1px solid var(--bd);border-radius:16px;overflow:hidden;box-shadow:0 14px 34px rgba(2,8,20,.32);align-self:start}
 #qt .qsec{padding:0}#qt .qsec[hidden]{display:none}#qt .qsec>.qls{border-top:0;padding:15px 18px;margin:0}#qt .qsec .qlr{grid-template-columns:minmax(0,1fr) auto;row-gap:2px;padding:12px 18px}#qt .qsec .qlr .ac{grid-column:1/-1;grid-row:2;justify-content:flex-start;margin-inline-start:44px}
 @media (max-width:560px){#qt .qlist.qsecs{grid-template-columns:1fr}}</style>
@@ -3555,7 +3555,7 @@ const QT_RULES = [
   [/دبش|عش النحل|خرسانة|تطهير|تسوية|FDR|تكسير|ازالة|إزالة|سن ?\d|مطب|كيستون/i, 'area'],
   [/كشط|تشريب|MC|RC|لاصق|رابط|سطحي|أسفلت|اسفلت|انترلوك|إنترلوك|بلاط|رصف|تسوية|زراعة/i, 'area'],
 ];
-const QT_XK = /^[AB]\|/; // مفاتيح إضافية في sel: B|حجم ردم السطح، A|معامل ردم الإحلال
+const QT_XK = /^[ABQ]\|/; // مفاتيح إضافية في sel: B|حجم ردم السطح، A|معامل ردم الإحلال
 const QT_DIG = /حفر|إحلال|احلال/;
 // الحفر بكل أنواعه (عادي/متماسك/صخر/إحلال) والردم: الكمية من سطح الفرق زي Volume Dashboard في Civil 3D
 const QT_EW = /حفر|ردم|ترابي|تراب|مخلف|احلال|إحلال/;
@@ -4111,12 +4111,12 @@ function qtProject() {
     document.body.appendChild(mu);
     setTimeout(() => document.addEventListener('click', function f(e2) { if (!mu.contains(e2.target)) { mu.remove(); document.removeEventListener('click', f); } }), 0);
   };
-  hb.append(cmd); hero.appendChild(hb); m.appendChild(hero);
+  bg.textContent = '💰 التسعير'; hb.append(bg, cmd); hero.appendChild(hb); m.appendChild(hero);
   if (!QT.items.length) { qtSummary(m); m.appendChild(pjEl('div', 'qempty', 'ارفع أول لوحة: اكتب البند واختار ملف DWG، والكمية هتطلع لوحدها.')); return; }
-  const tabs = pjEl('div', 'qtabs');
-  [['sum', 'الكميات'], ['det', 'التفاصيل والحسابات']].forEach(([k, t]) => { const b = pjEl('button', QT.tab === k ? 'on' : '', t); b.type = 'button'; b.onclick = () => { QT.tab = k; qtProject(); }; tabs.appendChild(b); });
-  m.appendChild(tabs);
-  if (QT.tab === 'sum') qtSummary(m); else qtDetails(m);
+  if (QT.tab === 'det' && QT.ditem && QT.items.some((x) => x.id === QT.ditem)) {
+    const bk = pjEl('button', 'qbtn qback', '→ رجوع للبنود'); bk.type = 'button'; bk.onclick = () => { QT.tab = 'sum'; QT.ditem = null; qtProject(); };
+    m.appendChild(bk); qtDetails(m);
+  } else { QT.tab = 'sum'; qtSummary(m); }
 }
 const QT_ICON = { manual: '✎', area: '▦', volume: '⬛', section: '◩', length: '━', paint: '┅', count: '#', fill: '▲', cut: '▼', formula: 'ƒ' };
 // الأقسام الرئيسية (بالترتيب) — البند بيتحط في قسمه من اسمه
@@ -4134,50 +4134,51 @@ const QT_SECS = [
 ];
 const qtSecOf = (item) => (QT_SECS.find((x) => x[3].test(item)) || QT_SECS[QT_SECS.length - 1]);
 function qtSummary(m) {
-  const secs = new Map();
-  // كل لوحة بكميتها لوحدها — مفيش جمع لكميات لوح على بعض
-  qtGroups().flatMap((G) => (G.rows.length > 1 ? G.rows.map((x) => ({ ...G, rows: [x], qty: +x.qty })) : [G])).forEach((G) => { const k = G.mode === 'formula' ? 'etc' : qtSecOf(G.item)[0]; if (!secs.has(k)) secs.set(k, []); secs.get(k).push(G); });
-  // شريط: بحث + إضافة
-  const bar = pjEl('div', 'qlbar');
-  const q = pjEl('input'); q.type = 'search'; q.placeholder = '🔍  دوّر على بند…'; q.className = 'qlq';
-  const ad2 = pjEl('button', 'qbtn on', '+ إضافة لوحة'); ad2.type = 'button'; ad2.onclick = () => qtAdd();
-  bar.append(q, ad2); m.appendChild(bar);
-  const L = pjEl('div', 'qlist qsecs'); m.appendChild(L);
-  if (!secs.size) { L.appendChild(pjEl('div', 'qempty', 'لسه مفيش بنود — ارفع أول لوحة.')); return; }
+  // شكل بسيط: خانة إضافة بند فوق، وتحتها جدول واحد بالبنود وكمياتها — الدوس على البند بيفتح اللوحة
+  const ab = pjEl('div', 'qsadd');
+  const nm = pjEl('input'); nm.type = 'text'; nm.placeholder = 'اسم البند (مثلاً: حفر تربة عادية)'; nm.setAttribute('list', 'qtSumDL');
+  const dl = pjEl('datalist'); dl.id = 'qtSumDL'; [...new Set(QT.items.map((x) => x.item).concat(QT_ITEMS))].forEach((v) => { const o = pjEl('option'); o.value = v; dl.appendChild(o); });
+  const fi = pjEl('input'); fi.type = 'file'; fi.accept = '.dwg,.dxf'; fi.hidden = true;
+  const fb = pjEl('button', 'qbtn on', '⬆ اختار اللوحة'); fb.type = 'button';
+  const hint = pjEl('span', 'qsah', 'والرقم يطلع على طول');
+  fb.onclick = () => { if (!nm.value.trim()) { hint.textContent = '✍️ اكتب اسم البند الأول'; hint.classList.add('err'); nm.focus(); return; } fi.click(); };
+  nm.oninput = () => { hint.textContent = 'والرقم يطلع على طول'; hint.classList.remove('err'); };
+  nm.onkeydown = (e) => { if (e.key === 'Enter') fb.click(); };
+  fi.onchange = () => { if (fi.files.length) qtAdd(nm.value.trim(), fi.files); };
+  ab.append(nm, dl, fb, fi, hint); m.appendChild(ab);
+  const GS = qtGroups().flatMap((G) => (G.rows.length > 1 && G.mode !== 'formula' ? G.rows.map((x) => ({ ...G, rows: [x], qty: +x.qty })) : [G]));
+  if (!GS.length) { m.appendChild(pjEl('div', 'qempty', 'لسه مفيش بنود — اكتب اسم البند واختار اللوحة.')); return; }
+  const ord = (G) => QT_SECS.findIndex((x) => x[0] === (G.mode === 'formula' ? 'etc' : qtSecOf(G.item)[0]));
+  GS.sort((a, b) => ord(a) - ord(b));
+  let q = null;
+  if (GS.length > 12) { q = pjEl('input'); q.type = 'search'; q.placeholder = '🔍  دوّر على بند…'; q.className = 'qlq qsq'; m.appendChild(q); }
+  const T = pjEl('div', 'qst'); m.appendChild(T);
+  const hd = pjEl('div', 'qsr qsh'); hd.append(pjEl('span', 'n', 'البند'), pjEl('span', 'v', 'الكمية'), pjEl('span', 'u', '')); T.appendChild(hd);
   const rows = [];
-  // الإحلال بيظهر جوه الحفر وجوه الردم (من غير ما تدخله مرتين)، ومالوش كارت لوحده
-  const REP = secs.get('ehlal') || [];
-  if (REP.length) { secs.delete('ehlal'); ['hafr', 'radm'].forEach((k) => { if (!secs.has(k)) secs.set(k, []); }); }
-  QT_SECS.filter(([k]) => secs.has(k)).forEach(([k, name, ic]) => {
-    const list = secs.get(k);
-    // القسم: كارت زي كروت الصفحة الرئيسية، وبنوده ظاهرة تحته بكمياتها
-    const card = pjEl('div', 'qsec'), sh = pjEl('div', 'qls');
-    const nn = list.length + ((k === 'hafr' || k === 'radm') ? REP.length : 0);
-    sh.append(pjEl('i', '', ic), pjEl('b', '', name), pjEl('span', '', nn + (nn === 1 ? ' بند' : nn < 11 ? ' بنود' : ' بند')));
-    card.appendChild(sh); L.appendChild(card);
-    const items = [];
-    list.forEach((G) => { const r = qtRow(G); card.appendChild(r); items.push(r); rows.push([r, G.item]); });
-    if (k === 'hafr' || k === 'radm') REP.forEach((G) => { const r = qtRow(G); r.classList.add('rep'); card.appendChild(r); items.push(r); rows.push([r, G.item]); });
-    card._items = items;
-    // التوتال: الحفر = لوح الحفر + الإحلال، والردم = لوح الردم + الإحلال
-    const rep = REP.filter((G) => /م³|م3/.test(G.unit)).reduce((t, G) => t + +G.qty, 0);
-    if (k === 'hafr' || k === 'radm') {
-      const own = list.filter((G) => /م³|م3/.test(G.unit)).reduce((t, G) => t + +G.qty, 0);
-      if (rep > 0 || list.length > 1) {
-        const lbl = k === 'hafr' ? 'إجمالي الحفر' : 'إجمالي الردم';
-        const tr = pjEl('div', 'qsectot');
-        tr.append(pjEl('span', '', lbl + (rep > 0 ? ' = ' + qtN(own) + ' + إحلال ' + qtN(rep) : '')), pjEl('b', '', qtN(own + rep) + ' م³'));
-        card.appendChild(tr);
-      }
-    }
+  GS.forEach((G) => {
+    const x = G.rows[0];
+    const r = pjEl('div', 'qsr'); r.tabIndex = 0;
+    const n = pjEl('span', 'n'); n.appendChild(pjEl('b', '', x.item));
+    const sub = x.mode === 'manual' ? 'يدوي' : x.mode === 'formula' ? 'محسوب من بنود' : (x.file_name || '').replace(/^\d+-/, '');
+    if (sub) n.appendChild(pjEl('small', '', sub + (qtOrigQ(x) != null && +x.thickness > 0 ? ' · × سمك ' + qtN(+x.thickness, 3) : '')));
+    r.append(n, pjEl('span', 'v', qtN(G.qty)), pjEl('span', 'u', x.unit));
+    const open = () => { QT.tab = 'det'; QT.ditem = x.id; QT.dsec = (x.mode === 'formula' ? QT_SECS[QT_SECS.length - 1] : qtSecOf(x.item))[0]; qtProject(); window.scrollTo(0, 0); };
+    r.onclick = open; r.onkeydown = (e) => { if (e.key === 'Enter') open(); };
+    if (G.rows.some((y) => y.id === QT.flash)) { r.classList.add('flash'); QT.flash = null; }
+    T.appendChild(r); rows.push([r, x.item]);
   });
-  q.oninput = () => {
-    const f = q.value.trim();
-    rows.forEach(([r, t]) => { r.hidden = !!f && !t.includes(f); });
-    L.querySelectorAll('.qsec').forEach((c) => { c.hidden = c._items.every((r) => r.hidden); });
-  };
+  // الإجمالي: الحفر = لوح الحفر + الإحلال، والردم = لوح الردم + الإحلال
+  const m3 = (G) => /م³|م3/.test(G.unit);
+  const sec = (k) => GS.filter((G) => G.mode !== 'formula' && qtSecOf(G.item)[0] === k && m3(G)).reduce((t, G) => t + +G.qty, 0);
+  const rp = sec('ehlal'), hf = sec('hafr'), rd = sec('radm');
+  if (rp > 0 && (hf > 0 || rd > 0)) {
+    const tt = pjEl('div', 'qstot');
+    if (hf > 0) tt.appendChild(pjEl('div', '', 'إجمالي الحفر (شامل الإحلال): ' + qtN(hf + rp) + ' م³'));
+    if (rd > 0) tt.appendChild(pjEl('div', '', 'إجمالي الردم (شامل الإحلال): ' + qtN(rd + rp) + ' م³'));
+    m.appendChild(tt);
+  }
+  if (q) q.oninput = () => { const f = q.value.trim(); rows.forEach(([r, t]) => { r.hidden = !!f && !t.includes(f); }); };
 }
-// صف بند: الاسم | الكمية | الوحدة | أوامر
 // خانة السمك في بنود الحفر والردم: لو اتكتب سمك → الكمية = الحجم × السمك (بعد ما توافق على الرقم)
 const qtOrigQ = (x) => { const k = (x.sel || []).find((y) => /^Q\|/.test(y)); return k ? +k.slice(2) : null; };
 async function qtItemArea(x) {
@@ -4285,7 +4286,22 @@ async function qtDetails(m) {
   const ib = pjEl('div', 'qditems');
   list.forEach((x) => { const b0 = pjEl('button', x.id === QT.ditem ? 'on' : ''); b0.type = 'button'; b0.append(pjEl('b', '', x.item), pjEl('span', '', qtN(x.qty) + ' ' + x.unit)); b0.title = (x.file_name || '').replace(/^\d+-/, ''); b0.onclick = () => { QT.ditem = x.id; qtProject(); }; ib.appendChild(b0); });
   const cur = list.find((x) => x.id === QT.ditem);
-  box.append(tb, ib, qtDetailCard(cur, det[cur.id]));
+  const G = qtGroupOf(cur) || { item: cur.item, rows: [cur], qty: +cur.qty, unit: cur.unit, mode: cur.mode };
+  const top = pjEl('div', 'qitop');
+  const tl = pjEl('div', 'qitl'); tl.append(pjEl('h2', '', cur.item), pjEl('div', 'qiq', qtN(+cur.qty) + ' ' + cur.unit));
+  top.appendChild(tl);
+  const acts = pjEl('div', 'qiac');
+  if (QT_EW.test(cur.item) && cur.mode !== 'formula' && cur.mode !== 'manual') acts.appendChild(qtThField(cur));
+  const ab = (t, c, f) => { const b0 = pjEl('button', 'qbtn sm' + (c ? ' ' + c : ''), t); b0.type = 'button'; b0.onclick = f; acts.appendChild(b0); };
+  ab('✎ الاسم', '', () => qtRename(G));
+  if (cur.mode !== 'formula') ab('+ لوحة لنفس البند', '', () => qtAdd(cur.item));
+  ab('حذف', 'danger', async () => {
+    if (!confirm('حذف بند «' + cur.item + '»؟')) return;
+    if (cur.file_path) await qtRm([cur.file_path]);
+    await sb.from('qt_items').delete().eq('id', cur.id); QT.items = QT.items.filter((y) => y.id !== cur.id); await qtRecalc(); QT.tab = 'sum'; QT.ditem = null; qtProject();
+  });
+  top.appendChild(acts);
+  box.append(top, qtDetailCard(cur, det[cur.id]));
   // اللوح اللي اترفعت قبل القراءة الكاملة: نعيد قراءتها في الخلفية (الكمية والحسبة زي ما هي)
   for (const x of QT.items.filter((y) => y.id === QT.ditem && y.file_path && det[y.id] && det[y.id].groups && !det[y.id].inv)) {
     if (QT.tab !== 'det') break;
@@ -4570,7 +4586,7 @@ async function qtSysItems() {
   QT_SYS = [[bySheet, 'تحليل الأسعار'], [safety, 'الأمن والسلامة']];
   return QT_SYS;
 }
-async function qtAdd(pre) {
+async function qtAdd(pre, files0) {
   pre = typeof pre === 'string' ? pre : '';
   const p = QT.cur; const m = qtMain(p.name + (pre ? ' — لوحة جديدة لبند ' + pre : ' — لوحة جديدة'), qtProject);
   const c = pjEl('div', 'qcard');
@@ -4634,7 +4650,7 @@ async function qtAdd(pre) {
   m.appendChild(c);
   const res = pjEl('div'); m.appendChild(res);
   if (pre) { it.value = pre; const n = QT.items.filter((x) => x.item === pre && x.mode !== 'formula').length; if (n) c.appendChild(pjEl('div', 'qhint', 'البند ده فيه ' + n + ' لوحة — اللوحة الجديدة هتتجمع عليهم.')); }
-  setTimeout(() => (pre ? fi.click() : it.focus()), 50);
+  if (!(files0 && files0.length)) setTimeout(() => (pre ? fi.click() : it.focus()), 50);
   let busy = false, ran = false;
   const sync = () => { goB.disabled = busy || !fi.files[0] || !it.value.trim(); };
   const go = async () => {
@@ -4691,6 +4707,7 @@ async function qtAdd(pre) {
     qtPick(res, item, f.name, path, j, null, au || (mem ? { mode: mem.mode, sel: [], th: mem.thickness } : null), true);
   };
   fi.onchange = () => { sync(); const f = fi.files[0]; if (insOpen()) { if (f && fi.files.length === 1 && /\.(dwg|dxf)$/i.test(f.name) && f.size <= 400 * 1048576) preRead(f); if (pre && !ins.value.trim()) go(); return; } go(); };
+  if (files0 && files0.length) { try { const dt = new DataTransfer(); dt.items.add(files0[0]); fi.files = dt.files; fi.onchange(); } catch (e) { /* */ } }
   goB.onclick = go; it.oninput = sync;
   it.onkeydown = (e) => { if (e.key === 'Enter' && fi.files[0]) go(); };
   // زي الأول: لو التعليمات مقفولة، الحصر بيبدأ لوحده أول ما يبقى فيه لوحة واسم بند
