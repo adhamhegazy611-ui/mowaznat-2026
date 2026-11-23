@@ -1732,6 +1732,12 @@ const PJ_SELF_TYPES = [ // [صف في «الذاتى فقط»، كلمات ال�
 const PJ_SELF_OUT = [[4, 8], [5, 8], [6, 8], [7, 8], [8, 8], [9, 8], [10, 8], [11, 8], [15, 9, 1], [16, 9, 1], [17, 9, 1], [18, 9, 1], [19, 9, 1], [23, 10], [24, 10], [25, 10], [26, 10]];
 function pjHasSelf() { const p = PJ.cur; if (!p) return false; return (p.items || []).some((si) => si < PJ_SAF && pjKindOf(si) === 'self' && !(PA.sheets[si] && PA.sheets[si].grp === PJ_SELFG)); }
 function pjSelfType(si) { const t = pjNorm(pjItemName(si) + ' ' + ((PA.sheets[si] && PA.sheets[si].title) || '')); if (/^نقل/.test(t)) return null; const m = PJ_SELF_TYPES.find(([, re]) => re.test(t)); return m ? m[0] : null; }
+// الوزن النسبي للذاتي: إجمالي المشروع كله وإجمالي الذاتي (مليون جنيه) من الموازنة
+function pjSelfTotals(all, self) {
+  const w = PAE && PAE.sheetIdx('الوزن النسبى للذاتى'); if (w == null) return;
+  if (!pjHasSelf()) { PAE.set(w, 2, 7, undefined); PAE.set(w, 3, 7, undefined); return; }
+  PAE.set(w, 2, 7, all / 1e6); PAE.set(w, 3, 7, self / 1e6);
+}
 function pjSelfSync() {
   const p = PJ.cur; if (!p || !PAE) return; const b = p.basics = p.basics || {}; b.custom = b.custom || [];
   const qi = PAE.sheetIdx('الذاتى فقط '), ms = PAE.sheetIdx('ملخص الذاتي'); if (qi == null || ms == null) return;
@@ -3311,6 +3317,7 @@ function pjBOQ() {
     });
     // الإجمالي العام = مجموع إجماليات الأقسام
     grand = secTots.reduce((a, [, v]) => a + v, 0);
+    try { pjSelfTotals(grand, parts.length > 1 ? ((ptots.find(([l]) => l === PJ_KINDS.self) || [])[1] || 0) : (parts[0][0] === 'self' ? grand : 0)); } catch (e) { console.warn(e); }
     // شامل هيئة الشئون المالية: الإجمالي العام ÷ 0.85
     const hfa = !!b.hfa, gLab = hfa ? 'الاجمالى العام شامل هيئة الشئون المالية' : 'الاجمالى العام غير شامل هيئة الشئون المالية', gVal = hfa ? grand / 0.85 : grand;
     D.push({ t: 'grand', label: gLab, hfa }); const gt = pjEl('tr', 'grand'), gl = pjEl('td', 'c', gLab); gl.colSpan = NC;
