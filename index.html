@@ -1722,6 +1722,41 @@ function PAEngine(sheets) {
 /* ===== تحليل أسعار (للأدمن بس: الداتا مشفرة والمفتاح في قاعدة البيانات بصلاحية الأدمن) ===== */
 let PA = null, PAcur = null, PAE = null, PAmode = 'x';
 const PJ_COPY0 = 200;
+// ===== تحليل أسعار الذاتي: كميات بنود الذاتي في الموازنة → شيت «الذاتى فقط»، وناتج «ملخص الذاتي» → بنود تحت الذاتي =====
+const PJ_SELFG = 'تحليل أسعار الذاتي';
+const PJ_SELF_TYPES = [ // [صف في «الذاتى فقط»، كلمات البند]
+  [3, /تسوي/], [4, /تطهير/], [7, /مخلف.*عضوي/], [6, /مخلف.*بلدوزر/], [5, /مخلف|ازاله|إزالة/], [8, /تكسير.*خرسان/], [9, /تكسير.*(اسفلت|أسفلت)/], [10, /كشط/],
+  [13, /حفر.*صخر/], [12, /حفر.*متماسك/], [11, /حفر/], [14, /ردم/], [15, /سن ?6|اساس|أساس/], [16, /سن ?(1|2)/], [17, /\bMC\b|تشريب/i], [18, /\bRC\b|لاصق/i], [19, /رابط/], [20, /سطحي/],
+];
+// صفوف «ملخص الذاتي» اللي بتتحط في الموازنة: [صف، القسم، الفئة بالمليون؟]
+const PJ_SELF_OUT = [[4, 8], [5, 8], [6, 8], [7, 8], [8, 8], [9, 8], [10, 8], [11, 8], [15, 9, 1], [16, 9, 1], [17, 9, 1], [18, 9, 1], [19, 9, 1], [23, 10], [24, 10], [25, 10], [26, 10]];
+function pjHasSelf() { const p = PJ.cur; if (!p) return false; return (p.items || []).some((si) => si < PJ_SAF && pjKindOf(si) === 'self' && !(PA.sheets[si] && PA.sheets[si].grp === PJ_SELFG)); }
+function pjSelfType(si) { const t = pjNorm(pjItemName(si) + ' ' + ((PA.sheets[si] && PA.sheets[si].title) || '')); if (/^نقل/.test(t)) return null; const m = PJ_SELF_TYPES.find(([, re]) => re.test(t)); return m ? m[0] : null; }
+function pjSelfSync() {
+  const p = PJ.cur; if (!p || !PAE) return; const b = p.basics = p.basics || {}; b.custom = b.custom || [];
+  const qi = PAE.sheetIdx('الذاتى فقط '), ms = PAE.sheetIdx('ملخص الذاتي'); if (qi == null || ms == null) return;
+  const on = pjHasSelf(), mode = b.mode === 'excl' ? 'excl' : 'incl';
+  // ١) الكميات والفئات من بنود الذاتي
+  const agg = {};
+  if (on) (p.items || []).forEach((si) => {
+    if (si >= PJ_SAF || pjKindOf(si) !== 'self') return; const r = pjSelfType(si), q = +((p.qty || {})[si]); if (!r || !(q > 0)) return;
+    const pr = b.pr && typeof b.pr[si] === 'number' ? b.pr[si] : pjSheetPrice(si, mode); const a = agg[r] || (agg[r] = { q: 0, v: 0 }); a.q += q; a.v += q * (pr || 0);
+  });
+  for (let r = 3; r <= 20; r++) { const a = agg[r]; PAE.set(qi, r, 4, a ? a.q : undefined); PAE.set(qi, r, 5, a && a.q ? a.v / a.q : undefined); }
+  // ٢) ناتج الملخص → بنود في الموازنة تحت الذاتي
+  const num = (r, c) => { const v = PAE.get(ms, r, c); return typeof v === 'number' && isFinite(v) ? v : 0; };
+  const txt = (r, c) => String(PAE.get(ms, r, c) || '').replace(/\s+/g, ' ').trim();
+  b.kind = b.kind || {}; b.sec = b.sec || {};
+  if (!on) { b.custom.filter((c) => c.selfr).forEach((c) => { delete b.kind[c.k]; delete b.sec[c.k]; if (p.qty) delete p.qty[c.k]; }); b.custom = b.custom.filter((c) => !c.selfr); return; }
+  PJ_SELF_OUT.forEach(([r, sx, mil]) => {
+    let c = b.custom.find((x) => x.selfr === r);
+    if (!c) { const k = b.custom.reduce((m, x) => Math.max(m, x.k), PJ_CUS) + 1; c = { k, selfr: r }; b.custom.push(c); }
+    const q = num(r, 4), e = num(r, 5);
+    c.desc = txt(r, 2); c.unit = txt(r, 3); c.price = Math.round((mil ? e * 1e6 : e) * 100) / 100; c.sec = PJ_SECS[sx];
+    b.kind[c.k] = 'self'; if (!b.sec[c.k]) b.sec[c.k] = c.sec; p.qty = p.qty || {}; p.qty[c.k] = Math.round(q * 100) / 100;
+  });
+}
+
 async function loadPA() {
   if (PA) return PA;
   const { data, error } = await sb.from('price_key').select('k').eq('id', 1).maybeSingle();
@@ -1745,7 +1780,10 @@ function paItems() {
   if (PJ.cur) {
     const mp = new Map(out.map((it) => [it.safety ? -1 : it.i, it]));
     const l = PJ.cur.items.map((k) => (k >= PJ_SAF ? pjSafItem(k) : mp.get(k))).filter((it) => it && !(it.i != null && PA.sheets[it.i] && PA.sheets[it.i].copyDel));
-    return l.map((it, n) => ({ it, n, o: it.ss != null ? pjSecOf(it.ss) : it.safety ? [98, ''] : pjSecOf(it.i) })).sort((a, c) => a.o[0] - c.o[0] || a.n - c.n).map((x) => (x.it.safety && x.it.ss == null ? x.it : Object.assign({}, x.it, { g: x.o[1] })));
+    const res = l.filter((it) => !(it.i != null && PA.sheets[it.i] && PA.sheets[it.i].grp === PJ_SELFG)).map((it, n) => ({ it, n, o: it.ss != null ? pjSecOf(it.ss) : it.safety ? [98, ''] : pjSecOf(it.i) })).sort((a, c) => a.o[0] - c.o[0] || a.n - c.n).map((x) => (x.it.safety && x.it.ss == null ? x.it : Object.assign({}, x.it, { g: x.o[1] })));
+    // موازنة فيها ذاتي: شيتات «تحليل أسعار الذاتي» بتظهر تحت البنود (بتتحسب من بنود الذاتي)
+    if (pjHasSelf()) PA.sheets.forEach((s, i) => { if (s.grp === PJ_SELFG && !s.pad) res.push({ g: PJ_SELFG, t: PAnames[i] || s.title, i, tpl: true }); });
+    return res;
   }
   return out;
 }
@@ -2552,7 +2590,7 @@ async function pjSaveExtra() {
   if (error) alert('تعذّر الحفظ');
 }
 function pjSheetTools(it) {
-  if (!PJ.cur || !it || it.safety) return;
+  if (!PJ.cur || !it || it.safety || it.tpl || (PA.sheets[it.i] && PA.sheets[it.i].grp === PJ_SELFG)) return;
   const hb = $('paMain').querySelector('.hero2 .hb'); if (!hb) return;
   const si = it.i, sh = PA.sheets[si], isCopy = sh.copyKey != null;
   const mk = (t, f, ttl) => { const x = pjEl('button', '', t); x.type = 'button'; x.title = ttl || ''; x.style.marginInlineStart = '6px'; x.onclick = f; hb.appendChild(x); return x; };
@@ -2907,6 +2945,7 @@ function pjScan() {
   const eq = {}, dist = {}, tr = [], f1 = [], f2 = [], item = {};
   const ref = (s) => { const m = /^\$?([A-Z]{1,3})\$?(\d+)$/.exec(s); if (!m) return null; let n = 0; for (const ch of m[1]) n = n * 26 + ch.charCodeAt(0) - 64; return [+m[2], n]; };
   PA.sheets.forEach((sh, si) => {
+    if (sh.grp === PJ_SELFG) return;   // تحليل أسعار الذاتي مش بنود
     const rows = new Map();
     sh.rows.forEach((r) => r[1].forEach((c) => { if (c[0] === '' && !c[6]) return; const a = rows.get(c[4]) || []; a.push(c); rows.set(c[4], a); }));
     const raw = (r, c) => (rows.get(r) || []).find((x) => x[5] === c);
@@ -3025,6 +3064,7 @@ function pjSecOf(si) {
 }
 function pjApplyBasics() {
   const X = pjScan(), b = PJ.cur.basics || {};
+  try { pjSelfSync(); } catch (e) { console.warn(e); }
   Object.entries(X.eq).forEach(([k, e]) => { const v = b.eq && b.eq[k]; e.cells.forEach(([si, r, c, o]) => { if (v != null && v !== '') PAE.set(si, r, c, +v); else if (PAE.has(si, r, c) && PAE.get(si, r, c) === o) PAE.set(si, r, c, undefined); }); });
   Object.entries(X.dist).forEach(([si, d]) => { const v = b.dist && b.dist[si]; if (v != null && v !== '') PAE.set(+si, d.r, d.c, +v); });
   Object.values(X.eq).forEach((e) => (e.prods || []).forEach(([si, r, c]) => { const k = si + ':' + r + ':' + c, v = b.prod && b.prod[k]; if (v != null && v !== '') { PAE.set(si, r, c, +v); PJ_PRODSET.add(k); } else if (PJ_PRODSET.has(k)) { PAE.set(si, r, c, undefined); PJ_PRODSET.delete(k); } }));
@@ -3100,7 +3140,7 @@ function pjBasics() {
   m.appendChild(pjEl('div', 'pjnote', 'عايز تعدّل رقم معين جوه بند (زي معدل الإنتاج أو سعر خامة)؟ افتح البند من القايمة واضغط على الرقم.'));
 }
 /* ===== الموازنة بنفس فورمة الهيئة ===== */
-const PJ_SECS = ['أعمال الجسر الترابي', 'أعمال طبقات الأساس', 'أعمال طبقات الرصف', 'أعمال الأرصفة والبردورات', 'أعمال البرابخ', 'أعمال الغرف', 'أعمال الأمن والسلامة', 'أعمال عامة'];
+const PJ_SECS = ['أعمال الجسر الترابي', 'أعمال طبقات الأساس', 'أعمال طبقات الرصف', 'أعمال الأرصفة والبردورات', 'أعمال البرابخ', 'أعمال الغرف', 'أعمال الأمن والسلامة', 'أعمال عامة', 'التوريدات اللازمة لتنفيذ الأعمال الذاتية', 'بنود أعمال لصالح تنفيذ الأعمال ذاتياً', 'العمالة والحملة المؤجرة لتنفيذ الأعمال الذاتية'];
 const PJ_ORD = ['أولاً', 'ثانياً', 'ثالثاً', 'رابعاً', 'خامساً', 'سادساً', 'سابعاً', 'ثامناً', 'تاسعاً', 'عاشراً'];
 const PJ_SAF = 10000;
 const pjSafIdx = (k) => (k - PJ_SAF) % 100;
@@ -3137,6 +3177,7 @@ const pjParse = (v) => { const t = String(v || '').replace(/[٠-٩]/g, (x) => '�
 function pjBOQ() {
   const p = PJ.cur; if (!p) return; PJ.view = 'boq';
   const X = pjScan(); p.qty = p.qty || {}; const b = p.basics = p.basics || {};
+  try { pjSelfSync(); } catch (e) { console.warn(e); }
   b.form = b.form || {}; b.sec = b.sec || {}; b.note = b.note || {};
   const mode = b.mode === 'excl' ? 'excl' : 'incl';
   const m = pjHero(pjBatLabel(p.battalion), 'موازنة ' + p.name, p.qt_id ? 'الكميات جاية من حصر الكميات (من اللوح). الأسعار بتتحسب من تحليل الأسعار بالبيانات الأساسية بتاعة المشروع.' : 'نفس فورمة الموازنة. اختار شامل ولا غير شامل، واكتب الكميات، والأرقام بتتحسب من تحليل الأسعار بالبيانات الأساسية بتاعة المشروع.', [['← البيانات الأساسية', pjBasics], ['⋯ الأوامر ▾', (ev) => pjCmdMenu(ev.currentTarget)]]);
@@ -3155,7 +3196,7 @@ function pjBOQ() {
   m.appendChild(bar);
   const paper = pjEl('div', 'pjpaper'); paper.id = 'pjPaper'; m.appendChild(paper);
   b.custom = b.custom || []; b.desc = b.desc || {};
-  const order = paItems().filter((it) => !it.safety || it.ss != null).map((it) => (it.ss != null ? it.ss : it.i)).concat(b.custom.map((c) => c.k));
+  const order = paItems().filter((it) => !it.tpl && (!it.safety || it.ss != null)).map((it) => (it.ss != null ? it.ss : it.i)).concat(b.custom.map((c) => c.k));
   b.pr = b.pr || {}; b.tq = b.tq || {}; b.rg = b.rg || {};
   const isSup = (si) => si < PJ_SAF && !!(X.item[si] && X.item[si].sup);
   const NC = 5;
@@ -3204,8 +3245,8 @@ function pjBOQ() {
           {
             const sel = pjEl('select', 'noexp pjsec'); [...new Set([...PJ_SECS, b.sec[si] || pjAutoSec(si)])].forEach((s) => { const o = pjEl('option', '', s); o.value = s; if (s === (b.sec[si] || pjAutoSec(si))) o.selected = true; sel.appendChild(o); });
             sel.title = 'القسم'; sel.onchange = () => { b.sec[si] = sel.value; paSave(); draw(); };
-            const op = pjEl('button', 'noexp pjop', it.cus ? '✎ تعديل البند' : 'فتح التحليل'); op.type = 'button';
-            op.onclick = it.cus ? () => pjCusDlg(pjCus(si), draw) : () => { const x = paItems().find((y) => (si >= PJ_SAF ? y.ss === si : !y.safety && y.i === si)); if (x) paShow(x); };
+            const op = pjEl('button', 'noexp pjop', it.cus && !(pjCus(si) || {}).selfr ? '✎ تعديل البند' : 'فتح التحليل'); op.type = 'button';
+            op.onclick = it.cus && (pjCus(si) || {}).selfr ? () => { const i0 = PAE.sheetIdx('ملخص الذاتي'), x = paItems().find((y) => y.i === i0); if (x) paShow(x); } : it.cus ? () => pjCusDlg(pjCus(si), draw) : () => { const x = paItems().find((y) => (si >= PJ_SAF ? y.ss === si : !y.safety && y.i === si)); if (x) paShow(x); };
             const rn = pjEl('button', 'noexp pjop', '✎ الاسم'); rn.type = 'button'; rn.title = 'تغيير وصف البند في الموازنة دي بس';
             rn.onclick = async () => { const cur = b.desc[si] || (it.std ? it.desc : (PAnames[si] || it.desc)); const v = await qtForm('وصف البند في الموازنة', 'بيتغير في موازنة المشروع ده بس — التحليل نفسه زي ما هو. سيبه فاضي يرجع للأصلي.', [{ k: 'd', label: 'الوصف', type: 'area', value: cur, req: false }], 'حفظ'); if (!v) return; if (v.d && v.d !== (it.std ? it.desc : (PAnames[si] || it.desc))) b.desc[si] = v.d; else delete b.desc[si]; paSave(); draw(); };
             const tools = pjEl('div', 'noexp pjitools'); tools.append(sel, op, rn);
@@ -4614,7 +4655,7 @@ async function qtSysItems() {
   const skip = /^ملخص$|علاوات|يومية|^توريد|عرض أسعار|الاشراف|بدون علاوة/;
   const clean = (t) => String(t || '').replace(/\(\s*2\s*\)/g, '').replace(/^\(/, '').replace(/^تحليل (سعر|اسعار|أسعار)\s+/, '').replace(/^تحليل ب/, '').replace(/\s*استقطاع.*$/, '').replace(/\s+/g, ' ').trim();
   const bySheet = [];
-  PA.sheets.forEach((sh, i) => { if (/سيارات|العمالة/.test(sh.grp) || sh.copyDel) return; const t = clean((typeof PAnames !== 'undefined' && PAnames[i]) || sh.title); if (t && !skip.test(t)) bySheet.push(t); });
+  PA.sheets.forEach((sh, i) => { if (/سيارات|العمالة/.test(sh.grp) || sh.grp === PJ_SELFG || sh.copyDel) return; const t = clean((typeof PAnames !== 'undefined' && PAnames[i]) || sh.title); if (t && !skip.test(t)) bySheet.push(t); });
   const safety = (PA.items || []).map((x) => clean(x.t));
   QT_SYS = [[bySheet, 'تحليل الأسعار'], [safety, 'الأمن والسلامة']];
   return QT_SYS;
@@ -5153,7 +5194,7 @@ function qtFxDlg(existing) {
    والكميات بتتكتب في موازنة مشروع تحليل الأسعار المربوط. الربط محفوظ في qt_projects (pa_id, pa_map). */
 function qtPaCands() {
   const X = pjScan(), out = [];
-  PA.sheets.forEach((sh, i) => { if (sh.copyDel || /سيارات|العمالة/.test(sh.grp) || /^ملخص$/.test((sh.title || '').trim())) return; const it = X.item[i] || {}; out.push({ si: i, t: (PAnames[i] || sh.title || '').trim(), g: sh.grp, unit: it.unit || '' }); });
+  PA.sheets.forEach((sh, i) => { if (sh.copyDel || /سيارات|العمالة/.test(sh.grp) || sh.grp === PJ_SELFG || /^ملخص$/.test((sh.title || '').trim())) return; const it = X.item[i] || {}; out.push({ si: i, t: (PAnames[i] || sh.title || '').trim(), g: sh.grp, unit: it.unit || '' }); });
   (PA.items || []).forEach((x, k) => out.push({ si: PJ_SAF + k, t: x.t, g: 'الأمن والسلامة', unit: x.unit || '' }));
   return out;
 }
