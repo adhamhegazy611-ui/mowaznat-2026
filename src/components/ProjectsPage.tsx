@@ -4,6 +4,7 @@ import type { Mark, Project, Reviewer } from '../lib/types'
 import { BLANK, QUICK_LABEL, quickPass, type QuickKey, computeTotals, copyText, displayValue, fmtDate, fmtNum, loadPref, normalize, savePref } from '../lib/util'
 import { isUrl, fileKind, openSheet } from '../lib/files'
 import { viewSheet } from './SheetViewer'
+import { editSheet } from './SheetEditor'
 import { exportToExcel } from '../lib/exportExcel'
 import ColumnFilter, { type SortDir } from './ColumnFilter'
 import ProjectForm from './ProjectForm'
@@ -148,7 +149,7 @@ export default function ProjectsPage({ projects, reviewers, canEdit, isAdmin, to
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                if (canEdit) openSheet(p.sheet_path!, p.sheet_name).catch((x) => toast((x as Error).message)); else viewSheet(p.sheet_path!, p.sheet_name)
+                if (canEdit) { if (!editSheet(p.sheet_path!, p.sheet_name, isAdmin)) openSheet(p.sheet_path!, p.sheet_name).catch((x) => toast((x as Error).message)) } else viewSheet(p.sheet_path!, p.sheet_name)
               }}>
               <span className="fi">XLS</span>فتح الشيت
             </a>
