@@ -909,7 +909,7 @@ body:not(.in) footer{color:#6f84a6}
 <style id="qpdel-css">#qt .qpw{position:relative;display:flex}#qt .qpw>.qproj{flex:1}
 #qt .qpdel{position:absolute;top:10px;inset-inline-end:10px;width:32px;height:32px;border-radius:9px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-size:14px;display:grid;place-items:center;opacity:.75;transition:opacity .15s,background .15s}
 #qt .qpdel:hover,#qt .qpdel:focus-visible{opacity:1;background:#ef4444;color:#fff}</style>
-<style id="qsec-css">#qt .qlist.qsecs{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:16px;background:none;border:0;box-shadow:none;overflow:visible;max-width:1180px;backdrop-filter:none}#qt .qlbar{max-width:1180px}
+<style id="qsec-css">#qt .qth{display:inline-flex;align-items:center;gap:5px;margin-top:5px;font-size:12px;font-weight:700;color:var(--mu,#6b7462)}#qt .qth input{width:62px;height:26px;padding:0 6px;border:1px solid #c9d3bf;border-radius:7px;background:#fff;color:#1f2a16;font:inherit;font-size:13px;text-align:center}#qt .qth input:focus{outline:2px solid #5a6b2e;border-color:#5a6b2e}#qt .qlist.qsecs{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:16px;background:none;border:0;box-shadow:none;overflow:visible;max-width:1180px;backdrop-filter:none}#qt .qlbar{max-width:1180px}
 #qt .qsec{background:rgba(9,22,42,.86);backdrop-filter:blur(10px);border:1px solid var(--bd);border-radius:16px;overflow:hidden;box-shadow:0 14px 34px rgba(2,8,20,.32);align-self:start}
 #qt .qsec{padding:0}#qt .qsec[hidden]{display:none}#qt .qsec>.qls{border-top:0;padding:15px 18px;margin:0}#qt .qsec .qlr{grid-template-columns:minmax(0,1fr) auto;row-gap:2px;padding:12px 18px}#qt .qsec .qlr .ac{grid-column:1/-1;grid-row:2;justify-content:flex-start;margin-inline-start:44px}
 @media (max-width:560px){#qt .qlist.qsecs{grid-template-columns:1fr}}</style>
@@ -4178,6 +4178,44 @@ function qtSummary(m) {
   };
 }
 // صف بند: الاسم | الكمية | الوحدة | أوامر
+// خانة السمك في بنود الحفر والردم: لو اتكتب سمك → الكمية = مسطح البند في اللوحة × السمك (بعد ما توافق على الرقم)
+const qtOrigQ = (x) => { const k = (x.sel || []).find((y) => /^Q\|/.test(y)); return k ? +k.slice(2) : null; };
+async function qtItemArea(x) {
+  const { data } = await sb.from('qt_items').select('detail').eq('id', x.id).maybeSingle();
+  const gs = (data && data.detail && data.detail.groups) || [], sel = new Set(x.sel || []), seen = new Set(); let a = 0;
+  gs.forEach((g) => { const k = qtKey(g); if (!sel.has(k) || seen.has(k)) return; seen.add(k); if (+g.area > 0) a += +g.area; });
+  return a;
+}
+function qtThField(x) {
+  const w = pjEl('label', 'qth'); w.title = 'لو كتبت سمك: الكمية = مسطح البند × السمك';
+  const on = qtOrigQ(x) != null && +x.thickness > 0;
+  const inp = pjEl('input'); inp.type = 'text'; inp.inputMode = 'decimal'; inp.placeholder = '—'; inp.value = on ? String(+x.thickness) : '';
+  w.append(pjEl('span', '', 'سمك'), inp, pjEl('span', '', 'م'));
+  ['click', 'mousedown', 'keydown'].forEach((ev) => w.addEventListener(ev, (e) => e.stopPropagation()));
+  inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') inp.blur(); };
+  inp.onchange = async () => {
+    const raw = inp.value.trim().replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[٫,]/g, '.');
+    const o = qtOrigQ(x);
+    if (!raw) {   // مسح السمك → ترجع الكمية الأصلية
+      if (o == null) return;
+      x.sel = (x.sel || []).filter((k) => !/^Q\|/.test(k)); x.thickness = null; x.qty = o;
+      await sb.from('qt_items').update({ sel: x.sel, thickness: null, qty: o }).eq('id', x.id); await qtRecalc(); qtProject(); return;
+    }
+    let t = parseFloat(raw); if (!(t > 0)) { alert('اكتب السمك بالمتر (مثلاً 0.30)'); inp.value = on ? String(+x.thickness) : ''; return; }
+    if (/سم|cm/i.test(raw) || t > 3) t = t / 100;
+    inp.disabled = true; let a = 0;
+    try { a = await qtItemArea(x); } catch (e) { /* */ }
+    inp.disabled = false;
+    if (!(a > 0)) { alert('مش لاقي مسطح للبند ده في اللوحة'); inp.value = on ? String(+x.thickness) : ''; return; }
+    const q = +(a * t).toFixed(3), cur = o != null ? o : +x.qty;
+    if (!confirm('«' + x.item + '»\n\nالمسطح ' + qtN(a) + ' م² × السمك ' + qtN(t, 3) + ' م = ' + qtN(q) + ' م³\n(الكمية من غير سمك: ' + qtN(cur) + ' م³)\n\nتطبق؟')) { inp.value = on ? String(+x.thickness) : ''; return; }
+    x.sel = (x.sel || []).filter((k) => !/^Q\|/.test(k)).concat(['Q|' + cur]); x.thickness = t; x.qty = q;
+    const { error } = await sb.from('qt_items').update({ sel: x.sel, thickness: t, qty: q }).eq('id', x.id);
+    if (error) { alert('تعذّر الحفظ: ' + error.message); return; }
+    QT.flash = x.id; qtProject();
+  };
+  return w;
+}
 function qtRow(G) {
   const x = G.rows[0], many = G.rows.length > 1;
   const r = pjEl('div', 'qlr m-' + x.mode); r.tabIndex = 0;
@@ -4185,7 +4223,9 @@ function qtRow(G) {
   const tt = pjEl('div', 'tt'); tt.appendChild(pjEl('b', '', x.item));
   const fp = x.mode === 'fill' ? G.rows.map(qtFillParts).find(Boolean) : null;
   const sub = G.rows.every((y) => y.mode === 'manual') ? 'كمية يدوي' + (x.note ? ' — ' + x.note : '') : many ? G.rows.length + (G.rows.some((y) => y.mode === 'manual') ? ' (لوح + يدوي)' : ' لوح') + (fp && fp.k && fp.digs.length ? ' · سطح + إحلال' : '') : fp && fp.k ? (fp.digs.length ? 'سطح الفرق + إحلال الحفر × ' + qtN(fp.k, 3) : 'سطح الفرق') : (x.file_name || '').replace(/^\d+-/, '');
-  tt.appendChild(pjEl('small', '', sub)); nm.appendChild(tt);
+  tt.appendChild(pjEl('small', '', sub));
+  if (!many && QT_EW.test(x.item) && x.mode !== 'formula' && x.mode !== 'manual') tt.appendChild(qtThField(x));
+  nm.appendChild(tt);
   const qv = pjEl('div', 'qv'); qv.append(pjEl('b', '', qtN(G.qty)), pjEl('span', '', x.unit));
   const ac = pjEl('div', 'ac');
   const btn = (t, c, f, ttl) => { const b = pjEl('button', c, t); b.type = 'button'; if (ttl) b.title = ttl; b.onclick = (e) => { e.stopPropagation(); f(); }; ac.appendChild(b); };
@@ -5003,6 +5043,7 @@ function qtFxText(x, short) {
 }
 async function qtRecalc() {
   for (const x of QT.items.filter((y) => y.mode === 'fill')) {
+    if (qtOrigQ(x) != null && +x.thickness > 0) continue;   // بند متحسب بالسمك
     const f = qtFillParts(x); if (!f && !(x.sel || []).some((k) => /^B\|/.test(k))) continue; const q = +(f ? f.total : qtBase(x)).toFixed(3);
     if (Math.abs(q - +x.qty) > 1e-6) { x.qty = q; await sb.from('qt_items').update({ qty: q }).eq('id', x.id); }
   }
