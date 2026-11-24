@@ -3,7 +3,8 @@
 # الكود في فرع portal-site (ci/qt-runner.js). التحقق بـ GitHub OIDC — مفيش أسرار.
 name: qt-runner
 on:
-  # الجدول اتوقف بعد ما الريبو بقى Private (دقايق Actions بقت محسوبة) — التشغيل بقى عند الطلب
+  schedule:
+    - cron: '*/10 * * * *'
   workflow_dispatch:
 permissions:
   id-token: write
