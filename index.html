@@ -4463,7 +4463,7 @@ function qtDetailCard(x, d, no) {
   if (d.rock && d.rock.rows) { const tb = pjEl('div', 'qcard'); tb.appendChild(pjEl('b', '', 'قطاعات الصخر (تقرير الجسات' + (d.rock.file ? ' — ' + d.rock.file : '') + ')')); const ul = pjEl('ul'); d.rock.rows.forEach((r) => ul.appendChild(pjEl('li', '', r.from + ' → ' + r.to + ': ' + qtN(qtRockLen(r)) + ' م × ' + r.w + ' × ' + r.d + ' = ' + qtN(qtRockVol(r)) + ' م³'))); tb.appendChild(ul); side.appendChild(tb); }
   (d.warnings || []).filter(qtWarnOk).forEach((w) => side.appendChild(pjEl('div', 'qwarn', '⚠️ ' + w)));
   // الكمية بطريقة المقاطع (Sample Lines) زي جدول Civil — والحجم المضبوط بين السطحين للمقارنة
-  if (x.mode === 'cut' || x.mode === 'fill') (d.groups || []).filter((g) => g.aea && (x.sel || []).includes(qtKey(g))).forEach((g) => side.appendChild(pjEl('div', 'qok', '📐 بطريقة المقاطع زي Civil (' + g.aea + ' مقطع): ' + qtN(g[x.mode]) + ' م³ — الحجم بين السطحين مباشرة ' + qtN(x.mode === 'fill' ? g.tinFill : g.tinCut))));
+  if (x.mode === 'cut' || x.mode === 'fill') (d.groups || []).filter((g) => g.aea && (x.sel || []).includes(qtKey(g))).forEach((g) => side.appendChild(pjEl('div', 'qok', '📐 الحساب بطريقة Sample Line زي Civil (' + g.aea + ' Sample Line): ' + qtN(g[x.mode]) + ' م³ — الحجم بين السطحين مباشرة ' + qtN(x.mode === 'fill' ? g.tinFill : g.tinCut))));
   // مراجعة على جدول Civil لو موجود في اللوحة: لو رقمنا مختلف عن أقرب رقم في الجدول بنقول صراحةً
   if ((x.mode === 'cut' || x.mode === 'fill') && qtOrigQ(x) == null) {
     const em = x.mode, tv = [...new Set((d.groups || []).filter((g) => g.src === 'table' && +g[em] > 0).map((g) => +(+g[em]).toFixed(2)))];
