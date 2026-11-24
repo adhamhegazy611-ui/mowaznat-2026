@@ -198,12 +198,13 @@ function s2s(A0, B0) {
 
 // قراءة خفيفة لناتج dwgread -O JSON من غير JSON.parse للملف كله (اللوح الكبيرة ممكن تبقى مئات الميجا)
 function scanDwgJson(text) {
-  const out = { classes: {}, tins: [], counts: {} };
+  const out = { classes: {}, tins: [], counts: {}, sls: [] };
   const ci = text.indexOf('"CLASSES": ['), oi = text.indexOf('"OBJECTS": [');
   if (ci >= 0 && oi > ci) { try { const seg = text.slice(ci + 11, text.lastIndexOf(']', oi) + 1).replace(/(-?)\b(nan|inf)\b/gi, 'null'); JSON.parse(seg).forEach((c) => { out.classes[c.number] = c.dxfname; }); } catch (e) { /* */ } }
   const re = /"entity": "UNKNOWN_ENT",\s*"index": \d+,\s*"type": (\d+),\s*"handle": \[\d+,\d+,(\d+)\]/g; let m;
   while ((m = re.exec(text))) {
     const ty = +m[1], dn = out.classes[ty] || ''; if (/^AEC/.test(dn)) out.counts[dn] = (out.counts[dn] || 0) + 1;
+    if (dn === 'AECC_SAMPLE_LINE') { const nx = text.indexOf('"entity":', m.index + 20), seg = text.slice(m.index, nx < 0 ? m.index + 65536 : nx), pm = /"preview": "([0-9A-F]+)"/.exec(seg); if (pm) out.sls.push({ handle: +m[2], pv: pm[1] }); continue; }
     if (!/TIN_SURFACE|VOLUME_SURFACE/i.test(dn)) continue;
     const ub = text.indexOf('"unknown_bits": "', m.index), nx = text.indexOf('"entity":', m.index + 20);
     if (ub < 0 || (nx >= 0 && ub > nx)) continue;
@@ -215,7 +216,7 @@ function scanDwgJson(text) {
 // نفس scanDwgJson بس على stdout بتاع dwgread مباشرة (من غير ما الـ JSON يتكتب على الديسك — في اللوح الكبيرة بيوصل لـ 900 ميجا)
 function scanDwgStream(stream) {
   return new Promise((resolve, reject) => {
-    const out = { classes: {}, tins: [], counts: {} };
+    const out = { classes: {}, tins: [], counts: {}, sls: [] };
     const K = Buffer.from('"entity": "UNKNOWN_ENT"'), UB = Buffer.from('"unknown_bits": "'), EN = Buffer.from('"entity":'), OB = Buffer.from('"OBJECTS": [');
     let phase = 0, buf = Buffer.alloc(0), cap = null; // cap = {handle, cls, parts: []}
     const head = [];
@@ -227,6 +228,12 @@ function scanDwgStream(stream) {
         const m = /"type": (\d+),\s*"handle": \[\d+,\d+,(\d+)\]/.exec(buf.subarray(p, p + 220).toString('latin1'));
         if (!m) { buf = buf.subarray(p + K.length); continue; }
         const dn = out.classes[+m[1]] || ''; if (/^AEC/.test(dn)) out.counts[dn] = (out.counts[dn] || 0) + 1;
+        if (dn === 'AECC_SAMPLE_LINE') { // خط المقطع: الإطار بتاعه في الـ preview (proxy graphics) — صغير
+          const nx = buf.indexOf(EN, p + K.length); if (nx < 0 && buf.length - p < 1 << 16) { buf = buf.subarray(p); return; }
+          const seg = buf.subarray(p, nx < 0 ? Math.min(buf.length, p + (1 << 16)) : nx).toString('latin1'), pm = /"preview": "([0-9A-F]+)"/.exec(seg);
+          if (pm) out.sls.push({ handle: +m[2], pv: pm[1] });
+          buf = buf.subarray(p + K.length); continue;
+        }
         if (!/TIN_SURFACE|VOLUME_SURFACE/i.test(dn)) { buf = buf.subarray(p + K.length); continue; }
         const ub = buf.indexOf(UB, p + K.length), nx = buf.indexOf(EN, p + K.length);
         if (nx >= 0 && (ub < 0 || ub > nx)) { buf = buf.subarray(nx); continue; }
@@ -252,6 +259,55 @@ function scanDwgStream(stream) {
     stream.on('end', () => resolve(out));
     stream.on('error', reject);
   });
+}
+
+
+// ===== طريقة المقاطع (Average End Area) زي جدول كميات Civil: خطوط المقاطع (Sample Lines) من اللوحة =====
+// كل خط مقطع: إطاره (bounding box) متخزن في الـ preview، والخط نفسه قطر الإطار العمودي على المحور
+function slBox(hex) {
+  const b = Buffer.from(hex, 'hex'); if (b.length < 16) return null; const n = b.readInt32LE(4); let i = 8;
+  for (let k = 0; k < n && i + 8 <= b.length; k++) {
+    const sz = b.readInt32LE(i), t = b.readInt32LE(i + 4); if (sz < 8) break;
+    if (t === 6) { const c = b.readInt32LE(i + 8); let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (let j = 0; j < c; j++) { const o = i + 12 + 24 * j; if (o + 16 > b.length) break; const x = b.readDoubleLE(o), y = b.readDoubleLE(o + 8); if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      if (isFinite(x0) && x1 - x0 + y1 - y0 > 1) return { x0, y0, x1, y1 }; }
+    i += sz;
+  }
+  return null;
+}
+function sampleLines(sls) {
+  const L = (sls || []).map((o) => { const r = slBox(o.pv); return r && { h: o.handle, ...r, cx: (r.x0 + r.x1) / 2, cy: (r.y0 + r.y1) / 2 }; }).filter(Boolean).sort((a, b) => a.h - b.h);
+  const ds = []; for (let i = 1; i < L.length; i++) ds.push(Math.hypot(L[i].cx - L[i - 1].cx, L[i].cy - L[i - 1].cy));
+  const med = ds.length ? ds.slice().sort((a, b) => a - b)[ds.length >> 1] : 0, brk = Math.max(5 * med, 50);
+  L.forEach((l, i) => {
+    const a = L[i > 0 && ds[i - 1] < brk ? i - 1 : i], b = L[i < L.length - 1 && ds[i] < brk ? i + 1 : i], dx = b.cx - a.cx, dy = b.cy - a.cy;
+    const c = (v) => Math.abs(v[0] * dx + v[1] * dy) / (Math.hypot(v[0], v[1]) || 1);
+    l.P = c([l.x1 - l.x0, l.y1 - l.y0]) <= c([l.x1 - l.x0, l.y0 - l.y1]) ? [[l.x0, l.y0], [l.x1, l.y1]] : [[l.x0, l.y1], [l.x1, l.y0]];
+    l.d = i > 0 && ds[i - 1] < brk ? ds[i - 1] : 0; // المسافة من المقطع اللي قبله (0 = بداية مجموعة جديدة)
+  });
+  return L;
+}
+function tinLookup(tin) {
+  if (tin._zl) return tin._zl; const { V, T } = tin, G = new Map(), c = 10, key = (i, j) => i * 1e7 + j;
+  T.forEach((t, n) => { const a = V[t[0]], b = V[t[1]], d = V[t[2]];
+    for (let i = Math.floor(Math.min(a[0], b[0], d[0]) / c); i <= Math.floor(Math.max(a[0], b[0], d[0]) / c); i++) for (let j = Math.floor(Math.min(a[1], b[1], d[1]) / c); j <= Math.floor(Math.max(a[1], b[1], d[1]) / c); j++) { const k = key(i, j); let q = G.get(k); if (!q) G.set(k, q = []); q.push(n); } });
+  return (tin._zl = (x, y) => { const q = G.get(key(Math.floor(x / c), Math.floor(y / c))); if (!q) return null;
+    for (const n of q) { const t = T[n], a = V[t[0]], b = V[t[1]], d = V[t[2]], det = (b[1] - d[1]) * (a[0] - d[0]) + (d[0] - b[0]) * (a[1] - d[1]); if (!det) continue;
+      const l1 = ((b[1] - d[1]) * (x - d[0]) + (d[0] - b[0]) * (y - d[1])) / det, l2 = ((d[1] - a[1]) * (x - d[0]) + (a[0] - d[0]) * (y - d[1])) / det, l3 = 1 - l1 - l2;
+      if (l1 >= -1e-9 && l2 >= -1e-9 && l3 >= -1e-9) return l1 * a[2] + l2 * b[2] + l3 * d[2]; }
+    return null; });
+}
+// حجم بين سطحين بالمقاطع: مساحة (B−A) الموجبة/السالبة في كل مقطع × متوسط المسافة
+function aeaVolume(A, B, L) {
+  const za = tinLookup(A), zb = tinLookup(B); let fill = 0, cut = 0, used = 0, pf = 0, pc = 0;
+  for (const l of L) {
+    const [p, q] = l.P, len = Math.hypot(q[0] - p[0], q[1] - p[1]), n = Math.min(8000, Math.max(50, Math.ceil(len / 0.05))); let f = 0, c = 0;
+    for (let k = 0; k < n; k++) { const t = (k + 0.5) / n, x = p[0] + t * (q[0] - p[0]), y = p[1] + t * (q[1] - p[1]), a = za(x, y); if (a == null) continue; const b = zb(x, y); if (b == null) continue; const d = b - a; if (d > 0) f += d; else c -= d; }
+    f *= len / n; c *= len / n; if (f + c > 0) used++;
+    if (l.d) { fill += (f + pf) / 2 * l.d; cut += (c + pc) / 2 * l.d; }
+    pf = f; pc = c;
+  }
+  return { fill, cut, used };
 }
 
 // مجموعات للحصر: كل سطح فرق = مجموعة «surface» فيها الردم والحفر + شبكة ألوان للعرض
@@ -293,12 +349,15 @@ function surfaceGroups(src, origin) {
     pairs.push({ A, B, r, ia: i + 1, ib: j + 1 });
   }
   const lab = (s, n) => (s.name ? '«' + s.name + '»' : 'سطح ' + n) + ' (منسوب ' + s.zmin.toFixed(1) + '–' + s.zmax.toFixed(1) + '، ' + Math.round(s.area).toLocaleString('en') + ' م²)';
+  // لو اللوحة فيها خطوط مقاطع: الكمية بطريقة المقاطع زي جدول Civil (والحجم المضبوط بين السطحين بيفضل للمقارنة)
+  const SL = src && src.sls && src.sls.length >= 2 ? sampleLines(src.sls) : [];
+  if (SL.length >= 2) pairs.forEach((pp) => { try { const v = aeaVolume(pp.A.tin, pp.B.tin, SL); if (v.used >= 2) pp.r = { ...pp.r, tinFill: pp.r.fill, tinCut: pp.r.cut, fill: v.fill, cut: v.cut, aea: v.used }; } catch (e) { /* */ } });
   pairs.forEach(({ A, B, r, ia, ib }) => {
     const BT = B.tin, t = flat3(BT.T);
     const g = grid(BT.V, t);
     out.push({
       key: 'SS|' + A.handle + '|' + B.handle, kind: 'surface', src: 's2s', layer: A.name && B.name ? '«' + A.name + '» ← «' + B.name + '»' : 'سطح ' + ia + ' ← سطح ' + ib, baseName: A.name || null, compName: B.name || null, baseArea: +A.area.toFixed(3), compArea: +B.area.toFixed(3), base: lab(A, ia), comp: lab(B, ib), handle: B.handle, color: 0, hex: '#22c55e', exact: true,
-      n: B.points, tris: BT.T.length, area: +r.area.toFixed(3), fill: +r.fill.toFixed(3), cut: +r.cut.toFixed(3), length: 0, paint: 0,
+      n: B.points, tris: BT.T.length, area: +r.area.toFixed(3), fill: +r.fill.toFixed(3), cut: +r.cut.toFixed(3), length: 0, paint: 0, ...(r.aea ? { aea: r.aea, tinFill: +r.tinFill.toFixed(3), tinCut: +r.tinCut.toFixed(3) } : {}),
       zmin: +B.zmin.toFixed(3), zmax: +B.zmax.toFixed(3), items: [], ext: g.ext, geom: g.geom,
     });
   });
