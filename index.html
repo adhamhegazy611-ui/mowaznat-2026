@@ -3964,7 +3964,10 @@ async function qtAnalyze(path, size, say) {
       if (st && st.status === 'done') {
         const { data: f } = await sb.storage.from('qt').download(path + '.result.json');
         if (!f) return { error: 'تعذّر تحميل نتيجة الحصر' };
-        try { return JSON.parse(await f.text()); } catch (e) { return { error: 'نتيجة الحصر بايظة' }; }
+        try { // النتيجة ممكن تبقى مضغوطة gzip
+          const b = new Uint8Array(await f.arrayBuffer()), t = b[0] === 0x1f && b[1] === 0x8b ? await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream('gzip'))).text() : new TextDecoder().decode(b);
+          return JSON.parse(t);
+        } catch (e) { return { error: 'نتيجة الحصر بايظة' }; }
       }
       if (st && st.status === 'error') return { error: st.error || 'تعذّر قراءة اللوحة' };
       if (Date.now() - t0 > 45 * 60000) return { error: 'الحصر أخد وقت أكتر من اللازم — جرّب تاني' };
@@ -3974,7 +3977,7 @@ async function qtAnalyze(path, size, say) {
   let r = null, j = null;
   try { const { data: { session: s } } = await sb.auth.getSession(); r = await fetch('/api/qt', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.access_token }, body: JSON.stringify({ path }) }); j = await r.json().catch(() => null); } catch (e) { r = null; }
   if (r && r.ok && j && j.groups) return j;
-  if (size > 60 * 1048576 && (!r || r.status >= 500 || !j)) return viaJob(); // وقعت على Vercel (غالباً الذاكرة)
+  if ((r && r.status === 413) || (j && j.big) || !r || r.status >= 500 || !j) return viaJob(); // النتيجة كبيرة على Vercel أو وقعت // وقعت على Vercel (غالباً الذاكرة)
   return { error: (j && j.error) || 'تعذّر الاتصال' };
 }
 async function qtUpload(path, f, say) {

@@ -98,7 +98,13 @@ module.exports = async (req, res) => {
       } catch (e) { result.warnings.push('تعذّر قراءة سطوح Civil 3D'); }
     }
     result.warnings = result.warnings.filter((w) => !/Civil 3D/.test(w));
-    return res.status(200).json(result);
+    // النتيجة الكبيرة: مضغوطة (حد Vercel للرد 4.5 ميجا) — ولو لسه كبيرة، الصفحة تبعتها للسيرفر الكبير
+    const body = Buffer.from(JSON.stringify(result));
+    if (body.length < 3 * 1048576 || req.headers.authorization === 'Bearer runner') return res.status(200).json(result);
+    const gz = zlib.gzipSync(body, { level: 6 });
+    if (gz.length > 4.2 * 1048576) return res.status(413).json({ error: 'نتيجة اللوحة كبيرة', big: true });
+    res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.setHeader('Content-Encoding', 'gzip');
+    return res.status(200).end(gz);
   } catch (e) {
     return res.status(500).json({ error: 'خطأ أثناء الحصر', detail: String(e && e.message || e).slice(0, 300) });
   } finally {
