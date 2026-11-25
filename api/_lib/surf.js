@@ -181,7 +181,7 @@ function s2s(A0, B0) {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; PA.forEach((p) => { x0 = Math.min(x0, p.x0); y0 = Math.min(y0, p.y0); x1 = Math.max(x1, p.x1); y1 = Math.max(y1, p.y1); });
   const cs = Math.max(1, Math.sqrt((x1 - x0) * (y1 - y0) / Math.max(1, PA.length)) * 2), G = new Map(), key = (i, j) => i * 1e6 + j;
   PA.forEach((p, n) => { for (let i = Math.floor((p.x0 - x0) / cs); i <= Math.floor((p.x1 - x0) / cs); i++) for (let j = Math.floor((p.y0 - y0) / cs); j <= Math.floor((p.y1 - y0) / cs); j++) { const k = key(i, j); let a = G.get(k); if (!a) G.set(k, a = []); a.push(n); } });
-  let area = 0, fill = 0, cut = 0; const seen = new Int32Array(PA.length).fill(-1);
+  let area = 0, fill = 0, cut = 0, fillA = 0, cutA = 0; const seen = new Int32Array(PA.length).fill(-1);
   PB.forEach((pb, nb) => {
     const tb = ccw(pb.p.map((v) => [v[0], v[1]]));
     for (let i = Math.floor((pb.x0 - x0) / cs); i <= Math.floor((pb.x1 - x0) / cs); i++) for (let j = Math.floor((pb.y0 - y0) / cs); j <= Math.floor((pb.y1 - y0) / cs); j++) {
@@ -190,10 +190,13 @@ function s2s(A0, B0) {
         const ta = ccw(pa.p.map((v) => [v[0], v[1]])); let poly = tb; for (let e = 0; e < 3 && poly.length; e++) poly = clip(poly, ta[e], ta[(e + 1) % 3]);
         if (poly.length < 3) continue; const ar = Math.abs(polyArea(poly)); if (ar < 1e-9) continue; area += ar;
         const d = (x, y) => zAt(pb, x, y) - zAt(pa, x, y), nd = (x, y) => -d(x, y);
-        fill += integ(halfPos(poly, d), d); cut += integ(halfPos(poly, nd), nd); }
+        const hp = halfPos(poly, d), hn = halfPos(poly, nd);
+        fill += integ(hp, d); cut += integ(hn, nd);
+        const ap = halfPos(poly, (x, y) => d(x, y) - 0.005), an = halfPos(poly, (x, y) => nd(x, y) - 0.005); // المسطح بس اللي فيه فرق فعلي (> 5 مم)
+        if (ap.length >= 3) fillA += Math.abs(polyArea(ap)); if (an.length >= 3) cutA += Math.abs(polyArea(an)); }
     }
   });
-  return { area, fill, cut };
+  return { area, fill, cut, fillA, cutA }; // fillA/cutA: المسطح (في المسقط) اللي فيه ردم / حفر
 }
 
 // قراءة خفيفة لناتج dwgread -O JSON من غير JSON.parse للملف كله (اللوح الكبيرة ممكن تبقى مئات الميجا)
@@ -357,7 +360,7 @@ function surfaceGroups(src, origin) {
     const g = grid(BT.V, t);
     out.push({
       key: 'SS|' + A.handle + '|' + B.handle, kind: 'surface', src: 's2s', layer: A.name && B.name ? '«' + A.name + '» ← «' + B.name + '»' : 'سطح ' + ia + ' ← سطح ' + ib, baseName: A.name || null, compName: B.name || null, baseArea: +A.area.toFixed(3), compArea: +B.area.toFixed(3), base: lab(A, ia), comp: lab(B, ib), handle: B.handle, color: 0, hex: '#22c55e', exact: true,
-      n: B.points, tris: BT.T.length, area: +r.area.toFixed(3), fill: +r.fill.toFixed(3), cut: +r.cut.toFixed(3), length: 0, paint: 0, ...(r.aea ? { aea: r.aea, tinFill: +r.tinFill.toFixed(3), tinCut: +r.tinCut.toFixed(3) } : {}),
+      n: B.points, tris: BT.T.length, area: +r.area.toFixed(3), fill: +r.fill.toFixed(3), cut: +r.cut.toFixed(3), fillA: +(r.fillA || 0).toFixed(3), cutA: +(r.cutA || 0).toFixed(3), length: 0, paint: 0, ...(r.aea ? { aea: r.aea, tinFill: +r.tinFill.toFixed(3), tinCut: +r.tinCut.toFixed(3) } : {}),
       zmin: +B.zmin.toFixed(3), zmax: +B.zmax.toFixed(3), items: [], ext: g.ext, geom: g.geom,
     });
   });
