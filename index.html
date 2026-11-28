@@ -5930,12 +5930,120 @@ function hubRender() {
   stat('إجمالي الموازنة (شامل)', mz && mz.total_incl != null ? hubNum(mz.total_incl) : '—', 'mz');
   m.appendChild(st);
   const tabs = pjEl('div', 'qtabs');
-  const T = [IS_QT && ['qt', 'اللوح والكميات'], ['pa', 'التحليل والموازنة'], ['est', 'المقايسات'], ['mz', 'موقف المشروع']].filter(Boolean);
+  const T = [IS_QT && ['qt', 'اللوح والكميات'], ['pa', 'التحليل والموازنة'], ['est', 'المقايسات'], ['mz', 'موقف المشروع'], ['rep', 'التقارير']].filter(Boolean);
   if (!T.some(([k]) => k === HUB.tab)) HUB.tab = T[0][0];
   T.forEach(([k, t]) => { const b = pjEl('button', HUB.tab === k ? 'on' : '', t); b.type = 'button'; b.onclick = () => { HUB.tab = k; hubRender(); }; tabs.appendChild(b); });
   m.appendChild(tabs);
   const cd = pjEl('div', 'qcard'); m.appendChild(cd);
-  ({ qt: hubQT, pa: hubPA, est: hubEst, mz: hubMZ })[HUB.tab](cd);
+  ({ qt: hubQT, pa: hubPA, est: hubEst, mz: hubMZ, rep: hubRep })[HUB.tab](cd);
+}
+
+// ===== التقارير: فحص التقرير — سكان حقيقي ولا متعدل (فوتوشوب/محرر PDF) =====
+// مؤشرات بس مش حكم نهائي: بيانات الملف (البرنامج اللي عمله وتواريخه)، تعديلات بعد الحفظ، صور ملزوقة، وتحليل مستوى الخطأ (ELA) للصور
+const REP_SCAN = /canon|hp ?scan|hewlett|xerox|ricoh|konica|kyocera|epson|brother|scansnap|fujitsu|sharp|toshiba|lexmark|samsung|naps2|scanner|twain|wia/i;
+const REP_PHONE = /camscanner|adobe scan|microsoft lens|office lens|genius scan|tinyscanner|clear ?scan|vflat/i;
+const REP_EDIT = /photoshop|illustrator|gimp|paint\.net|pixlr|photopea|canva|corel|affinity|snapseed|picsart/i;
+const REP_PDFED = /sejda|pdfescape|ilovepdf|smallpdf|pdf-?xchange|nitro|pdfelement|wondershare|foxit phantom|pdf ?editor|soda pdf|pdffiller|dochub|pdf24|pdfcandy/i;
+const REP_DOC = /microsoft.*word|word for|libreoffice|openoffice|google docs|wps|excel|powerpoint|autocad/i;
+async function repAnalyze(file) {
+  const buf = new Uint8Array(await file.arrayBuffer()), n = file.name.toLowerCase(), S = [], add = (lv, t) => S.push({ lv, t }), meta = {};
+  const latin = (a, b) => { let o = ''; for (let i = a; i < b; i++) o += String.fromCharCode(buf[i]); return o; };
+  const imgs = [];
+  const isPdf = buf[0] === 0x25 && buf[1] === 0x50, isJpg = buf[0] === 0xff && buf[1] === 0xd8, isPng = buf[0] === 0x89 && buf[1] === 0x50;
+  const softCheck = (sw, where) => {
+    if (!sw) return;
+    if (REP_EDIT.test(sw)) add('bad', '⛔ ' + where + ' معمول/متعدل ببرنامج تعديل صور: «' + sw + '»');
+    else if (REP_PDFED.test(sw)) add('bad', '⛔ ' + where + ' متعدل ببرنامج تعديل PDF: «' + sw + '»');
+    else if (REP_DOC.test(sw)) add('warn', '⚠️ ' + where + ' طالع من برنامج كتابة (' + sw + ') — مش سكان');
+    else if (REP_SCAN.test(sw)) add('ok', '✅ ' + where + ' طالع من جهاز سكانر: «' + sw + '»');
+    else if (REP_PHONE.test(sw)) add('warn', '⚠️ ' + where + ' متصور بتطبيق موبايل: «' + sw + '»');
+    else add('info', 'ℹ️ ' + where + ' — البرنامج: «' + sw + '»');
+  };
+  if (isPdf) {
+    meta.type = 'PDF'; const t = latin(0, buf.length);
+    const g = (k) => { const m = new RegExp('/' + k + '\\s*\\(([^)]{0,200})\\)').exec(t); return m ? m[1] : null; };
+    const xmp = (k) => { const m = new RegExp('<' + k + '>([^<]{0,200})</' + k + '>').exec(t) || new RegExp(k + '="([^"]{0,200})"').exec(t); return m ? m[1] : null; };
+    meta.producer = g('Producer') || xmp('pdf:Producer'); meta.creator = g('Creator') || xmp('xmp:CreatorTool');
+    const pd = (v) => { const m = /D:(\d{4})(\d{2})(\d{2})(\d{2})?(\d{2})?/.exec(v || ''); return m ? m[1] + '-' + m[2] + '-' + m[3] + (m[4] ? ' ' + m[4] + ':' + (m[5] || '00') : '') : null; };
+    meta.created = pd(g('CreationDate')) || (xmp('xmp:CreateDate') || '').slice(0, 16) || null; meta.modified = pd(g('ModDate')) || (xmp('xmp:ModifyDate') || '').slice(0, 16) || null;
+    softCheck(meta.creator, 'الملف'); if (meta.producer !== meta.creator) softCheck(meta.producer, 'الـ PDF');
+    if (/photoshop/i.test(t) && !REP_EDIT.test((meta.creator || '') + (meta.producer || ''))) add('bad', '⛔ جوه الملف آثار فوتوشوب (Photoshop) في بيانات الصور');
+    const eofs = (t.match(/%%EOF/g) || []).length; meta.saves = eofs;
+    if (eofs > 1) add('warn', '⚠️ الملف اتحفظ ' + eofs + ' مرات (اتعدل بعد ما اتعمل) — السكان العادي بيتحفظ مرة واحدة');
+    if (meta.created && meta.modified && meta.created.slice(0, 16) !== meta.modified.slice(0, 16)) add('warn', '⚠️ تاريخ التعديل (' + meta.modified + ') غير تاريخ الإنشاء (' + meta.created + ')');
+    const pages = (t.match(/\/Type\s*\/Page[^s]/g) || []).length, nImg = (t.match(/\/Subtype\s*\/Image/g) || []).length, nFont = (t.match(/\/Type\s*\/Font/g) || []).length;
+    const nAnn = (t.match(/\/Subtype\s*\/(FreeText|Stamp|Square|Ink|Widget)/g) || []).length; meta.pages = pages; meta.images = nImg; meta.fonts = nFont;
+    if (nImg && !nFont) add('ok', '✅ الصفحات صور بس من غير كتابة (شكل السكان الطبيعي)');
+    if (nImg && nFont) add('warn', '⚠️ فيه كتابة مكتوبة على الكمبيوتر (' + nFont + ' خط) فوق صور السكان — ممكن تكون اتضافت بعد السكان');
+    if (!nImg && nFont) add('warn', '⚠️ الملف كله كتابة كمبيوتر ومفيش ولا صورة — ده مش سكان');
+    if (pages && nImg > pages * 1.5) add('warn', '⚠️ فيه ' + nImg + ' صورة في ' + pages + ' صفحة — ممكن أجزاء اتلزقت على الصفحة');
+    if (nAnn) add('warn', '⚠️ فيه ' + nAnn + ' إضافة فوق الصفحة (ختم/نص/توقيع اتحط بعد كده)');
+    // صور JPEG جوه الـ PDF للتحليل
+    const re = /\/Filter\s*\/DCTDecode[\s\S]{0,400}?stream\r?\n/g; let m;
+    while ((m = re.exec(t)) && imgs.length < 6) { const st = m.index + m[0].length; let e = st; while (e < buf.length - 1 && !(buf[e] === 0xff && buf[e + 1] === 0xd9)) e++; if (e - st > 5000) imgs.push(buf.slice(st, e + 2)); }
+  } else if (isJpg || isPng) {
+    meta.type = isJpg ? 'JPG' : 'PNG';
+    if (isJpg) {
+      let i = 2;
+      while (i < buf.length - 4 && buf[i] === 0xff) {
+        const mk = buf[i + 1], ln = (buf[i + 2] << 8) | buf[i + 3]; const seg = latin(i + 4, Math.min(i + 2 + ln, buf.length));
+        if (mk === 0xe1 && seg.startsWith('Exif')) { const sw = /(Adobe Photoshop[^\0]{0,40}|GIMP[^\0]{0,20}|Snapseed|Picsart|Canva)/.exec(seg); if (sw) meta.software = sw[1]; const mm = /(Canon|NIKON|SONY|samsung|Apple|HUAWEI|Xiaomi|OPPO|vivo|realme|HP|EPSON|RICOH)[^\0]{0,30}/i.exec(seg); if (mm) meta.device = mm[0]; const dt = /(\d{4}:\d{2}:\d{2} \d{2}:\d{2}:\d{2})/.exec(seg); if (dt) meta.date = dt[1]; }
+        if (mk === 0xe1 && seg.startsWith('http://ns.adobe.com/xap')) { const ct = /CreatorTool(?:>|=")([^<"]{0,80})/.exec(seg); if (ct) meta.software = meta.software || ct[1]; if (/photoshop:History|stEvt:action="saved"/.test(seg)) meta.history = true; }
+        if (mk === 0xed && /Photoshop 3\.0/.test(seg)) meta.ps = true;
+        if (mk === 0xda) break; i += 2 + ln;
+      }
+      imgs.push(buf);
+    } else { const t = latin(0, Math.min(buf.length, 200000)); const sw = /tEXtSoftware\0([^\0]{0,60})/.exec(t) || /CreatorTool(?:>|=")([^<"]{0,80})/.exec(t); if (sw) meta.software = sw[1]; imgs.push(buf); }
+    softCheck(meta.software, 'الصورة');
+    if (meta.ps) add('bad', '⛔ الصورة فيها بيانات فوتوشوب (Photoshop 3.0)');
+    if (meta.history) add('bad', '⛔ الصورة فيها سجل تعديلات (اتفتحت واتحفظت في برنامج تعديل)');
+    if (meta.device) add('info', 'ℹ️ الجهاز اللي صورها: ' + meta.device + (meta.date ? ' — ' + meta.date : ''));
+    if (!meta.software && !meta.device && isJpg) add('info', 'ℹ️ الصورة مفيهاش أي بيانات (اتشالت أو اتبعتت على واتساب) — المؤشرات بتعتمد على تحليل الصورة بس');
+  } else { add('warn', 'الملف لازم يكون PDF أو صورة (JPG/PNG)'); return { meta, signs: S, ela: [] }; }
+  // تحليل مستوى الخطأ (ELA): الأجزاء المتعدلة بتبان أفتح/مختلفة عن باقي الصورة
+  const ela = [];
+  for (const b of imgs.slice(0, 4)) {
+    try {
+      const bm = await createImageBitmap(new Blob([b])); const sc = Math.min(1, 1400 / Math.max(bm.width, bm.height)), W = Math.round(bm.width * sc), H = Math.round(bm.height * sc);
+      const c1 = document.createElement('canvas'); c1.width = W; c1.height = H; const x1 = c1.getContext('2d'); x1.drawImage(bm, 0, 0, W, H);
+      const a = x1.getImageData(0, 0, W, H);
+      const re2 = await createImageBitmap(await new Promise((r) => c1.toBlob(r, 'image/jpeg', 0.9)));
+      const c2 = document.createElement('canvas'); c2.width = W; c2.height = H; const x2 = c2.getContext('2d'); x2.drawImage(re2, 0, 0); const bb = x2.getImageData(0, 0, W, H);
+      const o = x2.createImageData(W, H); const cell = 16, gw = Math.ceil(W / cell), gh = Math.ceil(H / cell), sum = new Float64Array(gw * gh), cnt = new Float64Array(gw * gh);
+      for (let k = 0; k < a.data.length; k += 4) { const d = (Math.abs(a.data[k] - bb.data[k]) + Math.abs(a.data[k + 1] - bb.data[k + 1]) + Math.abs(a.data[k + 2] - bb.data[k + 2])) / 3; const v = Math.min(255, d * 18); o.data[k] = v; o.data[k + 1] = v * 0.6; o.data[k + 2] = 255 - v; o.data[k + 3] = 255; const px = (k / 4) % W, py = Math.floor(k / 4 / W), gi = Math.floor(py / cell) * gw + Math.floor(px / cell); sum[gi] += d; cnt[gi]++; }
+      x2.putImageData(o, 0, 0);
+      const av = Array.from(sum, (v, i) => v / (cnt[i] || 1)).filter((v) => v > 0.05).sort((p, q) => p - q), md = av[av.length >> 1] || 0, hi = av.filter((v) => v > md * 4 + 1.5).length / (av.length || 1);
+      ela.push({ url: c2.toDataURL('image/jpeg', 0.8), hi });
+    } catch (e) { /* صيغة مش مدعومة */ }
+  }
+  if (ela.some((e) => e.hi > 0.03 && e.hi < 0.35)) add('warn', '⚠️ تحليل الصورة (ELA): فيه أجزاء بتختلف عن باقي الصفحة — بص على الصورة تحت، الأماكن الفاتحة/البرتقالي المتجمعة ممكن تكون متعدلة');
+  else if (ela.length) add('ok', '✅ تحليل الصورة (ELA): مفيش أجزاء شاذة واضحة');
+  return { meta, signs: S, ela };
+}
+function hubRep(cd) {
+  const { h } = HUB.cur;
+  cd.appendChild(pjEl('div', 'qhint', 'ارفع التقرير (PDF أو صورة) وأنا أفحصه: هل هو سكان حقيقي ولا معمول/متعدل على الكمبيوتر (فوتوشوب أو محرر PDF). دي مؤشرات قوية بس مش حكم نهائي — الأماكن المشكوك فيها بتبان على الصورة.'));
+  const r = pjEl('div', 'hrow'), fi = pjEl('input'); fi.type = 'file'; fi.accept = '.pdf,.jpg,.jpeg,.png'; r.appendChild(fi); cd.appendChild(r);
+  const res = pjEl('div'); cd.appendChild(res); const hist = pjEl('div'); cd.appendChild(hist);
+  const show = (box, nm, R) => {
+    const bad = R.signs.filter((x) => x.lv === 'bad').length, warn = R.signs.filter((x) => x.lv === 'warn').length;
+    const v = bad ? ['bad', '⛔ مضروب غالباً — فيه علامات تعديل واضحة'] : warn >= 2 ? ['warn', '⚠️ مشكوك فيه — محتاج مراجعة'] : warn ? ['warn', '⚠️ فيه ملاحظة — راجعها'] : ['ok', '✅ مفيش علامات تعديل — شكله سكان حقيقي'];
+    const c = pjEl('div', 'qinsok ' + (v[0] === 'bad' ? 'bad' : v[0] === 'warn' ? 'warn' : '')); c.append(pjEl('b', '', nm + ': ' + v[1]));
+    const m = R.meta || {}; c.appendChild(pjEl('div', 'qhint', [m.type, m.creator && 'المصدر: ' + m.creator, m.producer && m.producer !== m.creator && 'الـ PDF: ' + m.producer, m.software && 'البرنامج: ' + m.software, m.created && 'اتعمل: ' + m.created, m.modified && 'اتعدل: ' + m.modified, m.pages && m.pages + ' صفحة'].filter(Boolean).join(' · ')));
+    R.signs.forEach((sg) => c.appendChild(pjEl('div', '', sg.t)));
+    (R.ela || []).forEach((e) => { const im = document.createElement('img'); im.src = e.url; im.style.cssText = 'max-width:100%;border-radius:8px;margin-top:6px'; im.title = 'تحليل ELA: الأزرق = طبيعي، الفاتح/البرتقالي المتجمع = ممكن متعدل'; c.appendChild(im); });
+    box.appendChild(c);
+  };
+  fi.onchange = async () => {
+    const f = fi.files[0]; if (!f) return; res.innerHTML = '<span class="spin"></span> بيفحص التقرير…';
+    let R; try { R = await repAnalyze(f); } catch (e) { res.textContent = 'تعذّر فحص الملف'; return; }
+    res.textContent = ''; show(res, f.name, R);
+    await sb.from('hub_reports').insert({ hub_id: h.id, name: f.name, result: { meta: R.meta, signs: R.signs } });
+  };
+  (async () => {
+    const { data } = await sb.from('hub_reports').select('name,result,created_at').eq('hub_id', h.id).order('created_at', { ascending: false }).limit(30);
+    if (data && data.length) { hist.appendChild(pjEl('h3', '', 'التقارير اللي اتفحصت قبل كده')); data.forEach((x) => show(hist, x.name + ' (' + new Date(x.created_at).toLocaleDateString('ar-EG') + ')', { ...x.result, ela: [] })); }
+  })();
 }
 function hubNone(cd, txt, btn, fn) { cd.appendChild(pjEl('div', 'qempty', txt)); if (btn) { const b = pjEl('button', 'qbtn on', btn); b.type = 'button'; b.onclick = fn; cd.appendChild(b); } }
 function hubQT(cd) {
