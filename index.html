@@ -2124,7 +2124,8 @@ function paShow0(it) {
   if (it.safety) { paPrices(m, hl, el); paNav($('paQ').value); return; }
   const sh = PA.sheets[it.i], si = it.i;
   const hb = el('div', 'hb'), rb = el('button', '', 'إعادة ضبط الشيت'); rb.type = 'button'; rb.onclick = () => { PAE.reset(si); delete PAnames[si]; delete PAhid[si]; paSave(); paNav($('paQ').value); paShow(Object.assign({}, it, { t: PA.sheets[si].title })); };
-  hb.appendChild(rb); hero.appendChild(hb);
+  const pb = el('button', '', '🖨 طباعة'); pb.type = 'button'; pb.onclick = () => printEl(tw, '@page{size:A4 portrait;margin:10mm}@media print{body.printing .prt-wrap table{width:100%!important}}', it.t);
+  hb.append(pb, rb); hero.appendChild(hb);
   const hint = el('div', 'hint2');
   const tg = el('button', 'tgl', 'إظهار خانات الإدخال'); tg.type = 'button'; hint.appendChild(tg);
   const hm = el('button', 'tgl', PAhm ? 'إنهاء وضع الإخفاء' : 'إخفاء صف/عمود'); hm.type = 'button'; hm.title = 'اضغط على أي خانة واختار تخفي صفها أو عمودها (أو كليك يمين على الخانة)';
@@ -3579,14 +3580,26 @@ async function pjPdf() {
   const blob = pjPdfBytes(pages, A3[0], A3[1], MG);
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'موازنة ' + PJ.cur.name + '.pdf'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
-// طباعة من غير نافذة منبثقة (iframe مخفي) — بتشتغل حتى لو المتصفح قافل الـ popups
+// طباعة: في نفس الصفحة (من غير نوافذ ولا iframe) — نسخة من الجزء المطلوب جوه حاوية بنفس id الشاشة عشان الألوان والتنسيق، وكل حاجة تانية بتستخبى
+function printEl(node, css, title) {
+  if (!node) return;
+  let host = node; while (host.parentElement && host.parentElement !== document.body) host = host.parentElement;
+  document.querySelectorAll('.prt-wrap').forEach((x) => x.remove());
+  const wrap = document.createElement('div'), hid = host.id;
+  wrap.className = (host.className || '') + ' prt-wrap'; if (hid) { host.id = hid + '__prt'; wrap.id = hid; }
+  const cl = node.cloneNode(true); cl.querySelectorAll('.noexp,button,select,input,textarea').forEach((x) => x.remove());
+  wrap.appendChild(cl); document.body.appendChild(wrap); document.body.classList.add('printing');
+  const st = document.createElement('style');
+  st.textContent = '@media screen{.prt-wrap{display:none!important}}@media print{body.printing>*:not(.prt-wrap){display:none!important}body.printing .prt-wrap{display:block!important;position:static!important;inset:auto!important;overflow:visible!important;height:auto!important;max-height:none!important;width:auto!important;transform:none!important;clip-path:none!important;background:#fff!important}body.printing .prt-wrap .pv{display:inline!important}body.printing .prt-wrap .tw{overflow:visible!important;max-height:none!important}body.printing{background:#fff!important}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}' + (css || '');
+  document.head.appendChild(st);
+  const t0 = document.title; if (title) document.title = title;
+  let fin = false; const done = () => { if (fin) return; fin = true; wrap.remove(); if (hid) host.id = hid; st.remove(); document.body.classList.remove('printing'); document.title = t0; removeEventListener('afterprint', done); };
+  addEventListener('afterprint', done);
+  setTimeout(() => { try { window.print(); } catch (e) { alert('تعذّرت الطباعة'); } setTimeout(done, 1000); }, 120);
+}
 function pjPrint() {
-  const h = pjBoqHtml(); if (!h) return;
-  document.querySelectorAll('iframe.pjprint').forEach((x) => x.remove());
-  const f = document.createElement('iframe'); f.className = 'pjprint'; f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
-  document.body.appendChild(f); const d = f.contentWindow.document; d.open(); d.write(h); d.close();
-  const go = () => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { alert('تعذّرت الطباعة'); } setTimeout(() => f.remove(), 60000); };
-  if (d.fonts && d.fonts.ready) d.fonts.ready.then(() => setTimeout(go, 250)); else setTimeout(go, 600);
+  const pp = $('pjPaper'); if (!pp) return;
+  printEl(pp, PJ_A3_CSS.replace('@media print{', '@media print{body.printing .prt-wrap .pjpaper{max-width:none;padding:0;margin:0}'), 'موازنة ' + (PJ.cur ? PJ.cur.name : ''));
 }
 
 
