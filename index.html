@@ -4626,12 +4626,12 @@ function qtSatBox(x, d) {
     });
   };
   const poll = async (id, start) => {
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < 600; i++) {
       const { data: j } = await sb.from('qt_jobs').select('status,error,summary').eq('id', id).maybeSingle();
       if (!j) { out.textContent = 'تعذّر قراءة النتيجة'; return; }
       if (j.status === 'done') { render(j.summary && j.summary.dem, start); bt.disabled = false; bt.textContent = '🛰 إعادة المراجعة'; return; }
       if (j.status === 'error') { out.textContent = '⚠️ ' + (j.error || 'فشلت المراجعة'); bt.disabled = false; return; }
-      out.innerHTML = '<span class="spin"></span> السيرفر الكبير بيقارن اللوحة بداتا القمر الصناعي (بياخد 10–20 دقيقة)…'; await new Promise((r) => setTimeout(r, 20000));
+      out.innerHTML = '<span class="spin"></span> السيرفر بيقارن اللوحة بداتا القمر الصناعي (حوالي دقيقة)…'; await new Promise((r) => setTimeout(r, 4000));
     }
   };
   const getStart = async () => {
