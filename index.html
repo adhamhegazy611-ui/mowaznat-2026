@@ -5518,55 +5518,87 @@ function hubTable(heads, rows) {
   heads.forEach((x) => hr.appendChild(pjEl('th', '', x))); t.appendChild(hr);
   rows.forEach((r) => t.appendChild(r)); w.appendChild(t); return w;
 }
+
+// ===== الربط التلقائي: كل مشروع بيتربط لوحده بالحصر والموازنة وموقف المشروع والمقايسات من اسمه =====
+const HUB_STOP = new Set(['مشروع', 'موازنه', 'تقديريه', 'لاعمال', 'اعمال', 'بطول', 'خاصه', 'لصالح']);
+function hubToks(n) {
+  let t = String(n || '').toLowerCase().replace(/[ً-ْـ]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي')
+    .replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/(\d)([^\d\s.])/g, '$1 $2').replace(/([^\d\s.])(\d)/g, '$1 $2').replace(/[^ء-يa-z0-9.]+/g, ' ');
+  return t.split(' ').map((w) => w.replace(/^(وال|بال|لل|ال)(?=..)/, '').replace(/^و(?=...)/, '')).filter((w) => w && !HUB_STOP.has(w) && w !== 'كم');
+}
+function hubTokEq(a, b) {
+  if (a === b) return true; if (/\d/.test(a) || /\d/.test(b) || Math.min(a.length, b.length) < 4 || Math.abs(a.length - b.length) > 1) return false;
+  let i = 0, j = 0, e = 0; while (i < a.length && j < b.length) { if (a[i] === b[j]) { i++; j++; continue; } if (++e > 1) return false; if (a.length > b.length) i++; else if (b.length > a.length) j++; else { i++; j++; } }
+  return e + (a.length - i) + (b.length - j) <= 1;
+}
+// كل كلمات الاسم الأقصر موجودة في التاني (مع تسامح حرف غلط) — والدرجة على قد التشابه
+function hubScore(a, b) {
+  const A = hubToks(a), B = hubToks(b); if (!A.length || !B.length) return 0;
+  const [S, L] = A.length <= B.length ? [A, B] : [B, A];
+  const used = new Set(); let hit = 0;
+  S.forEach((w) => { const k = L.findIndex((x, i) => !used.has(i) && hubTokEq(w, x)); if (k >= 0) { used.add(k); hit++; } });
+  if (hit < S.length || (S.length === 1 && S[0].length < 4)) return 0;
+  return hit / (A.length + B.length - hit);
+}
+async function hubAuto(hs, qps, pps, mzs) {
+  const hubs = hs.map((h) => ({ ...h })), ch = new Map(), qUp = [];
+  const best = (name, rows, taken) => { let b = null, bs = 0; rows.forEach((r) => { if (taken && taken.has(String(r.id))) return; const sc = hubScore(name, r.name); if (sc > bs) { bs = sc; b = r; } }); return b; };
+  const touch = (h, k, v) => { if (String(h[k] || '') === String(v || '')) return; h[k] = v; ch.set(h, true); };
+  // 1) الحصر: كل مشروع حصر ليه مشروع
+  const usedQ = new Set(hubs.map((h) => h.qt_id).filter(Boolean).map(String));
+  (qps || []).forEach((q) => {
+    if (usedQ.has(String(q.id))) return;
+    let h = best(q.name, hubs.filter((x) => !x.qt_id));
+    if (!h) { h = { name: q.name, qt_id: null, pa_id: null, mz_id: null, est_q: q.name, _new: true }; hubs.push(h); }
+    touch(h, 'qt_id', q.id); usedQ.add(String(q.id));
+  });
+  // 2) الموازنة: اللي الحصر مربوط بيها الأول، وبعدين بالاسم
+  const qBy = {}; (qps || []).forEach((q) => { qBy[q.id] = q; });
+  hubs.forEach((h) => { const q = h.qt_id && qBy[h.qt_id]; if (q && q.pa_id && (pps || []).some((p) => p.id === q.pa_id)) touch(h, 'pa_id', q.pa_id); });
+  const usedP = new Set(hubs.map((h) => h.pa_id).filter(Boolean).map(String));
+  (pps || []).forEach((p) => {
+    if (usedP.has(String(p.id))) return;
+    const h0 = best(p.name, hubs); if (h0 && h0.pa_id) return; // نسخة مكررة من موازنة مشروع مربوط خلاص
+    const mp = best(p.name, mzs || []); if (mp && hubs.some((x) => x.pa_id && (String(x.mz_id) === String(mp.id) || best(x.name, mzs || []) === mp))) return; // نفس المشروع باسم فيه غلطة
+    let h = best(p.name, hubs.filter((x) => !x.pa_id));
+    if (!h) { h = { name: p.name, qt_id: null, pa_id: null, mz_id: null, est_q: p.name, _new: true }; hubs.push(h); }
+    touch(h, 'pa_id', p.id); usedP.add(String(p.id));
+  });
+  // الحصر يتربط بنفس الموازنة (عشان «التسعير والموازنة» و«تحديث الكميات»)
+  hubs.forEach((h) => { const q = h.qt_id && qBy[h.qt_id]; if (q && h.pa_id && !q.pa_id) { q.pa_id = h.pa_id; qUp.push(q); } });
+  // 3) موقف المشروع (الموازنات) + كلمة البحث في المقايسات
+  const usedM = new Set(hubs.map((h) => h.mz_id).filter((x) => x != null).map(String));
+  hubs.forEach((h) => { if (h.mz_id == null) { const m = best(h.name, mzs || [], usedM); if (m) { touch(h, 'mz_id', m.id); usedM.add(String(m.id)); } } if (!h.est_q) touch(h, 'est_q', h.name); });
+  for (const h of hubs) {
+    if (h._new) { const { _new, ...row } = h; const { data } = await sb.from('hub_projects').insert(row).select('*').single(); if (data) Object.assign(h, data); delete h._new; }
+    else if (ch.has(h)) await sb.from('hub_projects').update({ qt_id: h.qt_id, pa_id: h.pa_id, mz_id: h.mz_id, est_q: h.est_q }).eq('id', h.id);
+  }
+  for (const q of qUp) await sb.from('qt_projects').update({ pa_id: q.pa_id }).eq('id', q.id);
+  return hubs.filter((h) => h.id);
+}
 async function hubHome() {
   HUB.cur = null;
   const m = qtMain('المشاريع');
   const hero = pjEl('div', 'qhero'), hl = pjEl('div');
-  hl.append(pjEl('h2', '', 'المشاريع'), pjEl('p', '', 'كل مشروع فيه: اللوح والكميات، تحليل الأسعار والموازنة، المقايسات، وموقف المشروع — في مكان واحد.'));
+  hl.append(pjEl('h2', '', 'المشاريع'), pjEl('p', '', 'كل مشروع مربوط لوحده بالحصر والموازنة والمقايسات وموقف المشروع — افتح المشروع تلاقي كل حاجة.'));
   const nb = pjEl('button', 'qbtn on', '+ مشروع جديد'); nb.type = 'button'; nb.onclick = hubNew;
   const sb2 = pjEl('button', 'qbtn', '📎 ربط شيتات الموازنات'); sb2.type = 'button'; sb2.title = 'اختار ملفات الإكسيل وكل ملف يتربط بالمشروع بتاعه في الموازنات'; sb2.onclick = mzBulk;
   const hb0 = pjEl('div', 'hb'); hb0.append(nb, sb2);
   hero.append(hl, hb0); m.appendChild(hero);
   const grid = pjEl('div', 'qgrid'); grid.appendChild(pjEl('div', 'qempty', 'جاري التحميل…')); m.appendChild(grid);
-  const sug = pjEl('div'); sug.style.marginTop = '16px'; m.appendChild(sug);
-  const [{ data: hs, error }, { data: qps }, { data: pps }, { data: its }] = await Promise.all([
+  const [{ data: hs, error }, { data: qps }, { data: pps }, { data: mzs }] = await Promise.all([
     sb.from('hub_projects').select('*').order('created_at', { ascending: false }),
     IS_QT ? sb.from('qt_projects').select('id,name,pa_id') : Promise.resolve({ data: [] }),
-    sb.from('pa_projects').select('id,name,items'),
-    IS_QT ? sb.from('qt_items').select('project_id') : Promise.resolve({ data: [] }),
+    sb.from('pa_projects').select('id,name'),
+    sb.from('mz_projects').select('id,name,battalion').order('sort_order'),
   ]);
   grid.textContent = '';
   if (error) { grid.appendChild(pjEl('div', 'qempty', 'تعذّر تحميل المشاريع.')); return; }
-  HUB.list = hs || [];
-  const cnt = {}; (its || []).forEach((x) => { cnt[x.project_id] = (cnt[x.project_id] || 0) + 1; });
-  const paBy = {}; (pps || []).forEach((p) => { paBy[p.id] = p; });
+  let list = hs || [];
+  try { list = await hubAuto(list, qps, pps, mzs); } catch (e) { /* الربط التلقائي اختياري */ }
+  HUB.list = list.sort((x, y) => String(x.name).localeCompare(String(y.name), 'ar'));
   if (!HUB.list.length) grid.appendChild(pjEl('div', 'qempty', 'لسه مفيش مشاريع. دوس «+ مشروع جديد».'));
-  HUB.list.forEach((h) => {
-    const c = pjEl('button', 'qproj'); c.type = 'button';
-    const bits = [];
-    if (h.qt_id && IS_QT) bits.push((cnt[h.qt_id] || 0) + ' بند حصر');
-    if (h.pa_id && paBy[h.pa_id]) bits.push((paBy[h.pa_id].items || []).length + ' بند موازنة');
-    if (h.mz_id) bits.push('موقف المشروع');
-    c.append(pjEl('b', '', h.name), pjEl('span', '', bits.join(' · ') || 'مش مربوط لسه'), pjEl('small', '', new Date(h.created_at).toLocaleDateString('ar-EG')));
-    c.onclick = () => hubOpen(h.id);
-    grid.appendChild(c);
-  });
-  // مشاريع حصر أو موازنة لسه مش متجمعة هنا
-  const usedQ = new Set(HUB.list.map((h) => h.qt_id).filter(Boolean)), usedP = new Set(HUB.list.map((h) => h.pa_id).filter(Boolean));
-  const loose = [];
-  (qps || []).forEach((q) => { if (!usedQ.has(q.id)) loose.push({ name: q.name, qt_id: q.id, pa_id: q.pa_id && paBy[q.pa_id] && !usedP.has(q.pa_id) ? q.pa_id : null }); });
-  const lq = new Set(loose.map((x) => x.pa_id).filter(Boolean));
-  (pps || []).forEach((p) => { if (!usedP.has(p.id) && !lq.has(p.id)) loose.push({ name: p.name, qt_id: null, pa_id: p.id }); });
-  if (loose.length) {
-    const cd = pjEl('div', 'qcard'); cd.appendChild(pjEl('h3', '', 'مشاريع لسه مش متجمعة هنا'));
-    loose.forEach((x) => {
-      const k = [x.qt_id && 'حصر', x.pa_id && 'موازنة'].filter(Boolean).join(' + ');
-      const r = pjEl('div', 'hsug'); const b = pjEl('button', 'qbtn', '+ ضمه للمشاريع'); b.type = 'button';
-      b.onclick = async () => { b.disabled = true; const { error: e2 } = await sb.from('hub_projects').insert({ name: x.name, qt_id: x.qt_id, pa_id: x.pa_id, est_q: x.name }); if (e2) { b.disabled = false; return alert('تعذّر الإضافة'); } hubHome(); };
-      r.append(pjEl('span', '', x.name + ' — ' + k), b); cd.appendChild(r);
-    });
-    sug.appendChild(cd);
-  }
+  HUB.list.forEach((h) => { const c = pjEl('button', 'qproj'); c.type = 'button'; c.appendChild(pjEl('b', '', h.name)); c.onclick = () => hubOpen(h.id); grid.appendChild(c); });
 }
 // ===== ربط شيتات الموازنات بمشاريع «الموازنات» مرة واحدة =====
 // بيقرا عنوان أول شيت من الملف نفسه (xlsx = zip) عشان المطابقة تبقى أدق
