@@ -3759,6 +3759,44 @@ function qtCivChain(groups) {
   vols.forEach((v) => { const m = s2.filter((g) => !out.includes(g) && near(g.cut, v.cut) && near(g.fill, v.fill)); if (m.length) out.push(m[0]); });
   return out.length === vols.length ? out : [];
 }
+
+// ===== اختيار العنصر من اسم اللاير (زي المهندس): «انترلوك 8 سم» = لاير «انترلوك 8 سم» أو «INTERLOCK 8CM» — مش أكبر هاتش =====
+const QT_LSYN = [[/interlock|inter lock|انتر لوك|انترلوك|إنترلوك/g, ' انترلوك '], [/asphalt|asph|اسفلت|أسفلت/g, ' اسفلت '], [/kerb|curb|بردوره|بردورة|بدروره|بدرورة/g, ' بردوره '], [/new ?je?r?s[ey]+y?|new ?gersy|نيوجيرسي|نيوجرسي|نيو جرسي/g, ' نيوجرسي '], [/geo ?textile|جيوتكستايل|جيو تكستايل|جيوتكستيل/g, ' جيوتكستايل '], [/geo ?grid|جيوجريد|جيو جريد/g, ' جيوجريد '], [/marking|تخطيط|دهان/g, ' تخطيط '], [/sub ?base|base ?course|\bsen\b|سن/g, ' سن '], [/concrete|خرسانه|خرسانة/g, ' خرسانه '], [/marble|رخام/g, ' رخام '], [/tiles?|بلاط/g, ' بلاط '], [/binder|رابطه|رابطة/g, ' رابطه '], [/wearing|سطحيه|سطحية/g, ' سطحيه '], [/milling|كشط|قشط/g, ' كشط '], [/clearing|grubbing|تطهير/g, ' تطهير '], [/culvert|بربخ|برابخ/g, ' بربخ '], [/rip ?rap|دبش|تدبيش/g, ' دبش '], [/manhole|غرف? تفتيش/g, ' تفتيش ']];
+const QT_GEN = new Set(['اعمال', 'توريد', 'تركيب', 'تشغيل', 'طبقه', 'طبقة', 'سمك', 'سم', 'cm', 'mm', 'مم', 'م', 'ls', 'hd', 'hatch', 'layer', 'ال', 'من', 'في', 'و', 'بند', 'كميه', 'حصر', 'لوحه', 'beige', 'بيج']);
+function qtWords(t) {
+  let x = ' ' + qtNorm(t).replace(/(\d)\s*(cm|سم|مم|mm)/g, '$1 ') + ' ';
+  QT_LSYN.forEach(([re, to]) => { x = x.replace(re, to); });
+  x = x.replace(/(\d)([^\d\s.])/g, '$1 $2').replace(/([^\d\s.])(\d)/g, '$1 $2');
+  return x.split(/[^\p{L}\p{N}.]+/u).map((w) => w.replace(/^(وال|بال|لل|ال)(?=..)/, '')).filter((w) => w && !QT_GEN.has(w));
+}
+function qtNameHits(item, gs) {
+  const iw = qtWords(item), inum = iw.filter((w) => /^\d/.test(w)), ik = iw.filter((w) => !/^\d/.test(w) && w.length >= 2);
+  if (!ik.length) return [];
+  const sc = gs.map((g) => {
+    const lw = qtWords(g.layer || g.name || ''); if (!lw.length) return 0;
+    const lnum = lw.filter((w) => /^\d/.test(w));
+    if (inum.length && lnum.length && !inum.some((n) => lnum.includes(n))) return 0; // «انترلوك 8 سم» مش لاير «6 سم»
+    const k = ik.filter((w) => lw.some((v) => v === w || (w.length >= 4 && v.length >= 4 && (v.includes(w) || w.includes(v))))).length;
+    return k ? k + (inum.length && inum.some((n) => lnum.includes(n)) ? 0.5 : 0) : 0;
+  });
+  const best = Math.max(0, ...sc); return best > 0 ? gs.filter((_, i) => sc[i] === best) : [];
+}
+// الرقم المكتوب في اللوحة للبند ده (إجمالي الانترلوك 8 سم = 11393.6 م2) → العناصر اللي مجموعها = الرقم ده
+let QT_TXT = [];
+function qtNoteHit(item, gs, val) {
+  const ik = qtWords(item).filter((w) => !/^\d/.test(w) && w.length >= 3), inum = qtWords(item).filter((w) => /^\d/.test(w)); if (!ik.length) return null;
+  const notes = [];
+  (QT_TXT || []).forEach((t) => { const tx = String(t && t.t || ''); if (!/[=:]/.test(tx)) return; const tw = qtWords(tx);
+    if (!ik.every((w) => tw.some((v) => v === w || (w.length >= 4 && v.includes(w))))) return;
+    if (inum.length && !inum.every((n) => tw.includes(n))) return;
+    const m = /-?\d[\d,]*(?:\.\d+)?/.exec(tx.split(/[=:]/).pop()); if (m) notes.push(+m[0].replace(/,/g, '')); });
+  if (!notes.length) return null;
+  const ok = (v) => notes.some((n) => Math.abs(v - n) <= Math.max(0.5, 0.001 * n));
+  const c = gs.filter((g) => val(g) > 0).slice(0, 40);
+  for (const g of c) if (ok(val(g))) return [g];
+  for (let i = 0; i < c.length; i++) for (let j = i + 1; j < c.length; j++) if (ok(val(c[i]) + val(c[j]))) return [c[i], c[j]];
+  return null;
+}
 function qtAuto(item, groups, mem) {
   const top = groups.filter((g) => !g.hid && !g.blk);
   if (top.length < groups.length && !(mem && mem.sel && mem.sel.some((k) => k.includes('|@')))) { const r = qtAuto0(item, top, mem); if (r) return r; }
@@ -3787,7 +3825,7 @@ function qtAuto0(item, groups, mem) {
     if (b) return { mode: b.cut >= b.fill ? 'cut' : 'fill', sel: [qtKey(b)] };
   }
   // البردورة: كل خطوط اللوحة على كل اللايرات (البردورة ممكن تبقى متوزعة على أكتر من لاير)
-  if (/بردور|بدرور/.test(item)) { const ln = groups.filter((g) => g.kind === 'line' && !QT_BG.test(g.layer) && g.length > 0); if (ln.length) return { mode: 'length', sel: ln.map(qtKey) }; }
+  if (/بردور|بدرور/.test(item)) { const ln = groups.filter((g) => g.kind === 'line' && !QT_BG.test(g.layer) && g.length > 0); const nm = qtNameHits(item, ln.concat(groups.filter((g) => g.kind === 'line' && g.length > 0 && /curb|kerb/i.test(g.layer)))); if (nm.length) return { mode: 'length', sel: [...new Set(nm.map(qtKey))], how: 'name' }; if (ln.length === 1) return { mode: 'length', sel: ln.map(qtKey) }; if (ln.length) { const nl = qtNoteHit(item, ln, (g) => g.length); if (nl) return { mode: 'length', sel: nl.map(qtKey), how: 'note' }; return null; } }
   if (QT_EW.test(item)) {
     // الحفر والردم: Surface to Surface بس (مقارنة سطحين بأسمائهم من Civil)
     const em = qtEwMode(item), s2 = groups.filter((g) => g.src === 's2s' && g[em] > 0);
@@ -3834,6 +3872,7 @@ function qtAuto0(item, groups, mem) {
     const th0 = qtThick(item) || (mem && mem.thickness ? +mem.thickness : null);
     if (mem && mem.sel && mem.sel.length && mem.sel.every((k) => keys.has(k))) return { mode: 'volume', sel: qtExpHatch(groups, mem.sel), th: th0, how: 'mem' };
     const hb = groups.filter((g) => g.kind === 'hatch' && g.area > 0 && !g.blk && !g.hid).sort((a, b) => b.area - a.area);
+    const bn = qtNameHits(item, groups.filter((g) => g.kind === 'hatch' && g.area > 0)); if (bn.length) return { mode: 'volume', sel: bn.map(qtKey), th: th0, how: 'name' };
     const h0 = hb[0] || groups.filter((g) => g.kind === 'hatch' && g.area > 0).sort((a, b) => b.area - a.area)[0];
     return h0 ? { mode: 'volume', sel: qtSameColor(groups, h0).map(qtKey), th: th0 } : { mode: 'volume', sel: [], th: th0 };
   }
@@ -3845,6 +3884,18 @@ function qtAuto0(item, groups, mem) {
   const fg = ls.filter((g) => !QT_BG.test(g.layer)).sort((a, b) => b.length - a.length);
   const bs = groups.filter((g) => g.kind === 'block' && !QT_BG.test(g.layer)).sort((a, b) => b.n - a.n);
   const th = mem && mem.thickness ? +mem.thickness : null;
+  // 1) اسم اللاير زي اسم البند  2) الرقم المكتوب في اللوحة للبند  3) لو فيه اختيار واحد بس — غير كده مفيش تخمين
+  {
+    const ah = qtNameHits(item, hs), al = qtNameHits(item, fg), ab = qtNameHits(item, bs);
+    const wantA = !rmode || rmode === 'area' || rmode === 'volume' || rmode === 'section', wantL = !rmode || rmode === 'length' || rmode === 'paint', wantC = !rmode || rmode === 'count';
+    if (wantA && ah.length && rmode !== 'section') return { mode: th && mem && mem.mode === 'volume' ? 'volume' : 'area', sel: ah.map(qtKey), th, how: 'name' };
+    if (wantL && al.length && hint !== 'mark') return { mode: 'length', sel: al.map(qtKey), how: 'name' };
+    if (wantC && ab.length) return { mode: 'count', sel: ab.map(qtKey), how: 'name' };
+    if (wantA && rmode !== 'section') { const nh = qtNoteHit(item, hs, (g) => g.area); if (nh) return { mode: 'area', sel: nh.map(qtKey), th, how: 'note' }; }
+    if (wantL) { const nl = qtNoteHit(item, fg, (g) => g.length); if (nl) return { mode: 'length', sel: nl.map(qtKey), how: 'note' }; }
+    const layersA = new Set(hs.filter((g) => !g.blk).map((g) => g.layer + '|' + g.color));
+    if (wantA && !rmode && layersA.size > 1) return null; // كذا هاتش ومفيش ولا واحد اسمه زي البند — منخمنش
+  }
   const mode0 = rmode || (hs.length && hs[0].area > 20 ? 'area' : fg.length ? 'length' : bs.length ? 'count' : 'area');
   if (mode0 === 'area') { if (hs.length) return { mode: th && mem.mode === 'volume' ? 'volume' : 'area', sel: qtSameColor(groups, hs[0]).map(qtKey), th }; const cl = fg.find((g) => g.area > 0); return cl ? { mode: 'area', sel: [qtKey(cl)], th } : null; }
   if (mode0 === 'section') { const h = hs[0], l = fg[0]; return h && l ? { mode: 'section', sel: [qtKey(h), qtKey(l)] } : null; }
@@ -4897,6 +4948,7 @@ async function qtAdd(pre, files0) {
     }
     let mem = null;
     try { const { data } = await sb.from('qt_items').select('mode,sel,thickness').eq('item', item).order('created_at', { ascending: false }).limit(1); mem = data && data[0]; } catch (e) { /* */ }
+    QT_TXT = (j.inv && j.inv.texts) || [];
     const au = qtAuto(item, j.groups, mem), q = au && qtQty(j.groups, au);
     if (au && q != null && q > 0) {
       const vf = qtVerify(item, au, q, j);
@@ -4986,6 +5038,7 @@ async function qtBatch(files, forced) {
   const calc = (r) => {
     const item = r.it.value.trim(); r.box.textContent = ''; r.q = null; r.au = null;
     if (!item) { r.qv.textContent = 'اكتب البند'; return refresh(); }
+    QT_TXT = (r.j.inv && r.j.inv.texts) || [];
     const au = qtAuto(item, r.j.groups, memFor(item)), q = au && qtQty(r.j.groups, au);
     if (au && q != null && q > 0) { r.au = au; r.q = q; r.qv.textContent = 'الكمية: ' + qtN(q, 2) + ' ' + QT_MODES[au.mode][1] + (au.how === 'mem' ? ' — نفس طريقة الحسبة اللي قبل كده' : ''); }
     else {
@@ -5115,7 +5168,7 @@ async function qtSave(item, fname, path, R, a, q, existing) {
 // ok = فيه مصدر تاني مطابق (فرق ≤ 1%) · bad = فيه مصدر تاني للبند ده ومش مطابق · none = مفيش حاجة في اللوحة نراجع عليها
 function qtVerify(item, a, q, R) {
   if (!(q > 0) || !R) return { st: 'none' };
-  const near = (x, y, tol) => x > 0 && y > 0 && Math.abs(x - y) / Math.max(x, y) <= (tol || 0.01);
+  const near = (x, y, tol) => x > 0 && y > 0 && Math.abs(x - y) <= (tol ? tol * Math.max(x, y) : Math.max(0.5, 0.001 * Math.max(x, y)));
   const mode = a.mode, G = R.groups || [], sel = new Set(a.sel || []), refs = [];
   const base = a.th ? q / a.th : null; // قبل السمك
   if (mode === 'cut' || mode === 'fill') {
