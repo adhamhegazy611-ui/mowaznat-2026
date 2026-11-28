@@ -57,11 +57,12 @@ async function demCheck(buf, groups) {
   const S = require('../api/_lib/surf.js'), f = '/tmp/dem_in.dwg'; fs.writeFileSync(f, buf);
   const p = cp.spawn(path.join(__dirname, '../api/_bin/dwgread'), ['-O', 'JSON', f], { stdio: ['ignore', 'pipe', 'ignore'] });
   const sc = await S.scanDwgStream(p.stdout); const ss = S.surfaces(sc).filter((s) => s.tin && s.tin.V && s.tin.V.length > 10);
+  const el = ss.filter((s) => !s.volume);
   if (!ss.length) return { note: 'مفيش سطوح' };
   const pick = (V, n) => { const st = Math.max(1, Math.floor(V.length / n)), o = []; for (let i = 0; i < V.length && o.length < n; i += st) o.push(V[i]); return o; };
   const smp = await sampler(GT);
   // نظام الإحداثيات: اللي بيوقّع النقط جوه مصر وأقرب فرق مع الـ DEM
-  const ref = ss.slice().sort((a, b) => b.tin.V.length - a.tin.V.length)[0], rp = pick(ref.tin.V, 300);
+  const ref = el.slice().sort((a, b) => b.tin.V.length - a.tin.V.length)[0], rp = pick(ref.tin.V, 300);
   let best = null; const tried = [];
   for (const [nm, def] of Object.entries(CRS)) {
     let ll; try { ll = rp.map((v) => proj4(def, 'WGS84', [v[0], v[1]])); } catch (e) { continue; }
@@ -73,11 +74,28 @@ async function demCheck(buf, groups) {
   }
   if (!best) return { note: 'معرفتش أحدد مكان اللوحة على الخريطة', tried };
   const res = { crs: best.nm, tried, surfaces: [], ms: 0 };
-  for (const s of ss.slice(0, 25)) {
+  for (const s of el.slice(0, 25)) {
     const V = pick(s.tin.V, 2500), ll = V.map((v) => proj4(best.def, 'WGS84', [v[0], v[1]])), z = await smp(ll), d = [];
     z.forEach((h, i) => { if (h != null) d.push(h - V[i][2]); });
     res.surfaces.push({ name: s.name, pts: s.tin.V.length, ...stats(d) });
     if (Date.now() - t0 > 240000) break;
+  }
+  // الكميات لو الأرض الطبيعية = الـ DEM بدل سطح اللوحة: نفس التصميم، على شبكة 5م جوه حدود سطح التصميم
+  res.pairs = [];
+  const tins = ss.filter((s) => !s.volume), big = tins.slice().sort((a, b) => b.area - a.area)[0];
+  const pairs = (groups || []).filter((g) => g.src === 's2s' && g.baseName && g.compName).sort((a, b) => (b.cut + b.fill) - (a.cut + a.fill)).slice(0, 4);
+  for (const g of pairs) {
+    const B = tins.find((s) => s.name === g.baseName), C = tins.find((s) => s.name === g.compName); if (!B || !C) continue;
+    const zc = S.tinLookup(C.tin), zb = S.tinLookup(B.tin); let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    C.tin.V.forEach((v) => { if (v[0] < x0) x0 = v[0]; if (v[0] > x1) x1 = v[0]; if (v[1] < y0) y0 = v[1]; if (v[1] > y1) y1 = v[1]; });
+    const step = Math.max(5, Math.sqrt((x1 - x0) * (y1 - y0) / 60000)), P = [];
+    for (let x = x0 + step / 2; x < x1; x += step) for (let y = y0 + step / 2; y < y1; y += step) { const c = zc(x, y), b = zb(x, y); if (c != null && b != null) P.push([x, y, c, b]); }
+    if (!P.length) continue;
+    const z = await smp(P.map((p2) => proj4(best.def, 'WGS84', [p2[0], p2[1]]))), A = step * step;
+    let cs = 0, fs2 = 0, cd = 0, fd = 0, k = 0; const dd = [];
+    P.forEach((p2, i) => { const h = z[i]; if (h == null) return; k++; const db = p2[2] - p2[3], dm = p2[2] - h; if (db > 0) fs2 += db * A; else cs -= db * A; if (dm > 0) fd += dm * A; else cd -= dm * A; dd.push(h - p2[3]); });
+    res.pairs.push({ layer: g.layer, step: r2(step), cells: k, area: Math.round(k * A), drawing: { cut: Math.round(cs), fill: Math.round(fs2) }, dem: { cut: Math.round(cd), fill: Math.round(fd) }, groundDiff: stats(dd) });
+    if (Date.now() - t0 > 270000) break;
   }
   const c0 = proj4(best.def, 'WGS84', [rp[0][0], rp[0][1]]); res.at = [r2(c0[1]), r2(c0[0])];
   res.ms = Date.now() - t0;

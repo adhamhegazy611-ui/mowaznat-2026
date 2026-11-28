@@ -381,4 +381,4 @@ function civilCounts(J) {
   return n;
 }
 
-module.exports = { civilCounts, surfaces, surfaceGroups, decodePoints, volumeOf, decodeTin, tinVolume, s2s, scanDwgJson, scanDwgStream, tinName };
+module.exports = { civilCounts, surfaces, surfaceGroups, decodePoints, volumeOf, decodeTin, tinVolume, s2s, scanDwgJson, scanDwgStream, tinName, tinLookup };
