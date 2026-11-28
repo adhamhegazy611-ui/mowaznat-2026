@@ -5771,7 +5771,11 @@ function hubScore(a, b) {
   if (hit < S.length || (S.length === 1 && S[0].length < 4)) return 0;
   return hit / (A.length + B.length - hit);
 }
-async function hubAuto(hs, qps, pps, mzs) {
+// المشاريع القديمة (قبل تشغيل المنظومة) متتضافش لوحدها — الربط التلقائي للمشاريع الجديدة بس
+const HUB_FROM = '2026-11-28T16:45:00Z';
+async function hubAuto(hs, qps0, pps0, mzs) {
+  const fresh = (r) => !r.created_at || r.created_at >= HUB_FROM || hs.some((h) => h.qt_id === r.id || h.pa_id === r.id);
+  const qps = (qps0 || []).filter(fresh), pps = (pps0 || []).filter(fresh);
   const hubs = hs.map((h) => ({ ...h })), ch = new Map(), qUp = [];
   const best = (name, rows, taken) => { let b = null, bs = 0; rows.forEach((r) => { if (taken && taken.has(String(r.id))) return; const sc = hubScore(name, r.name); if (sc > bs) { bs = sc; b = r; } }); return b; };
   const touch = (h, k, v) => { if (String(h[k] || '') === String(v || '')) return; h[k] = v; ch.set(h, true); };
@@ -5819,8 +5823,8 @@ async function hubHome() {
   const grid = pjEl('div', 'qgrid'); grid.appendChild(pjEl('div', 'qempty', 'جاري التحميل…')); m.appendChild(grid);
   const [{ data: hs, error }, { data: qps }, { data: pps }, { data: mzs }] = await Promise.all([
     sb.from('hub_projects').select('*').order('created_at', { ascending: false }),
-    IS_QT ? sb.from('qt_projects').select('id,name,pa_id') : Promise.resolve({ data: [] }),
-    sb.from('pa_projects').select('id,name'),
+    IS_QT ? sb.from('qt_projects').select('id,name,pa_id,created_at') : Promise.resolve({ data: [] }),
+    sb.from('pa_projects').select('id,name,created_at'),
     sb.from('mz_projects').select('id,name,battalion').order('sort_order'),
   ]);
   grid.textContent = '';
