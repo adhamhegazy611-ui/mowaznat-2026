@@ -92,9 +92,10 @@ async function demCheck(buf, groups) {
     for (let x = x0 + step / 2; x < x1; x += step) for (let y = y0 + step / 2; y < y1; y += step) { const c = zc(x, y), b = zb(x, y); if (c != null && b != null) P.push([x, y, c, b]); }
     if (!P.length) continue;
     const z = await smp(P.map((p2) => proj4(best.def, 'WGS84', [p2[0], p2[1]]))), A = step * step;
-    let cs = 0, fs2 = 0, cd = 0, fd = 0, k = 0; const dd = [];
-    P.forEach((p2, i) => { const h = z[i]; if (h == null) return; k++; const db = p2[2] - p2[3], dm = p2[2] - h; if (db > 0) fs2 += db * A; else cs -= db * A; if (dm > 0) fd += dm * A; else cd -= dm * A; dd.push(h - p2[3]); });
-    res.pairs.push({ layer: g.layer, step: r2(step), cells: k, area: Math.round(k * A), drawing: { cut: Math.round(cs), fill: Math.round(fs2) }, dem: { cut: Math.round(cd), fill: Math.round(fd) }, groundDiff: stats(dd) });
+    let cs = 0, fs2 = 0, cd = 0, fd = 0, c2 = 0, f2 = 0, k = 0; const dd = [], dc = [];
+    P.forEach((p2, i) => { const h = z[i]; if (h == null) return; k++; const db = p2[2] - p2[3], dm = p2[2] - h, dn = h - p2[3]; if (db > 0) fs2 += db * A; else cs -= db * A; if (dm > 0) fd += dm * A; else cd -= dm * A; if (dn > 0) f2 += dn * A; else c2 -= dn * A; dd.push(h - p2[3]); dc.push(h - p2[2]); });
+    // dem: الـ DEM مكان السطح الأول (الأساس) · dem2: الـ DEM مكان السطح التاني — (الحفر/الردم من الأساس للتاني)
+    res.pairs.push({ layer: g.layer, base: g.baseName, comp: g.compName, step: r2(step), cells: k, area: Math.round(k * A), drawing: { cut: Math.round(cs), fill: Math.round(fs2) }, dem: { cut: Math.round(cd), fill: Math.round(fd) }, dem2: { cut: Math.round(c2), fill: Math.round(f2) }, baseDiff: stats(dd), compDiff: stats(dc) });
     if (Date.now() - t0 > 270000) break;
   }
   const c0 = proj4(best.def, 'WGS84', [rp[0][0], rp[0][1]]); res.at = [r2(c0[1]), r2(c0[0])];
