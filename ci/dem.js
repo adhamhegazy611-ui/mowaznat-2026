@@ -74,11 +74,11 @@ async function demCheck(buf, groups) {
   }
   if (!best) return { note: 'معرفتش أحدد مكان اللوحة على الخريطة', tried };
   const res = { crs: best.nm, tried, surfaces: [], ms: 0 };
-  for (const s of el.slice(0, 25)) {
-    const V = pick(s.tin.V, 2500), ll = V.map((v) => proj4(best.def, 'WGS84', [v[0], v[1]])), z = await smp(ll), d = [];
+  for (const s of el.slice(0, 60)) {
+    const V = pick(s.tin.V, 1500), ll = V.map((v) => proj4(best.def, 'WGS84', [v[0], v[1]])), z = await smp(ll), d = [];
     z.forEach((h, i) => { if (h != null) d.push(h - V[i][2]); });
-    res.surfaces.push({ name: s.name, pts: s.tin.V.length, ...stats(d) });
-    if (Date.now() - t0 > 240000) break;
+    res.surfaces.push({ name: s.name, pts: s.tin.V.length, area: Math.round(s.area || 0), ...stats(d) });
+    if (Date.now() - t0 > 400000) break;
   }
   // الكميات لو الأرض الطبيعية = الـ DEM بدل سطح اللوحة: نفس التصميم، على شبكة 5م جوه حدود سطح التصميم
   res.pairs = [];
@@ -118,7 +118,7 @@ async function demCheck(buf, groups) {
       const xy = J.pts.map((p2) => proj4('WGS84', best.def, [p2[1], p2[0]]));
       const zd = await smp(J.pts.map((p2) => [p2[1], p2[0]]));
       const dd = []; J.pts.forEach((p2, i) => { if (zd[i] != null) dd.push(p2[2] - zd[i]); }); is2.vsCopernicus = stats(dd); // الأرض اتغيرت قد إيه من 2015
-      for (const s of el.slice(0, 25)) {
+      for (const s of el) {
         const f = S.tinLookup(s.tin), d = [], byd = {};
         J.pts.forEach((p2, i) => { const z = f(xy[i][0], xy[i][1]); if (z == null) return; const v = p2[2] - z; d.push(v); (byd[p2[3]] || (byd[p2[3]] = [])).push(v); });
         if (d.length) is2.surfaces.push({ name: s.name, ...stats(d), byDate: Object.fromEntries(Object.entries(byd).map(([k, v]) => [k, [v.length, r2(q(v, 0.5))]])) });
