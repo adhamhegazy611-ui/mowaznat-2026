@@ -98,6 +98,28 @@ async function demCheck(buf, groups) {
     res.pairs.push({ layer: g.layer, base: g.baseName, comp: g.compName, step: r2(step), cells: k, area: Math.round(k * A), drawing: { cut: Math.round(cs), fill: Math.round(fs2) }, dem: { cut: Math.round(cd), fill: Math.round(fd) }, dem2: { cut: Math.round(c2), fill: Math.round(f2) }, baseDiff: stats(dd), compDiff: stats(dc) });
     if (Date.now() - t0 > 270000) break;
   }
+  // ICESat-2 (ليزر ناسا 2018 → 2026): نقط أرض دقيقة (±0.3م) على مسارات بتعدي فوق المشروع
+  try {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; el.forEach((s) => s.tin.V.forEach((v) => { if (v[0] < x0) x0 = v[0]; if (v[0] > x1) x1 = v[0]; if (v[1] < y0) y0 = v[1]; if (v[1] > y1) y1 = v[1]; }));
+    const pad = 100, cn = [[x0 - pad, y0 - pad], [x1 + pad, y0 - pad], [x1 + pad, y1 + pad], [x0 - pad, y1 + pad], [x0 - pad, y0 - pad]].map((c) => proj4(best.def, 'WGS84', c));
+    fs.writeFileSync('/tmp/is2_in.json', JSON.stringify({ poly: cn.map((c) => ({ lon: c[0], lat: c[1] })), t0: '2018-10-01T00:00:00Z', t1: '2026-12-31T00:00:00Z' }));
+    cp.execSync('pip install -q sliderule pyproj geopandas >/dev/null 2>&1 || pip install -q --break-system-packages sliderule pyproj geopandas >/dev/null 2>&1', { stdio: 'ignore', timeout: 240000 });
+    cp.execSync('python3 ' + path.join(__dirname, 'is2.py'), { stdio: 'inherit', timeout: 300000 });
+    const J = JSON.parse(fs.readFileSync('/tmp/is2_out.json', 'utf8'));
+    const is2 = { n: J.pts.length, err: J.err, dates: {}, surfaces: [] };
+    J.pts.forEach((p2) => { is2.dates[p2[3]] = (is2.dates[p2[3]] || 0) + 1; });
+    if (J.pts.length) {
+      const xy = J.pts.map((p2) => proj4('WGS84', best.def, [p2[1], p2[0]]));
+      const zd = await smp(J.pts.map((p2) => [p2[1], p2[0]]));
+      const dd = []; J.pts.forEach((p2, i) => { if (zd[i] != null) dd.push(p2[2] - zd[i]); }); is2.vsCopernicus = stats(dd); // الأرض اتغيرت قد إيه من 2015
+      for (const s of el.slice(0, 25)) {
+        const f = S.tinLookup(s.tin), d = [], byd = {};
+        J.pts.forEach((p2, i) => { const z = f(xy[i][0], xy[i][1]); if (z == null) return; const v = p2[2] - z; d.push(v); (byd[p2[3]] || (byd[p2[3]] = [])).push(v); });
+        if (d.length) is2.surfaces.push({ name: s.name, ...stats(d), byDate: Object.fromEntries(Object.entries(byd).map(([k, v]) => [k, [v.length, r2(q(v, 0.5))]])) });
+      }
+    }
+    res.is2 = is2;
+  } catch (e) { res.is2 = { err: String(e && e.message || e).slice(0, 300) }; }
   const c0 = proj4(best.def, 'WGS84', [rp[0][0], rp[0][1]]); res.at = [r2(c0[1]), r2(c0[0])];
   res.ms = Date.now() - t0;
   return res;
