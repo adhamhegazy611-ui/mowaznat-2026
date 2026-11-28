@@ -29,3 +29,4 @@ jobs:
           QT_HEAP: '12000'
           QT_TMUL: '6'
           QT_POLL_SEC: '3300'
+          EARTHDATA_TOKEN: ${{ secrets.EARTHDATA_TOKEN }}
