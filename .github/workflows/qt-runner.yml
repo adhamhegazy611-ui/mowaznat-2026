@@ -9,6 +9,7 @@ on:
 permissions:
   id-token: write
   contents: read
+  actions: write
 concurrency:
   group: qt-runner
   cancel-in-progress: false
@@ -30,3 +31,9 @@ jobs:
           QT_TMUL: '6'
           QT_POLL_SEC: '3300'
           EARTHDATA_TOKEN: ${{ secrets.EARTHDATA_TOKEN }}
+      # السيرفر يفضل شغال على طول: قبل ما يخلص بيشغّل نسخة جديدة (الجدول كل 10 دقايق مش مضمون من GitHub)
+      - name: تشغيل النسخة الجاية
+        if: ${{ !cancelled() }}
+        run: gh workflow run qt-runner.yml --ref main -R ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ github.token }}
