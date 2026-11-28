@@ -4604,6 +4604,8 @@ function qtSatBox(x, d) {
     const is2 = dem.is2 || {}, S = (is2.surfaces || []), C = dem.surfaces || [];
     out.appendChild(pjEl('div', 'qhint', 'مكان اللوحة: ' + (dem.crs || '') + ' · مرات مرور القمر ICESat-2 فوق المشروع: ' + Object.keys(is2.dates || {}).length + ' (' + (is2.n || 0) + ' نقطة أرض) · تاريخ بداية المشروع: ' + (start || '—')));
     const names = grounds.length ? grounds : S.slice().sort((a, b) => b.n - a.n).slice(0, 3).map((s0) => s0.name);
+    const noPts = ((dem.cmr && dem.cmr.dates) || []).filter((t) => !(is2.dates || {})[t]);
+    if (noPts.length) out.appendChild(pjEl('div', 'qhint', 'مرات عدّى فيها القمر من غير ما يقيس الأرض (سحاب/غبار أو المسار برة اللوحة): ' + noPts.filter((t) => t >= '2024').join('، ')));
     if (!grounds.length) out.appendChild(pjEl('div', 'qhint', 'البند ده محسوب من سطح فرق Civil، فمش عارف أنهي سطح هو الأرض الطبيعية — دي السطوح اللي القمر عدى عليها:'));
     names.forEach((nm) => {
       const s0 = S.find((z) => z.name === nm), c0 = C.find((z) => z.name === nm), pr = pairs.find((g) => g.baseName === nm);
@@ -4619,6 +4621,8 @@ function qtSatBox(x, d) {
         const [n, md] = s0.byDate[base], am = Math.abs(md);
         const v = n < 5 ? ['⚠️', 'نقط قليلة (' + n + ') — المقارنة على خط واحد بس'] : am <= 0.5 ? ['✅', 'الأرض الطبيعية في اللوحة مطابقة للقمر الصناعي قبل بداية المشروع'] : am <= 1.5 ? ['⚠️', 'فيه فرق ' + qtN(am, 2) + ' م — محتاج مراجعة'] : ['⛔', 'فرق كبير ' + qtN(am, 2) + ' م — الأرض الطبيعية في اللوحة ' + (md > 0 ? 'أوطى' : 'أعلى') + ' من الحقيقة قبل بداية المشروع'];
         cd.appendChild(pjEl('div', 'qsatv', v[0] + ' ' + v[1] + ' (مرور ' + base + ')'));
+        const gapM = Math.round((new Date(start) - new Date(base)) / (30.4 * 864e5));
+        if (gapM > 6) cd.appendChild(pjEl('div', 'qhint', '⚠️ آخر مرة القمر قاس السطح ده قبل البداية كانت من ' + gapM + ' شهر — لو حصل شغل في الأرض في الفترة دي مش هيبان.'));
         if (pr && n >= 5) { const A = (pr.cutA || 0) + (pr.fillA || 0) || pr.area || 0, dv = md * A; cd.appendChild(pjEl('div', 'qhint', 'تأثير تقريبي على الكمية: ' + (md > 0 ? 'الحفر يزيد / الردم يقل' : 'الحفر يقل / الردم يزيد') + ' بحوالي ' + qtN(Math.abs(dv)) + ' م³ (الفرق × مسطح ' + qtN(A) + ' م²) — تقدير من نقط على خطوط مرور القمر بس.')); }
       }
       if (c0) cd.appendChild(pjEl('small', 'qhint', 'للمقارنة — خريطة Copernicus (2011–2015): الفرق ' + (c0.median >= 0 ? '+' : '') + qtN(c0.median, 2) + ' م'));

@@ -107,7 +107,7 @@ async function demCheck(buf, groups) {
     const g = await (await fetch('https://cmr.earthdata.nasa.gov/search/granules.json?short_name=ATL08&version=007&bounding_box=' + bbox.map((v) => v.toFixed(5)).join(',') + '&page_size=500&sort_key=start_date')).json();
     const ents = (g.feed && g.feed.entry) || [];
     const urls = ents.map((e) => ((e.links || []).find((l) => /^https:\/\/data\.nsidc\.earthdatacloud.*\.h5$/.test(l.href)) || {}).href).filter(Boolean);
-    res.cmr = { n: ents.length, urls: urls.length };
+    res.cmr = { n: ents.length, urls: urls.length, dates: ents.map((e) => String(e.time_start).slice(0, 10)) };
     fs.writeFileSync('/tmp/is2_in.json', JSON.stringify({ bbox, urls }));
     cp.execSync('pip install -q h5py requests pyproj numpy >/dev/null 2>&1 || pip install -q --break-system-packages h5py requests pyproj numpy >/dev/null 2>&1', { stdio: 'ignore', timeout: 240000 });
     cp.execSync('python3 ' + path.join(__dirname, 'is2.py'), { stdio: 'inherit', timeout: 900000 });
