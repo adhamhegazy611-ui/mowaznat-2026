@@ -2959,7 +2959,7 @@ function pjScan() {
     const rk = [...rows.keys()].sort((a, b) => a - b);
     // عمود «علاوة المنطقة / بالمنطقة»: الحساب والإدخال بيبقوا عليه بدل عمود القيمة
     let regC = null; rows.forEach((cs) => cs.forEach((c) => { if (regC == null && typeof c[0] === 'string' && !c[6] && /علاوه المنطقه|بالمنطقه/.test(pjNorm(c[0])) && !/^سعر البند/.test(pjNorm(c[0]))) regC = c[5]; }));
-    let desc = null, price1 = null, price2 = null, unit0 = '', alltxt = '', foot = null;
+    let desc = null, price1 = null, price2 = null, p2m = null, unit0 = '', alltxt = '', foot = null;
     rk.forEach((r, ri) => {
       const cs = rows.get(r).sort((a, b) => a[5] - b[5]);
       const lab = cs.find((c) => typeof c[0] === 'string' && !c[6]);
@@ -3009,7 +3009,7 @@ function pjScan() {
             if (qf) { const nm = /\+\s*'([^']+)'!/.exec(qf[6])[1].trim(); const fi = PA.sheets.findIndex((x, k) => k < PJ_COPY0 && !x.pad && String(x.name || x.title || '').trim() === nm); if (fi >= 0) foot = fi; }
           }
           // سطر إجمالي من غير معامل (زي الرابطة: سعر الطن + النقل) بيبقى هو السعر النهائي
-          if (gs) { if (!price2 || !fc) price2 = pc; } else if (!price1 || !fc) price1 = pc;
+          if (gs) { if (!price2 || !fc) { price2 = pc; const mt = after.find((c) => c[5] > pc[1]); p2m = mt && !regionRow ? [r, mt[5]] : null; } } else if (!price1 || !fc) price1 = pc;
         }
       }
     });
@@ -3027,7 +3027,7 @@ function pjScan() {
       rk.forEach((r) => { const cs = rows.get(r); const lb = cs.find((c) => typeof c[0] === 'string' && /^\s*(مشاريع|المشروعات|مشروعات)/.test(c[0]) && c[0].length < 70); const nm = cs.filter((c) => typeof c[0] === 'number' && c[0] >= 1000).pop(); if (lb && nm) (sup = sup || []).push([lb[0].replace(/\s+/g, ' ').trim(), r, nm[5]]); });
       if (sup) { u2 = 'شهر'; if (!price1) price1 = [sup[0][1], sup[0][2]]; }
     }
-    item[si] = { desc, std, unit: u2, p1: price1, p2: price2, foot, sup };
+    item[si] = { desc, std, unit: u2, p1: price1, p2: price2, p2m, foot, sup };
   });
   Object.values(eq).forEach((e) => { e.def = +Object.entries(e.vals).sort((a, b) => b[1] - a[1])[0][0]; });
   PJX = { eq, dist, tr, f1, f2, item };
@@ -3038,10 +3038,13 @@ const pjInScope = (si) => PJ.cur && PJ.cur.items.includes(si);
 function pjSheetPrice(si, mode) {
   const it = pjScan().item[si]; if (!it) return null;
   if (it.sup) { const g = it.sup[(PJ.cur && PJ.cur.basics.rg && PJ.cur.basics.rg[si]) || 0] || it.sup[0]; const v = PAE.get(si, g[1], g[2]); return typeof v === 'number' ? Math.round(v + 1e-9) : null; }
-  const pp = mode === 'excl' ? it.p2 : it.p1; if (!pp) return null;
+  const pp = mode === 'excl' ? (it.p2m && pjMatTax(si) ? it.p2m : it.p2) : it.p1; if (!pp) return null;
   let v = PAE.get(si, pp[0], pp[1]); if (typeof v !== 'number' && pp[2]) v = PAE.get(si, pp[2][0], pp[2][1]);
   return typeof v === 'number' ? Math.round(v + 1e-9) : null;   // لأقرب جنيه زي الشيت
 }
+// غير شامل الضريبة: البند اللي في شيته عمودين (غير شامل / شامل الضريبة على الخامات) بتختار منهم في الموازنة
+function pjMatTax(si) { const b = PJ.cur && PJ.cur.basics, v = b && b.mt && b.mt[si]; return v == null ? !!(PA.sheets[si] && PA.sheets[si].mtDef) : !!v; }
+function pjMatPrice(si, on) { const it = pjScan().item[si], pp = on ? it.p2m : it.p2; const v = pp && PAE.get(si, pp[0], pp[1]); return typeof v === 'number' ? Math.round(v + 1e-9) : null; }
 // بنود بقدمة أو من غيرها (النيوجيرسي): شيت القدمة بتاعها، وسعر القدمة لوحدها
 const pjFoot = (si) => { const it = si < PJ_SAF && pjScan().item[si]; return it && it.foot != null ? it.foot : null; };
 function pjFootPrice(si, mode) {
@@ -3269,6 +3272,12 @@ function pjBOQ() {
               it.sup.forEach((g, i) => { const v = PAE.get(si, g[1], g[2]); const o = pjEl('option', '', g[0] + ' — ' + (typeof v === 'number' ? pjNum(v, 0) : '')); o.value = i; if (i === (b.rg[si] || 0)) o.selected = true; rgS.appendChild(o); });
               rgS.onchange = () => { b.rg[si] = +rgS.value; paSave(); draw(); };
               tools.appendChild(rgS);
+            }
+            if (!it.cus && si < PJ_SAF && pjScan().item[si] && pjScan().item[si].p2m) {
+              const ms = pjEl('select', 'noexp pjsec'); ms.title = 'سعر البند غير شامل ضريبة القيمة المضافة: من غير أو شامل الضريبة على الخامات';
+              [[0, 'غير شامل ض. الخامات — ' + pjNum(pjMatPrice(si, false) || 0, 0)], [1, 'شامل ض. الخامات — ' + pjNum(pjMatPrice(si, true) || 0, 0)]].forEach(([v, l]) => { const o = pjEl('option', '', l); o.value = v; if (!!v === pjMatTax(si)) o.selected = true; ms.appendChild(o); });
+              ms.onchange = () => { b.mt = b.mt || {}; b.mt[si] = ms.value === '1'; delete b.pr[si]; paSave(); draw(); };
+              if (mode === 'excl') tools.appendChild(ms);
             }
             if (!it.cus && pjFoot(si) != null) {
               const fq = pjEl('select', 'noexp pjsec'); fq.title = 'البند بقدمة ولا لا';
