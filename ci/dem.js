@@ -109,7 +109,7 @@ async function demCheck(buf, groups) {
     const urls = ents.map((e) => ((e.links || []).find((l) => /^https:\/\/data\.nsidc\.earthdatacloud.*\.h5$/.test(l.href)) || {}).href).filter(Boolean);
     res.cmr = { n: ents.length, urls: urls.length };
     fs.writeFileSync('/tmp/is2_in.json', JSON.stringify({ bbox, urls }));
-    cp.execSync('pip install -q h5py fsspec aiohttp pyproj numpy >/dev/null 2>&1 || pip install -q --break-system-packages h5py fsspec aiohttp pyproj numpy >/dev/null 2>&1', { stdio: 'ignore', timeout: 240000 });
+    cp.execSync('pip install -q h5py requests pyproj numpy >/dev/null 2>&1 || pip install -q --break-system-packages h5py requests pyproj numpy >/dev/null 2>&1', { stdio: 'ignore', timeout: 240000 });
     cp.execSync('python3 ' + path.join(__dirname, 'is2.py'), { stdio: 'inherit', timeout: 900000 });
     const J = JSON.parse(fs.readFileSync('/tmp/is2_out.json', 'utf8'));
     const is2 = { n: J.pts.length, err: J.err, files: J.files, fail: J.fail, dates: {}, surfaces: [] };
