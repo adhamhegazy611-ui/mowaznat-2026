@@ -5270,9 +5270,13 @@ async function qtSave(item, fname, path, R, a, q, existing) {
 // ===== أبعاد الطرق للمراجعة: [{n, L, W}] في qt_projects.roads =====
 const QT_ASPH = /اسفلت|أسفلت|سطحي|رابط|تشريب|لاصق|(^|[^a-z])(mc|rc)([^a-z]|$)|prime|tack|wearing|binder/i;
 function qtRoadArea(item, a) {
-  const R = (QT.cur && QT.cur.roads) || []; if (!R.length || !(a.mode === 'area' || a.mode === 'volume')) return null;
+  const R0 = (QT.cur && QT.cur.roads) || []; if (!R0.length || !(a.mode === 'area' || a.mode === 'volume')) return null;
+  // السطر اللي مكتوب فيه «سن/أساس» للسن، و«أسفلت» (أو من غير اسم) للأسفلت
+  const isB = (r) => /سن|اساس|أساس|base/i.test(r.n || ''), RB = R0.filter(isB), R = R0.filter((r) => !isB(r));
+  const isBaseItem = QT_BASE.test(item) || /(^|\s)سن/.test(item);
+  if (isBaseItem && RB.length) { const AB = RB.reduce((t, r) => t + (+r.L || 0) * (+r.W || 0), 0); if (AB > 0) return { v: AB, src: 'أبعاد السن اللي كتبتها: الطول × العرض = ' + qtN(AB) + ' م²' }; }
   const L = R.reduce((t, r) => t + (+r.L || 0), 0), A = R.reduce((t, r) => t + (+r.L || 0) * (+r.W || 0), 0); if (!(A > 0)) return null;
-  if (QT_BASE.test(item) || /(^|\s)سن/.test(item)) {
+  if (isBaseItem) {
     // زيادة العرض: سمك 40سم = 50سم من كل ناحية، سمك 20–25سم = 25سم من كل ناحية
     const th = a.th || qtThick(item); const side = !th ? 0 : Math.abs(th - 0.4) < 0.011 ? 0.5 : th >= 0.195 && th <= 0.255 ? 0.25 : 0, ext = 2 * side;
     return { v: A + ext * L, src: 'أبعاد الطرق: الطول × (العرض' + (side ? ' + ' + qtN(side, 2) + 'م يمين + ' + qtN(side, 2) + 'م شمال' : '') + ') = ' + qtN(A + ext * L) + ' م²' + (side ? '' : (th ? ' (السمك ' + qtN(th, 2) + 'م — من غير زيادة عرض)' : '')) };
@@ -5282,7 +5286,7 @@ function qtRoadArea(item, a) {
 }
 async function qtRoadsDlg() {
   const R = (QT.cur && QT.cur.roads) || [];
-  const v = await qtForm('أبعاد الطرق', 'كل سطر طريق: الاسم (اختياري) والطول والعرض بالمتر — مثلاً «طريق 1: 2500 × 12». المنظومة بتراجع مسطحات الأسفلت والسن عليها (السن سمك 40سم عرضه بيزيد 50سم من كل ناحية، وسمك 20–25سم بيزيد 25سم من كل ناحية).', [
+  const v = await qtForm('أبعاد الطرق', 'اكتب كل سطر: أسفلت أو سن، وبعده الطول × العرض بالمتر — مثلاً:\nأسفلت: 2500 × 12\nسن: 2500 × 13\nلو كتبت أسفلت بس، السن بيتحسب لوحده من عرض الأسفلت. المنظومة بتراجع مسطحات الأسفلت والسن عليها (السن سمك 40سم عرضه بيزيد 50سم من كل ناحية، وسمك 20–25سم بيزيد 25سم من كل ناحية).', [
     { k: 't', label: 'الطرق', type: 'area', value: R.map((r) => (r.n ? r.n + ': ' : '') + r.L + ' × ' + r.W).join('\n'), req: false },
   ], 'حفظ');
   if (!v) return;
