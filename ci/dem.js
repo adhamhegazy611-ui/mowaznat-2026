@@ -103,6 +103,13 @@ async function demCheck(buf, groups) {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; el.forEach((s) => s.tin.V.forEach((v) => { if (v[0] < x0) x0 = v[0]; if (v[0] > x1) x1 = v[0]; if (v[1] < y0) y0 = v[1]; if (v[1] > y1) y1 = v[1]; }));
     const pad = 100, cn = [[x0 - pad, y0 - pad], [x1 + pad, y0 - pad], [x1 + pad, y1 + pad], [x0 - pad, y1 + pad], [x0 - pad, y0 - pad]].map((c) => proj4(best.def, 'WGS84', c));
     fs.writeFileSync('/tmp/is2_in.json', JSON.stringify({ poly: cn.map((c) => ({ lon: c[0], lat: c[1] })), t0: '2018-10-01T00:00:00Z', t1: '2026-12-31T00:00:00Z' }));
+    // مسارات ICESat-2 اللي عدت فوق المشروع (CMR بتاع ناسا — من غير تسجيل)
+    try { const lo = cn.map((c) => c[0]), la = cn.map((c) => c[1]), bb = [Math.min(...lo), Math.min(...la), Math.max(...lo), Math.max(...la)].map((v) => v.toFixed(4)).join(',');
+      const g = await (await fetch('https://cmr.earthdata.nasa.gov/search/granules.json?short_name=ATL08&bounding_box=' + bb + '&page_size=500&sort_key=start_date')).json();
+      res.cmr = { n: (g.feed && g.feed.entry || []).length, dates: (g.feed && g.feed.entry || []).map((e) => String(e.time_start).slice(0, 10)) };
+      const g2 = await (await fetch('https://cmr.earthdata.nasa.gov/search/granules.json?short_name=ATL08&bounding_box=' + [Math.min(...lo) - 0.03, Math.min(...la) - 0.03, Math.max(...lo) + 0.03, Math.max(...la) + 0.03].map((v) => v.toFixed(4)).join(',') + '&page_size=500')).json();
+      res.cmr.n3km = (g2.feed && g2.feed.entry || []).length;
+    } catch (e) { res.cmr = { err: String(e.message || e).slice(0, 200) }; }
     cp.execSync('pip install -q sliderule pyproj geopandas >/dev/null 2>&1 || pip install -q --break-system-packages sliderule pyproj geopandas >/dev/null 2>&1', { stdio: 'ignore', timeout: 240000 });
     cp.execSync('python3 ' + path.join(__dirname, 'is2.py'), { stdio: 'inherit', timeout: 300000 });
     const J = JSON.parse(fs.readFileSync('/tmp/is2_out.json', 'utf8'));
