@@ -4394,7 +4394,8 @@ function qtSummary(m) {
   nm.onkeydown = (e) => { if (e.key === 'Enter') fb.click(); };
   fi.onchange = () => { if (fi.files.length) qtAdd(nm.value.trim(), fi.files); };
   const sb2 = pjEl('button', 'qbtn', 'Σ جمع بنود'); sb2.type = 'button'; sb2.title = 'بند جديد = مجموع كميات بندين أو أكتر'; sb2.onclick = () => qtFxDlg();
-  ab.append(nm, dl, fb, fi, hint, sb2); m.appendChild(ab);
+  const rdb = pjEl('button', 'qbtn', '📏 أبعاد الطرق' + (QT.cur && QT.cur.roads && QT.cur.roads.length ? ' (' + QT.cur.roads.length + ')' : '')); rdb.type = 'button'; rdb.title = 'الطول والعرض — للمراجعة على مسطحات الأسفلت والسن'; rdb.onclick = qtRoadsDlg;
+  ab.append(nm, dl, fb, fi, hint, sb2, rdb); m.appendChild(ab);
   const GS = qtGroups(); // البند الواحد سطر واحد (لو ليه كذا لوحة بتتجمع، والتفاصيل لما تدوس عليه)
   if (!GS.length) { m.appendChild(pjEl('div', 'qempty', 'لسه مفيش بنود — اكتب اسم البند واختار اللوحة.')); return; }
   const ord = (G) => QT_SECS.findIndex((x) => x[0] === (G.mode === 'formula' ? 'etc' : qtSecOf(G.item)[0]));
@@ -4713,6 +4714,7 @@ function qtDetailCard(x, d, no) {
   // الكمية بطريقة المقاطع (Sample Lines) زي جدول Civil — والحجم المضبوط بين السطحين للمقارنة
   if (x.mode === 'cut' || x.mode === 'fill') (d.groups || []).filter((g) => g.aea && (x.sel || []).includes(qtKey(g))).forEach((g) => side.appendChild(pjEl('div', 'qok', '📐 الحساب بطريقة Sample Line زي Civil (' + g.aea + ' Sample Line): ' + qtN(g[x.mode]) + ' م³ — الحجم بين السطحين مباشرة ' + qtN(x.mode === 'fill' ? g.tinFill : g.tinCut))));
   if ((x.mode === 'cut' || x.mode === 'fill') && x.file_path) side.appendChild(qtSatBox(x, d));
+  if ((x.mode === 'area' || x.mode === 'volume') && x.qty > 0) { const rr = qtRoadArea(x.item, { mode: x.mode, th: +x.thickness || null }); if (rr) { const ar = x.mode === 'volume' && +x.thickness ? x.qty / +x.thickness : +x.qty, df = (ar - rr.v) / rr.v * 100; side.appendChild(pjEl('div', Math.abs(df) <= 3 ? 'qok' : 'qwarn', (Math.abs(df) <= 3 ? '✅' : '⚠️') + ' مراجعة على الطول والعرض: المتوقع ' + qtN(rr.v) + ' م² — اللوحة ' + qtN(ar) + ' م² (فرق ' + (df >= 0 ? '+' : '') + qtN(df, 1) + '%)')); } }
   // مراجعة على جدول Civil لو موجود في اللوحة: لو رقمنا مختلف عن أقرب رقم في الجدول بنقول صراحةً
   if ((x.mode === 'cut' || x.mode === 'fill') && qtOrigQ(x) == null) {
     const em = x.mode, tv = [...new Set((d.groups || []).filter((g) => g.src === 'table' && +g[em] > 0).map((g) => +(+g[em]).toFixed(2)))];
@@ -5261,6 +5263,29 @@ async function qtSave(item, fname, path, R, a, q, existing) {
 // ===== المراجعة: المنظومة متطلعش رقم غير لما تتأكد منه بطريقتين =====
 // المصادر التانية: جدول Cut/Fill من Civil، أسطح الفرق اللي Civil عاملها، والأرقام المكتوبة في اللوحة (كمية = ...)
 // ok = فيه مصدر تاني مطابق (فرق ≤ 1%) · bad = فيه مصدر تاني للبند ده ومش مطابق · none = مفيش حاجة في اللوحة نراجع عليها
+
+// ===== أبعاد الطرق للمراجعة: [{n, L, W}] في qt_projects.roads =====
+const QT_ASPH = /اسفلت|أسفلت|سطحي|رابط|تشريب|لاصق|(^|[^a-z])(mc|rc)([^a-z]|$)|prime|tack|wearing|binder/i;
+function qtRoadArea(item, a) {
+  const R = (QT.cur && QT.cur.roads) || []; if (!R.length || !(a.mode === 'area' || a.mode === 'volume')) return null;
+  const L = R.reduce((t, r) => t + (+r.L || 0), 0), A = R.reduce((t, r) => t + (+r.L || 0) * (+r.W || 0), 0); if (!(A > 0)) return null;
+  if (QT_BASE.test(item) || /(^|\s)سن/.test(item)) {
+    const th = a.th || qtThick(item); const ext = th && Math.abs(th - 0.4) < 0.011 ? 1 : 0;
+    return { v: A + ext * L, src: 'أبعاد الطرق: الطول × (العرض' + (ext ? ' + 0.5م يمين + 0.5م شمال' : '') + ') = ' + qtN(A + ext * L) + ' م²' + (ext ? '' : (th ? ' (السمك ' + qtN(th, 2) + 'م — من غير زيادة عرض)' : '')) };
+  }
+  if (QT_ASPH.test(item)) return { v: A, src: 'أبعاد الطرق: الطول × العرض = ' + qtN(A) + ' م²' };
+  return null;
+}
+async function qtRoadsDlg() {
+  const R = (QT.cur && QT.cur.roads) || [];
+  const v = await qtForm('أبعاد الطرق', 'كل سطر طريق: الاسم (اختياري) والطول والعرض بالمتر — مثلاً «طريق 1: 2500 × 12». المنظومة بتراجع مسطحات الأسفلت والسن عليها (السن سمك 40سم عرضه بيزيد 50سم يمين و50سم شمال).', [
+    { k: 't', label: 'الطرق', type: 'area', value: R.map((r) => (r.n ? r.n + ': ' : '') + r.L + ' × ' + r.W).join('\n'), req: false },
+  ], 'حفظ');
+  if (!v) return;
+  const out = []; String(v.t || '').split(/\n+/).forEach((ln) => { const m = /^(?:(.*?)[:：]\s*)?([\d.,]+)\s*[x×*\s]\s*([\d.,]+)\s*$/.exec(ln.trim().replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))); if (m) out.push({ n: (m[1] || '').trim(), L: +m[2].replace(/,/g, ''), W: +m[3].replace(/,/g, '') }); });
+  const { error } = await sb.from('qt_projects').update({ roads: out.length ? out : null }).eq('id', QT.cur.id); if (error) return alert('تعذّر الحفظ');
+  QT.cur.roads = out; qtProject();
+}
 function qtVerify(item, a, q, R) {
   if (!(q > 0) || !R) return { st: 'none' };
   const near = (x, y, tol) => x > 0 && y > 0 && Math.abs(x - y) <= (tol ? tol * Math.max(x, y) : Math.max(0.5, 0.001 * Math.max(x, y)));
@@ -5272,6 +5297,9 @@ function qtVerify(item, a, q, R) {
     G.filter((g) => g.kind === 'surface' && !g.src && !sel.has(qtKey(g))).forEach((g) => refs.push({ v: g[mode], src: 'سطح الفرق في Civil ' + g.layer, strong: false }));
     G.filter((g) => g.aea && sel.has(qtKey(g))).forEach((g) => refs.push({ v: mode === 'fill' ? g.tinFill : g.tinCut, src: 'الحجم بين السطحين مباشرة', tol: 0.06, strong: false }));
   }
+  // أبعاد الطرق (الطول × العرض) من بيانات المشروع: الأسفلت/MC/RC = الطول × العرض، والسن سمك 40سم = الطول × (العرض + 1م)
+  const rd = qtRoadArea(item, a);
+  if (rd) refs.push({ v: rd.v * (a.mode === 'volume' && a.th ? a.th : 1), src: rd.src, tol: 0.03, strong: true });
   // النصوص: «... = 301473 م3» — بناخد آخر رقم بعد = أو الرقم اللي جنبه وحدة
   const itT = hubToks(item).filter((w) => w.length >= 3);
   const unitRe = mode === 'length' || mode === 'paint' ? /م\.?\s*ط|متر\s*طولي|\bm\b|\bl\.?m/i : mode === 'area' ? /م\s*[²2]|m2|مسطح|مساحة/i : mode === 'count' ? /عدد/ : /م\s*[³3]|m3|حجم|كمية/i;
